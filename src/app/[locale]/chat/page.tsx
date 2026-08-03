@@ -363,8 +363,6 @@ export default function ChatPage() {
       </header>
 
       <div className="chat-body" ref={bodyRef}>
-        <p className="chat-body__note">{t("freeNote")}</p>
-
         <div className="welcome-chip">{t("welcome")}</div>
 
         <div className="msg msg--ai">{t("greeting")}</div>
