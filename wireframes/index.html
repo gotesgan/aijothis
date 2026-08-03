@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jyotish — Ad → Free AI Question → Paywall</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="page">
+
+    <header class="page__topbar">
+      <span class="eyebrow">Wireframe · AI Astrologer Conversion Flow</span>
+      <h1 class="page__title">Instagram Ad → Free First Question → AI Astrologer Paywall</h1>
+      <p class="page__subtitle">AI persona answers Q1 free · blocked at Q2 · flat pricing to continue</p>
+    </header>
+
+    <!-- Flow stepper -->
+    <nav class="stepper" aria-label="Flow steps">
+      <button class="step-pill" data-go="ad">1 · IG Ad</button>
+      <span class="step-arrow">→</span>
+      <button class="step-pill" data-go="landing">2 · Landing</button>
+      <span class="step-arrow">→</span>
+      <button class="step-pill" data-go="details">3 · Details</button>
+      <span class="step-arrow">→</span>
+      <button class="step-pill" data-go="chat">4 · AI Chat</button>
+      <span class="step-arrow">→</span>
+      <button class="step-pill step-pill--pay" data-go="paywall">5 · Paywall</button>
+      <span class="step-arrow">→</span>
+      <button class="step-pill" data-go="pay">6 · Pay</button>
+      <span class="step-arrow">→</span>
+      <button class="step-pill" data-go="success">7 · Unlocked</button>
+    </nav>
+
+    <div class="device">
+      <div class="device__bezel">
+        <div class="device__notch"></div>
+
+        <div class="screen">
+
+          <!-- ═══════════ STEP 1 · IG AD ═══════════ -->
+          <section class="view" data-view="ad">
+
+            <div class="ad-bar">
+              <span class="ad-bar__tag">Sponsored</span>
+              <span class="ad-bar__src">via Instagram</span>
+              <span class="ad-bar__copy">🔗 jyotish.app/r/insta-ad</span>
+            </div>
+
+            <div class="ad-hero">
+              <span class="placeholder-box placeholder-box--md ad-hero__img">[Ad creative — AI astrologer + Kundli visual]</span>
+              <p class="ad-hero__kicker">AI VEDIC ASTROLOGER · FREE FIRST QUESTION</p>
+              <h2 class="ad-hero__title">Your AI astrologer is online 24/7.<br />First question — free.</h2>
+              <p class="ad-hero__sub">Love · Career · Marriage · Money — an instant, personal answer from an AI that has studied 5M+ Kundlis.</p>
+            </div>
+
+            <div class="ad-trust">
+              <div class="stat">
+                <span class="stat__value">4.8★</span>
+                <span class="stat__label">200k reviews</span>
+              </div>
+              <div class="stat">
+                <span class="stat__value">24/7</span>
+                <span class="stat__label">Instant replies</span>
+              </div>
+              <div class="stat">
+                <span class="stat__value">5M+</span>
+                <span class="stat__label">Kundlis read</span>
+              </div>
+            </div>
+
+            <button class="btn btn--primary btn--block btn--lg" data-go="details">Start My Free AI Chat →</button>
+            <p class="note">No payment needed for your first question · flat ₹49 after that</p>
+            <p class="note note--faint">[UTM: insta_ad → landing] · Goal: capture lead</p>
+          </section>
+
+          <!-- ═══════════ STEP 2 · LANDING ═══════════ -->
+          <section class="view" data-view="landing" hidden>
+
+            <div class="app-header">
+              <span class="placeholder-box placeholder-box--sm app-header__logo">[Logo]</span>
+              <span class="app-header__name">Jyotish<span class="dot">.</span></span>
+              <span class="badge badge--live">AI · Free offer</span>
+            </div>
+
+            <div class="landing-hero">
+              <h2 class="landing-hero__title">You're 30 seconds away<br />from your first answer</h2>
+              <p class="landing-hero__sub">Arya, our AI astrologer, reads your Vedic chart and answers instantly — day or night.</p>
+              <div class="placeholder-box placeholder-box--md landing-hero__img">[AI astrologer hero visual]</div>
+            </div>
+
+            <!-- AI persona card -->
+            <div class="persona">
+              <span class="placeholder-box placeholder-box--sm persona__avatar">[AI]</span>
+              <div class="persona__body">
+                <span class="persona__name">Arya · Your AI Astrologer</span>
+                <span class="persona__meta">Vedic engine · replies instantly · never judges</span>
+              </div>
+              <span class="badge badge--ai">Powered by AI</span>
+            </div>
+
+            <div class="landing-offer">
+              <span class="badge badge--popular">Offer</span>
+              <p class="landing-offer__line"><strong>1st question FREE</strong> · then flat ₹49/question or passes</p>
+            </div>
+
+            <div class="landing-steps">
+              <div class="mini-step"><span class="mini-step__num">1</span> Share birth details</div>
+              <div class="mini-step"><span class="mini-step__num">2</span> AI reads your Kundli instantly</div>
+              <div class="mini-step"><span class="mini-step__num">3</span> Ask anything, 24/7</div>
+            </div>
+
+            <button class="btn btn--primary btn--block btn--lg" data-go="details">Continue →</button>
+            <p class="note">🔒 Encrypted · No card needed to start</p>
+          </section>
+
+          <!-- ═══════════ STEP 3 · BIRTH DETAILS ═══════════ -->
+          <section class="view" data-view="details" hidden>
+
+            <div class="app-header app-header--back">
+              <button class="icon-btn" data-go="landing">‹</button>
+              <span class="app-header__name">Your Details</span>
+            </div>
+
+            <div class="details-progress">
+              <span class="badge badge--live">Step 1 of 2</span>
+              <span class="details-progress__bar"><span class="details-progress__fill"></span></span>
+            </div>
+
+            <form class="card form" onsubmit="return false">
+              <label class="field">
+                <span class="field__label">Your name</span>
+                <input class="field__input" type="text" placeholder="e.g. Aarav Sharma" />
+              </label>
+              <div class="field-row">
+                <label class="field">
+                  <span class="field__label">Date of birth</span>
+                  <input class="field__input" type="date" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Time of birth</span>
+                  <input class="field__input" type="time" />
+                </label>
+              </div>
+              <label class="field">
+                <span class="field__label">Place of birth</span>
+                <input class="field__input" type="text" placeholder="City or town" />
+              </label>
+              <p class="note note--faint">Don't know your time? We'll use 12:00 PM — Rashi &amp; Nakshatra stay reliable.</p>
+              <button class="btn btn--primary btn--block btn--lg" data-go="chat">Connect with Arya (AI) →</button>
+            </form>
+
+            <p class="note">Arya builds your Vedic chart &amp; personalises answers to your Dasha, not your zodiac sign</p>
+          </section>
+
+          <!-- ═══════════ STEP 4 · FREE AI CHAT ═══════════ -->
+          <section class="view" data-view="chat" hidden>
+
+            <div class="chat-header">
+              <button class="icon-btn" data-go="details">‹</button>
+              <span class="avatar avatar--ai chat-header__avatar">[AI]</span>
+              <div class="chat-header__meta">
+                <span class="chat-header__name">Arya · AI Astrologer</span>
+                <span class="chat-header__status chat-header__status--ai">● Online · replies instantly</span>
+              </div>
+              <span class="badge badge--ai">AI</span>
+            </div>
+
+            <div class="chat">
+              <p class="chat__date">Today · Free AI chat</p>
+
+              <div class="msg msg--ai">
+                <p class="msg__text">Namaste 🙏 I'm Arya, your AI astrologer. I've read your Kundli (Cancer · Moon in the 7th). Ask me anything about love, career or money — your first question is on us. ✨</p>
+              </div>
+
+              <div class="msg msg--out">
+                <p class="msg__text">Hello Arya, when will I get married? I have been single for 2 years.</p>
+              </div>
+
+              <div class="msg msg--ai">
+                <p class="msg__text">Good question 🙏 Your 7th house lord is well-placed, but Saturn aspects it. A strong marriage period opens between <strong>March – July next year</strong>, most likely through family connections. I can also check what makes you hesitate in relationships — just ask me anything else.</p>
+              </div>
+
+              <div class="free-chip">
+                <span class="free-chip__tick">✓</span>
+                Your free AI question was answered
+              </div>
+            </div>
+
+            <div class="chat-input">
+              <span class="chat-input__box">Ask your AI astrologer…</span>
+              <button class="chat-input__send" data-go="paywall">➤</button>
+            </div>
+          </section>
+
+          <!-- ═══════════ STEP 5 · PAYWALL ═══════════ -->
+          <section class="view" data-view="paywall" hidden>
+
+            <div class="chat-header">
+              <button class="icon-btn" data-go="chat">‹</button>
+              <span class="avatar avatar--ai chat-header__avatar">[AI]</span>
+              <div class="chat-header__meta">
+                <span class="chat-header__name">Arya · AI Astrologer</span>
+                <span class="chat-header__status chat-header__status--ai">● Online · waiting for your question</span>
+              </div>
+            </div>
+
+            <div class="paywall">
+              <div class="paywall__hero">
+                <span class="placeholder-box placeholder-box--sm paywall__emoji">[💬]</span>
+                <h2 class="paywall__title">Your free question is done.</h2>
+                <p class="paywall__sub">Keep asking Arya anything — no wait, no judgement. Flat pricing, no per-minute fees.</p>
+              </div>
+
+              <div class="plans">
+                <label class="plan plan--active">
+                  <input type="radio" name="plan" checked hidden />
+                  <span class="plan__body">
+                    <span class="plan__name">Single question</span>
+                    <span class="plan__price">₹49</span>
+                  </span>
+                  <span class="plan__tag badge badge--live">One-time</span>
+                </label>
+
+                <label class="plan">
+                  <input type="radio" name="plan" hidden />
+                  <span class="plan__body">
+                    <span class="plan__name">5-question pass</span>
+                    <span class="plan__price">₹149</span>
+                    <span class="plan__per">₹29/q · 7 days</span>
+                  </span>
+                  <span class="plan__tag badge badge--save">Best value</span>
+                </label>
+
+                <label class="plan">
+                  <input type="radio" name="plan" hidden />
+                  <span class="plan__body">
+                    <span class="plan__name">Unlimited chat</span>
+                    <span class="plan__price">₹299</span>
+                    <span class="plan__per">per month</span>
+                  </span>
+                  <span class="plan__tag badge badge--popular">Popular</span>
+                </label>
+              </div>
+
+              <button class="btn btn--primary btn--block btn--lg" data-go="pay">Pay ₹49 &amp; Keep Asking →</button>
+
+              <div class="paymethods">
+                <span class="placeholder-box placeholder-box--xs">[UPI]</span>
+                <span class="placeholder-box placeholder-box--xs">[Card]</span>
+                <span class="placeholder-box placeholder-box--xs">[Wallet]</span>
+              </div>
+              <p class="note">🔒 Secure UPI · Unused credits don't expire · No subscriptions hidden</p>
+            </div>
+          </section>
+
+          <!-- ═══════════ STEP 6 · PAYMENT SHEET ═══════════ -->
+          <section class="view" data-view="pay" hidden>
+
+            <div class="app-header app-header--back">
+              <button class="icon-btn" data-go="paywall">‹</button>
+              <span class="app-header__name">Checkout</span>
+            </div>
+
+            <div class="card form">
+              <div class="pay-summary">
+                <span class="pay-summary__item">Chat with Arya (AI) · Single question</span>
+                <span class="pay-summary__amount">₹49</span>
+              </div>
+              <div class="pay-summary pay-summary--total">
+                <span class="pay-summary__item">Total payable</span>
+                <span class="pay-summary__amount">₹49</span>
+              </div>
+            </div>
+
+            <div class="card form">
+              <h3 class="section-title">Payment method</h3>
+              <label class="method">
+                <input type="radio" name="pay" checked hidden />
+                <span class="placeholder-box placeholder-box--xs method__icon">[UPI]</span>
+                <span class="method__body">
+                  <span class="method__name">UPI</span>
+                  <span class="method__sub">GPay · PhonePe · Paytm</span>
+                </span>
+              </label>
+              <label class="method">
+                <input type="radio" name="pay" hidden />
+                <span class="placeholder-box placeholder-box--xs method__icon">[💳]</span>
+                <span class="method__body">
+                  <span class="method__name">Card</span>
+                  <span class="method__sub">Credit / Debit</span>
+                </span>
+              </label>
+              <label class="method">
+                <input type="radio" name="pay" hidden />
+                <span class="placeholder-box placeholder-box--xs method__icon">[📱]</span>
+                <span class="method__body">
+                  <span class="method__name">Netbanking / Wallet</span>
+                  <span class="method__sub">All banks supported</span>
+                </span>
+              </label>
+            </div>
+
+            <button class="btn btn--primary btn--block btn--lg" data-go="success">Pay ₹49 securely →</button>
+            <p class="note">This is a wireframe — payment is a placeholder sheet. [Razorpay / Cashfree SDK here]</p>
+          </section>
+
+          <!-- ═══════════ STEP 7 · SUCCESS / UNLOCKED ═══════════ -->
+          <section class="view" data-view="success" hidden>
+
+            <div class="success-hero">
+              <span class="placeholder-box placeholder-box--sm success-hero__check">[✓]</span>
+              <h2 class="success-hero__title">Payment successful 🎉</h2>
+              <p class="success-hero__sub">You're connected with Arya. Keep the conversation going — instantly.</p>
+              <span class="badge badge--live">1 question unlocked</span>
+            </div>
+
+            <div class="chat">
+              <p class="chat__date">Reconnecting…</p>
+
+              <div class="msg msg--out">
+                <p class="msg__text">And if I ask about my career change — is this a good time to switch jobs?</p>
+              </div>
+
+              <div class="msg msg--ai">
+                <p class="msg__text">An excellent question 🙏 Jupiter's transit over your 10th house supports a <strong>move in the next 4 months</strong>. Take a role where you report to a senior — you'll grow faster. Want me to find the best month for the switch?</p>
+              </div>
+
+              <div class="free-chip free-chip--paid">
+                <span class="free-chip__tick">✓</span>
+                AI chat active · 0 of 1 question used
+              </div>
+            </div>
+
+            <div class="chat-input chat-input--active">
+              <span class="chat-input__box">Type your next question…</span>
+              <button class="chat-input__send chat-input__send--on">➤</button>
+            </div>
+
+            <button class="btn btn--ghost btn--block" data-go="ad">↺ Restart journey (new lead)</button>
+            <p class="note note--faint">[Post-payment: log purchase → show re-engagement prompts]</p>
+          </section>
+
+        </div>
+      </div>
+    </div>
+
+    <p class="page__footnote">Click any step pill above, or tap the primary buttons inside the phone to walk the flow.</p>
+  </div>
+
+  <script>
+    // Wireframe navigation only — switches which screen is visible.
+    const views = document.querySelectorAll(".view");
+    const pills = document.querySelectorAll(".step-pill");
+
+    function go(name) {
+      views.forEach(v => (v.hidden = v.dataset.view !== name));
+      pills.forEach(p => p.classList.toggle("step-pill--on", p.dataset.go === name));
+      const screen = document.querySelector(".screen");
+      if (screen) screen.scrollTop = 0;
+    }
+
+    pills.forEach(p => p.addEventListener("click", () => go(p.dataset.go)));
+    document.querySelectorAll("[data-go]").forEach(el =>
+      el.addEventListener("click", e => { e.preventDefault(); go(el.dataset.go); })
+    );
+  </script>
+
+</body>
+</html>
