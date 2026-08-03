@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
 import { getDeviceId, getOrCreateChatId, newUuid, saveKundli } from "@/lib/storage";
 import type { ChatMessage, KundliResult } from "@/lib/types";
@@ -18,6 +18,53 @@ const SIGNED_UP_KEY = "jyotish_signed_up_v1";
 const PAID20_KEY = "jyotish_paid20_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
 const PAID_PACK = 20;
+
+/** Loads Razorpay checkout and opens the payment sheet. */
+function openRazorpay(opts: {
+  orderId: string;
+  keyId: string;
+  amount: number;
+  currency: string;
+}): Promise<boolean> {
+  return new Promise((resolve) => {
+    const loadScript = () => {
+      if ((window as unknown as { Razorpay?: unknown }).Razorpay) return init();
+      const s = document.createElement("script");
+      s.src = "https://checkout.razorpay.com/v1/checkout.js";
+      s.async = true;
+      s.onload = init;
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    };
+    const init = () => {
+      const R = (window as unknown as { Razorpay?: new (o: unknown) => { open: () => void } }).Razorpay;
+      if (!R) return resolve(false);
+      const rzp = new R({
+        key: opts.keyId,
+        amount: opts.amount,
+        currency: opts.currency,
+        name: "Jyotish",
+        description: "20 questions with Arya",
+        order_id: opts.orderId,
+        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+          try {
+            const res = await fetch("/api/payment-verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-device-id": getDeviceId() },
+              body: JSON.stringify(response),
+            });
+            resolve(res.ok);
+          } catch {
+            resolve(false);
+          }
+        },
+        modal: { ondismiss: () => resolve(false) },
+      });
+      rzp.open();
+    };
+    loadScript();
+  });
+}
 
 /** Loads Google Identity Services and runs the sign-in prompt. */
 function runGoogleIdentity(clientId: string): Promise<boolean> {
@@ -214,19 +261,34 @@ export default function ChatPage() {
     }
   }
 
-  /** Buy the ₹15 / 20-question pack (simulated until Razorpay is wired). */
+  /** Buy the ₹15 / 20-question pack — real Razorpay checkout when keys are set. */
   async function buy20() {
-    setPaid20(true);
-    localStorage.setItem(PAID20_KEY, "1");
     setShowPaywall(false);
     try {
-      await fetch("/api/checkout", {
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "x-device-id": getDeviceId() },
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? "Order failed");
+
+      if (data.simulated) {
+        // Experiment path: grant immediately (no real payment yet).
+        grantPack();
+        return;
+      }
+
+      // Real Razorpay checkout.
+      const ok = await openRazorpay(data);
+      if (ok) grantPack();
     } catch {
-      // non-fatal
+      setShowPaywall(true);
     }
+  }
+
+  function grantPack() {
+    setPaid20(true);
+    localStorage.setItem(PAID20_KEY, "1");
   }
 
   async function open() {
@@ -376,6 +438,12 @@ export default function ChatPage() {
             <button className="btn btn--gold" onClick={signUp}>
               {t("continueGoogle")}
             </button>
+            <p className="gate-modal__legal">
+              {t("agree")}{" "}
+              <Link href="/legal/privacy">{t("agreePrivacy")}</Link>
+              {" · "}
+              <Link href="/legal/terms">{t("agreeTerms")}</Link>
+            </p>
             <button
               className="gate-modal__ghost"
               onClick={() => setShowSignup(false)}

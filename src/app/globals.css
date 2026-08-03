@@ -1160,7 +1160,7 @@ button {
   border-radius: 999px;
   padding: 13px 18px;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 16px; /* prevent iOS zoom-on-focus */
   color: var(--ivory);
   resize: none;
   max-height: 120px;
@@ -1283,6 +1283,31 @@ button {
   font-size: 0.85rem;
   font-weight: 600;
   padding: 6px;
+}
+.gate-modal__legal {
+  font-size: 0.72rem;
+  color: var(--ivory-faint);
+}
+.gate-modal__legal a {
+  color: var(--marigold);
+  text-decoration: underline;
+}
+
+/* legal footer links */
+.legal-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 0 4px;
+  font-size: 0.78rem;
+  color: var(--ivory-faint);
+}
+.legal-links__item {
+  color: var(--ivory-muted);
+}
+.legal-links__dot {
+  opacity: 0.5;
 }
 
 /* ─────────────── Reading (overview) ─────────────── */

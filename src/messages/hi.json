@@ -94,7 +94,10 @@
     "simNote": "(Simulated signup — असली के लिए Google Client ID जोड़ें)",
     "paywallTitle": "20 और questions सिर्फ ₹15 में",
     "paywallSub": "आपके free questions खत्म हो गए। आर्य से 20 और questions अनलॉक करें — एक बार का ₹15।",
-    "buy20": "₹15 दें · 20 questions"
+    "buy20": "₹15 दें · 20 questions",
+    "agree": "जारी रखने से आप सहमत हैं:",
+    "agreePrivacy": "गोपनीयता नीति",
+    "agreeTerms": "नियम व शर्तें"
   },
   "Lang": {
     "label": "भाषा"
@@ -166,5 +169,9 @@
       "saturn": "अनुशासन व सेवा",
       "mercury": "बुद्धि व व्यापार"
     }
+  },
+  "Footer": {
+    "privacy": "गोपनीयता नीति",
+    "terms": "नियम व शर्तें"
   }
 }

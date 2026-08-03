@@ -16,6 +16,7 @@ export default async function HomePage({
 
   const t = await getTranslations("Landing");
   const tt = await getTranslations("Today");
+  const lt = await getTranslations("Footer");
 
   const steps = [
     { title: t("how1Title"), desc: t("how1Desc") },
@@ -101,6 +102,14 @@ export default async function HomePage({
       </section>
 
       <AppNav />
+
+      <footer className="legal-links">
+        <Link href="/legal/privacy" className="legal-links__item">{lt("privacy")}</Link>
+        <span className="legal-links__dot">·</span>
+        <Link href="/legal/terms" className="legal-links__item">{lt("terms")}</Link>
+        <span className="legal-links__dot">·</span>
+        <span className="legal-links__item faint">{t("stats2Value")} users</span>
+      </footer>
     </div>
   );
 }

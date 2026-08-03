@@ -94,7 +94,10 @@
     "simNote": "(Simulated signup — add a Google Client ID to make it real)",
     "paywallTitle": "20 more questions for ₹15",
     "paywallSub": "You've used your free questions. Unlock 20 more with Arya — one-time ₹15.",
-    "buy20": "Pay ₹15 · 20 questions"
+    "buy20": "Pay ₹15 · 20 questions",
+    "agree": "By continuing you agree to our",
+    "agreePrivacy": "Privacy Policy",
+    "agreeTerms": "Terms & Conditions"
   },
   "Lang": {
     "label": "Language"
@@ -166,5 +169,9 @@
       "saturn": "discipline & service",
       "mercury": "intellect & commerce"
     }
+  },
+  "Footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms & Conditions"
   }
 }
