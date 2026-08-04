@@ -1651,3 +1651,141 @@ button {
     transform: rotate(360deg);
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   Motion & polish — deliberate, quiet, reduced-motion safe
+   ═══════════════════════════════════════════════════ */
+
+/* Hide scrollbars where content scrolls (keeps it app-like) */
+.chat-body,
+.scroll-row__track,
+.place-suggest {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.chat-body::-webkit-scrollbar,
+.scroll-row__track::-webkit-scrollbar,
+.place-suggest::-webkit-scrollbar {
+  display: none;
+}
+@media (max-width: 600px) {
+  html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Smooth scrolling in scroll containers */
+html {
+  scroll-behavior: smooth;
+}
+.chat-body,
+.scroll-row__track {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Screen entrance — one quiet fade-up per page */
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.screen,
+.chat-view {
+  animation: screen-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Chat message entrance */
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.msg {
+  animation: msg-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Gate modals — fade backdrop, gentle card rise */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.gate-modal {
+  animation: fade-in 0.18s ease-out both;
+}
+.gate-modal__card {
+  animation: modal-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Gentle micro-interactions (hover-capable devices only) */
+@media (hover: hover) {
+  .btn--gold:hover {
+    transform: translateY(-1px);
+  }
+  .btn--gold:active {
+    transform: translateY(0) scale(0.97);
+  }
+  .persona,
+  .card:hover {
+    border-color: var(--line-strong);
+  }
+  .feature-card__link,
+  .acc__head:hover .acc__chev,
+  .planet-item__head:hover .planet-item__chev {
+    transform: translateX(1px);
+  }
+}
+
+/* Jank guards */
+.mandala__svg {
+  will-change: transform;
+}
+.chat-header,
+.chat-input-row {
+  transform: translateZ(0);
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .mandala__ring {
+    animation: none;
+  }
+}
