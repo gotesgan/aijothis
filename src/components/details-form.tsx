@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useEffect, useState } from "react";import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { saveKundli, getDeviceId } from "@/lib/storage";
+import { trackLead, trackQuestionChip } from "@/lib/pixel";
 import type { KundliResult } from "@/lib/types";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
 import { ArrowRight, Loader2, Clock } from "lucide-react";
@@ -22,6 +22,11 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
   const [error, setError] = useState("");
 
   const canSubmit = name.trim() && date && time && selected && !submitting;
+
+  // A carried question means the user came in via a landing chip.
+  useEffect(() => {
+    if (initialQ) trackQuestionChip(initialQ);
+  }, [initialQ]);
 
   function toggleUnknownTime() {
     setTimeUnknown((v) => {
@@ -65,6 +70,7 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
 
       const kundli: KundliResult = data.kundli;
       saveKundli(kundli);
+      trackLead();
       router.push(initialQ ? { pathname: "/chat", query: { q: initialQ } } : "/chat");
     } catch (err) {
       setError((err as Error).message ?? "Network error. Please try again.");

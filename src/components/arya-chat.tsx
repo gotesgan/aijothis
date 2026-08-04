@@ -1,12 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
 import { getDeviceId, getOrCreateChatId, newUuid, saveKundli } from "@/lib/storage";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
+import { pickStarters } from "@/lib/starters";
+import {
+  trackLead,
+  trackInitiateCheckout,
+  trackPurchase,
+  trackSignup,
+  trackFirstAnswer,
+  trackPaywallShown,
+  trackPackSelected,
+  trackPaywallDismissed,
+} from "@/lib/pixel";
 import type { Locale } from "@/i18n/routing";
 import type { ChatMessage, KundliResult } from "@/lib/types";
 import Image from "next/image";
@@ -246,6 +257,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     setStreaming(true);
     try {
       await streamReply(next, next);
+      maybeFireFirstAnswer();
     } catch (err) {
       setMessages([
         ...next,
@@ -273,6 +285,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     setSignedUp(true);
     localStorage.setItem(SIGNED_UP_KEY, "1");
     setShowSignup(false);
+    trackSignup();
     try {
       await fetch("/api/signup", {
         method: "POST",
@@ -286,6 +299,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   /** Buy the selected pack — real Razorpay checkout when keys are set. */
   async function buyPack() {
     setShowPaywall(false);
+    trackInitiateCheckout();
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -309,6 +323,19 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   function grantPack(questions: number) {
     setPaidQuestions(questions);
     localStorage.setItem(PAID_Q_KEY, String(questions));
+    trackPurchase(selectedPack.price);
+  }
+
+  useEffect(() => {
+    if (showPaywall) trackPaywallShown();
+  }, [showPaywall]);
+
+  /** Fires once — the first user question that gets a real answer. */
+  const firstAnswerFiredRef = useRef(false);
+  function maybeFireFirstAnswer() {
+    if (firstAnswerFiredRef.current) return;
+    firstAnswerFiredRef.current = true;
+    trackFirstAnswer();
   }
 
   async function open() {
@@ -327,6 +354,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   /** After the in-chat details form computes the chart: answer the pending question. */
   async function onDetailsComplete(newKundli: KundliResult) {
     saveKundli(newKundli);
+    trackLead();
     const question = pendingQuestion;
     const display = messages;
     setNeedDetails(false);
@@ -335,6 +363,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     setStreaming(true);
     try {
       await streamReply([{ role: "user", content: question }], display, newKundli);
+      maybeFireFirstAnswer();
     } catch {
       // ignore
     } finally {
@@ -374,13 +403,28 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         }`
       : null;
 
-  // Starter chips — shown once the first reply has landed.
+  // Starter chips — context-aware, shown once the first reply has landed.
   const showStarters =
     !!kundli &&
     messages.length > 0 &&
     !streaming &&
     !experimentDone &&
     messages[messages.length - 1]?.role === "assistant";
+
+  const starters = useMemo(() => {
+    if (!showStarters) return [];
+    const asked = new Set<string>();
+    const context: string[] = [];
+    for (const m of messages) {
+      if (m.role === "user") {
+        asked.add(m.content);
+        context.push(m.content);
+      } else {
+        context.push(m.content);
+      }
+    }
+    return pickStarters(context.join(" "), locale, asked);
+  }, [messages, showStarters, locale]);
 
   return (
     <div className="chat-view">
@@ -444,9 +488,9 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           </div>
         )}
 
-        {showStarters && (
+        {showStarters && starters.length > 0 && (
           <div className="starter-chips">
-            {[t("starter1"), t("starter2"), t("starter3")].map((q) => (
+            {starters.map((q) => (
               <button key={q} className="chip" onClick={() => void sendText(q)}>
                 {q}
               </button>
@@ -528,7 +572,10 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
                   className={`pack-option ${
                     selectedPack.id === p.id ? "pack-option--on" : ""
                   }`}
-                  onClick={() => setSelectedPack(p)}
+                  onClick={() => {
+                    setSelectedPack(p);
+                    trackPackSelected(p.price);
+                  }}
                 >
                   <span className="pack-option__price">₹{p.price}</span>
                   <span className="pack-option__q">
@@ -544,7 +591,10 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             </button>
             <button
               className="gate-modal__ghost"
-              onClick={() => setShowPaywall(false)}
+              onClick={() => {
+                setShowPaywall(false);
+                trackPaywallDismissed();
+              }}
             >
               {t("notNow")}
             </button>
