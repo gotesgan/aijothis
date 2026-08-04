@@ -3,6 +3,7 @@ import { hasLocale } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import { Inter, Fraunces, Tiro_Devanagari_Marathi } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { routing } from "@/i18n/routing";
 import type { Metadata } from "next";
 import "../globals.css";
@@ -65,6 +66,7 @@ export default async function LocaleLayout({
         <NextIntlClientProvider>
           <div className="app-shell">{children}</div>
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );
