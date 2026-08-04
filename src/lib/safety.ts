@@ -13,7 +13,7 @@ export function detectCrisis(text: string): boolean {
 
 const CRISIS_REPLY: Record<string, string> = {
   en:
-    "I'm really glad you told me that, and please know you're not alone. 🙏 I'm an AI, so I'm not equipped for crisis support — but the people around you and professional help can make a real difference. Please reach out to someone you trust or a mental-health professional right now. In India, you can call the KIRAN helpline (1800-599-0019) or iCall (9152987821) — both free, confidential, and available 24/7. You matter, and things can get better. ❤️",
+    "I'm really glad you told me that, and please know you're not alone. 🙏 I'm an AI, so I'm not equipped for crisis support — but the people around you and professional help can make a real difference. Please reach out to someone you trust or a mental-health professional right now. In India, you can call the KIRAN helpline (1800-599-0019) or iCall (9152987821) — both confidential and available 24/7. You matter, and things can get better. ❤️",
   hi:
     "आपने यह मुझसे साझा किया, इसके लिए धन्यवाद — और कृपया जानें कि आप अकेले नहीं हैं। 🙏 मैं एक AI हूँ, इसलिए संकट सहायता के लिए सक्षम नहीं हूँ — लेकिन आपके आस-पास के लोग और पेशेवर मदद वाकई फर्क ला सकते हैं। कृपया अभी किसी भरोसेमंद व्यक्ति या मानसिक-स्वास्थ्य पेशेवर से संपर्क करें। भारत में आप KIRAN हेल्पलाइन (1800-599-0019) या iCall (9152987821) पर कॉल कर सकते हैं — दोनों मुफ्त और गोपनीय हैं। आपकी जिंदगी मायने रखती है, और चीज़ें बेहतर हो सकती हैं। ❤️",
   mr:

@@ -6,23 +6,30 @@ import { useRouter } from "@/i18n/navigation";
 import { saveKundli, getDeviceId } from "@/lib/storage";
 import type { KundliResult } from "@/lib/types";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Clock } from "lucide-react";
 
-export function DetailsForm() {
+export function DetailsForm({ initialQ }: { initialQ?: string }) {
   const t = useTranslations("Details");
   const locale = useLocale();
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [timeUnknown, setTimeUnknown] = useState(false);
   const [selected, setSelected] = useState<PlaceSelection | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const canSubmit =
-    name.trim() && date && time && selected && !submitting;
+  const canSubmit = name.trim() && date && time && selected && !submitting;
+
+  function toggleUnknownTime() {
+    setTimeUnknown((v) => {
+      const next = !v;
+      setTime(next ? "12:00" : "");
+      return next;
+    });
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,7 +46,6 @@ export function DetailsForm() {
         },
         body: JSON.stringify({
           name: name.trim(),
-          mobile: mobile.trim(),
           date,
           time,
           place: selected.place,
@@ -59,7 +65,7 @@ export function DetailsForm() {
 
       const kundli: KundliResult = data.kundli;
       saveKundli(kundli);
-      router.push("/chat");
+      router.push(initialQ ? { pathname: "/chat", query: { q: initialQ } } : "/chat");
     } catch (err) {
       setError((err as Error).message ?? "Network error. Please try again.");
       setSubmitting(false);
@@ -76,19 +82,6 @@ export function DetailsForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t("namePh")}
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{t("mobile")}</span>
-        <input
-          className="field__input"
-          type="tel"
-          inputMode="numeric"
-          maxLength={15}
-          value={mobile}
-          onChange={(e) => setMobile(e.target.value)}
-          placeholder="+91 98xxxxxxxx"
         />
       </label>
 
@@ -114,16 +107,26 @@ export function DetailsForm() {
         </label>
       </div>
 
+      <button
+        type="button"
+        className="time-toggle"
+        onClick={toggleUnknownTime}
+      >
+        <Clock size={15} />
+        {t("toggleUnknown")}
+      </button>
+      {timeUnknown && (
+        <p className="faint" style={{ fontSize: 12, marginTop: -8 }}>
+          {t("unknownTime")}
+        </p>
+      )}
+
       <PlaceAutocomplete
         label={t("pob")}
         placeholder={t("pobPh")}
         onSelect={setSelected}
         onEdit={() => setSelected(null)}
       />
-
-      <p className="faint" style={{ fontSize: 13 }}>
-        {t("unknownTime")}
-      </p>
 
       {error && (
         <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>
@@ -146,7 +149,7 @@ export function DetailsForm() {
       </button>
 
       <p className="faint" style={{ fontSize: 13, textAlign: "center" }}>
-        {t("submitNote")}
+        {t("noSignup")}
       </p>
     </form>
   );

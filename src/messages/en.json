@@ -19,7 +19,7 @@
     "title": "Your Kundli, decoded by Arya.",
     "titleHighlight": "Your destiny, in your hands.",
     "subtitle": "Arya, your AI Vedic astrologer, reads your birth chart and answers in seconds — love, career, marriage, money.",
-    "cta": "Generate My Free Kundli",
+    "cta": "Ask Arya",
     "stats1Value": "24/7",
     "stats1Label": "Instant replies",
     "stats2Value": "5M+",
@@ -35,7 +35,11 @@
     "how3Desc": "Chat with Arya and get answers personalised to your Dasha, not your sign.",
     "personaName": "Arya · Your AI Astrologer",
     "personaMeta": "Vedic engine · replies instantly · never judges",
-    "aiBadge": "Powered by AI"
+    "aiBadge": "Powered by AI",
+    "chip1": "When will I get married?",
+    "chip2": "Should I switch jobs?",
+    "chip3": "Will my salary increase?",
+    "sampleBubble": "Namaste 🙏 I'm Arya. Tell me what's on your mind — love, career, money — and I'll read your chart and answer you personally."
   },
   "Details": {
     "title": "Your Details",
@@ -50,7 +54,9 @@
     "submit": "Connect with Arya (AI)",
     "submitNote": "Arya builds your Vedic chart and personalises answers to your Dasha.",
     "back": "Back",
-    "mobile": "Mobile number (optional)"
+    "mobile": "Mobile number (optional)",
+    "noSignup": "No sign-up needed — takes 20 seconds",
+    "toggleUnknown": "Don't know exact time? Tap here"
   },
   "Kundli": {
     "title": "Your Kundli",
@@ -85,7 +91,7 @@
     "chart": "View chart",
     "needDetails": "To answer that personally, I need your birth details — date, time and place. Share them below 👇",
     "signupTitle": "Keep chatting with Arya",
-    "signupSub": "Your free question is done. Continue with Google to ask more.",
+    "signupSub": "Your first question is answered. Continue with Google to ask more.",
     "continueGoogle": "Continue with Google",
     "notNow": "Not now",
     "doneTitle": "Questions complete",
@@ -97,7 +103,11 @@
     "agreePrivacy": "Privacy Policy",
     "agreeTerms": "Terms & Conditions",
     "packQ": "questions",
-    "payBtn": "Pay"
+    "payBtn": "Pay",
+    "glance": "Here's your chart at a glance",
+    "starter1": "What about marriage timing?",
+    "starter2": "Tell me about my career",
+    "starter3": "Is this good for money?"
   },
   "Lang": {
     "label": "Language"

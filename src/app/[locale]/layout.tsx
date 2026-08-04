@@ -36,7 +36,7 @@ export async function generateMetadata({
     title: "Jyotish — AI Vedic Astrologer",
     description:
       locale === "en"
-        ? "Chat with Arya, your AI Vedic astrologer. Get your free Kundli in seconds."
+        ? "Chat with Arya, your AI Vedic astrologer. Get your personal Kundli in seconds."
         : locale === "hi"
           ? "आर्य से बात करें — आपका AI वैदिक ज्योतिषी। मुफ्त कुंडली सेकंडों में।"
           : "आर्यशी बोला — तुमचा AI वैदिक ज्योतिषी. मोफत कुंडली सेकंदात.",

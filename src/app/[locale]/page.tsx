@@ -38,6 +38,15 @@ export default async function HomePage({
           {t("title")} <em>{t("titleHighlight")}</em>
         </h1>
         <p className="hero__sub">{t("subtitle")}</p>
+
+        {/* sample Arya chat bubble — sets expectation it's a chat */}
+        <div className="chat-preview">
+          <span className="chat-preview__avatar">
+            <Image src="/arays.png" alt="AI" fill sizes="40px" className="avatar-img" />
+          </span>
+          <div className="msg msg--ai">{t("sampleBubble")}</div>
+        </div>
+
         <div className="hero__cta">
           <Link href="/details" className="btn btn--gold btn--lg">
             {t("cta")}
@@ -46,6 +55,19 @@ export default async function HomePage({
             <span className="badge badge--live">●</span>
             {t("stats1Value")} · {t("stats1Label")}
           </span>
+        </div>
+
+        {/* tappable question chips — carry the question into the funnel */}
+        <div className="hero-chips">
+          {[t("chip1"), t("chip2"), t("chip3")].map((q) => (
+            <Link
+              key={q}
+              href={{ pathname: "/details", query: { q } }}
+              className="chip"
+            >
+              {q}
+            </Link>
+          ))}
         </div>
       </section>
 

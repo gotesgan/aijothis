@@ -6,10 +6,13 @@ import { Link } from "@/i18n/navigation";
 
 export default async function DetailsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const { locale } = await params;
+  const { q } = await searchParams;
   setRequestLocale(locale);
   const t = await getTranslations("Details");
   const nav = await getTranslations("Nav");
@@ -36,7 +39,7 @@ export default async function DetailsPage({
         >
           {t("title")}
         </h1>
-        <DetailsForm />
+        <DetailsForm initialQ={q} />
       </div>
 
       <AppNav />
