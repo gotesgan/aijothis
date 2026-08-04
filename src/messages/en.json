@@ -104,7 +104,8 @@
     "agreeTerms": "Terms & Conditions",
     "packQ": "questions",
     "payBtn": "Pay",
-    "glance": "Here's your chart at a glance"
+    "glance": "Here's your chart at a glance",
+    "glanceAsk": "Ask me anything you'd like — love, career, money, anything on your mind."
   },
   "Lang": {
     "label": "Language"

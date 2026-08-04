@@ -400,7 +400,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           PLANET[locale][
             kundli.dasha.periods.find((p) => p.current)?.lord.toLowerCase() ?? ""
           ] ?? ""
-        }`
+        }\n\n${t("glanceAsk")}`
       : null;
 
   // Starter chips — context-aware, shown once the first reply has landed.
