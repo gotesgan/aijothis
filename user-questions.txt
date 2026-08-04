@@ -1,0 +1,173 @@
+======================================================================
+JYOTISH — ALL USER QUESTIONS (from Supabase messages table)
+Generated: 2026-08-04T20:00:22.429357
+======================================================================
+Total messages: 114  |  User messages: 57
+  → Real user questions: 42
+  → Auto-generated openers (boilerplate, ignore): 15
+  → Assistant replies: 57
+
+#====================================================================
+# REAL USER QUESTIONS
+#====================================================================
+
+1. [2026-08-03T19:44:23]
+Will I get married
+
+2. [2026-08-03T19:47:18]
+heelo
+
+3. [2026-08-03T19:48:26]
+will i get maaired
+
+4. [2026-08-03T23:38:00]
+माझ्या कुंडलीचा संक्षिप्त वैयक्तिक आढावा आणि आज कशावर लक्ष केंद्रित करावे, ते सांगा.
+
+5. [2026-08-04T03:14:44]
+What Best murth tim
+
+6. [2026-08-04T03:21:05]
+Rashi
+
+7. [2026-08-04T03:41:01]
+माझ्या कुंडलीचा संक्षिप्त वैयक्तिक आढावा आणि आज कशावर लक्ष केंद्रित करावे, ते सांगा.
+
+8. [2026-08-04T04:00:54]
+Carrier
+
+9. [2026-08-04T04:05:05]
+Money
+
+10. [2026-08-04T04:15:18]
+माझ्या कुंडलीचा संक्षिप्त वैयक्तिक आढावा आणि आज कशावर लक्ष केंद्रित करावे, ते सांगा.
+
+11. [2026-08-04T04:17:37]
+Money
+
+12. [2026-08-04T04:25:17]
+what willl be my next few months about my career
+
+13. [2026-08-04T04:26:05]
+माझ्या कुंडलीचा संक्षिप्त वैयक्तिक आढावा आणि आज कशावर लक्ष केंद्रित करावे, ते सांगा.
+
+14. [2026-08-04T04:26:46]
+Amd my kumdali
+
+15. [2026-08-04T04:30:16]
+give me the exact month about my career will i get new  job in month of auguest
+
+16. [2026-08-04T04:31:18]
+when will i get a better paying job
+
+17. [2026-08-04T04:36:38]
+what about my future plans ?
+
+18. [2026-08-04T04:37:55]
+yes
+
+19. [2026-08-04T04:39:44]
+yes
+
+20. [2026-08-04T04:40:08]
+when will i get sex
+
+21. [2026-08-04T04:40:55]
+yes
+
+22. [2026-08-04T04:41:07]
+yes
+
+23. [2026-08-04T04:41:33]
+no
+
+24. [2026-08-04T04:44:59]
+will i get that job in myprefferd loaction hinjewadi
+
+25. [2026-08-04T04:46:52]
+yes
+
+26. [2026-08-04T04:55:33]
+I want to ask regarding my job
+
+27. [2026-08-04T04:57:51]
+yes
+
+28. [2026-08-04T04:59:05]
+yes
+
+29. [2026-08-04T04:59:37]
+tell me about my job how will br going
+
+30. [2026-08-04T06:44:40]
+so when to switch?
+
+31. [2026-08-04T06:48:54]
+what is going on with my job currently?
+
+32. [2026-08-04T06:52:53]
+in which field my career has growth
+
+33. [2026-08-04T06:56:01]
+माझ्या कुंडलीचा संक्षिप्त वैयक्तिक आढावा आणि आज कशावर लक्ष केंद्रित करावे, ते सांगा.
+
+34. [2026-08-04T06:58:14]
+any new update or chances for new clients in our business?
+
+35. [2026-08-04T08:09:31]
+माझ्या कुंडलीचा संक्षिप्त वैयक्तिक आढावा आणि आज कशावर लक्ष केंद्रित करावे, ते सांगा.
+
+36. [2026-08-04T08:10:47]
+Thank you
+
+37. [2026-08-04T08:17:47]
+yes
+
+38. [2026-08-04T09:17:44]
+What future opportunities will I have?
+
+39. [2026-08-04T10:44:35]
+any new client update in our business?
+
+40. [2026-08-04T10:48:29]
+mai mera jo job hai abhi wo same as it is continue kar sakti hu kya at least a year?
+
+41. [2026-08-04T14:20:54]
+माझी राशी काय आहे
+
+42. [2026-08-04T14:26:36]
+माझे ऑगस्ट महिन्याचे भविष्य सांग
+
+
+#====================================================================
+# AUTO-GENERATED OPENERS (Arya's first message, not user-typed)
+#====================================================================
+
+1. [2026-08-03T19:43:29] Give me a brief personalised overview of my chart and what I should focus on today.
+
+2. [2026-08-04T03:19:05] Give me a brief personalised overview of my chart and what I should focus on today.
+
+3. [2026-08-04T04:03:07] Give me a brief personalised overview of my chart and what I should focus on today.
+
+4. [2026-08-04T04:23:27] Give me a brief personalised overview of my chart and what I should focus on today.
+
+5. [2026-08-04T04:29:54] Give me a brief personalised overview of my chart and what I should focus on today.
+
+6. [2026-08-04T04:31:18] Give me a brief personalised overview of my chart and what I should focus on today.
+
+7. [2026-08-04T04:33:26] Give me a brief personalised overview of my chart and what I should focus on today.
+
+8. [2026-08-04T04:37:22] Give me a brief personalised overview of my chart and what I should focus on today.
+
+9. [2026-08-04T04:57:45] Give me a brief personalised overview of my chart and what I should focus on today.
+
+10. [2026-08-04T05:05:14] Give me a brief personalised overview of my chart and what I should focus on today.
+
+11. [2026-08-04T06:51:41] Give me a brief personalised overview of my chart and what I should focus on today.
+
+12. [2026-08-04T08:16:02] Give me a brief personalised overview of my chart and what I should focus on today.
+
+13. [2026-08-04T08:58:41] Give me a brief personalised overview of my chart and what I should focus on today.
+
+14. [2026-08-04T09:12:40] Give me a brief personalised overview of my chart and what I should focus on today.
+
+15. [2026-08-04T14:20:23] Give me a brief personalised overview of my chart and what I should focus on today.

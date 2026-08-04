@@ -4,6 +4,7 @@ import { computeTransits } from "@/lib/transit";
 import { classifyTopic, getChartFocus } from "@/lib/routing";
 import { retrieveVedicContext } from "@/lib/rag";
 import { needsReflection, reflectOnAnswer } from "@/lib/reflection";
+import { detectCrisis, crisisReply } from "@/lib/safety";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { newUuid } from "@/lib/storage";
 import type { ChatMessage, KundliResult } from "@/lib/types";
@@ -28,6 +29,15 @@ export async function POST(request: Request) {
 
   if (!kundli || !Array.isArray(messages) || messages.length === 0) {
     return new Response("missing_chat_payload", { status: 400 });
+  }
+
+  // Safety guard: crisis/self-harm input → caring reply, no LLM call.
+  const latestUser = messages[messages.length - 1];
+  if (latestUser?.role === "user" && detectCrisis(latestUser.content)) {
+    const reply = crisisReply(lang ?? "en");
+    return new Response(reply, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
   }
 
   const encoder = new TextEncoder();
