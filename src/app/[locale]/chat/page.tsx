@@ -15,9 +15,22 @@ import { Send, Gem } from "lucide-react";
 
 const OPENING_KEY = "jyotish_opening_v1";
 const SIGNED_UP_KEY = "jyotish_signed_up_v1";
-const PAID20_KEY = "jyotish_paid20_v1";
+const PAID_Q_KEY = "jyotish_paid_questions_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
-const PAID_PACK = 20;
+
+interface QuestionPack {
+  id: string;
+  price: number;
+  questions: number;
+  popular?: boolean;
+}
+
+/** Pack menu — ₹10 to ₹30, more value per rupee at higher tiers. */
+const PACKS: QuestionPack[] = [
+  { id: "p10", price: 10, questions: 10 },
+  { id: "p20", price: 20, questions: 30, popular: true },
+  { id: "p30", price: 30, questions: 50 },
+];
 
 /** Loads Razorpay checkout and opens the payment sheet. */
 function openRazorpay(opts: {
@@ -133,11 +146,11 @@ export default function ChatPage() {
       typeof window !== "undefined" &&
       localStorage.getItem(SIGNED_UP_KEY) === "1"
   );
-  const [paid20, setPaid20] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      localStorage.getItem(PAID20_KEY) === "1"
-  );
+  const [paidQuestions, setPaidQuestions] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return Number(localStorage.getItem(PAID_Q_KEY) ?? 0) || 0;
+  });
+  const [selectedPack, setSelectedPack] = useState<QuestionPack>(PACKS[1]);
   const [askedCount, setAskedCount] = useState(0);
   const [showSignup, setShowSignup] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -214,12 +227,12 @@ export default function ChatPage() {
       setShowSignup(true);
       return;
     }
-    const limit = paid20 ? FREE_LIMIT + PAID_PACK : FREE_LIMIT;
+    const limit = FREE_LIMIT + paidQuestions;
     if (askedCount >= limit) {
-      if (paid20) {
+      if (paidQuestions > 0) {
         setExperimentDone(true);
       } else {
-        setShowPaywall(true); // used 5 questions → offer 20-question pack
+        setShowPaywall(true); // used free questions → offer a pack
       }
       return;
     }
@@ -262,33 +275,35 @@ export default function ChatPage() {
   }
 
   /** Buy the ₹15 / 20-question pack — real Razorpay checkout when keys are set. */
-  async function buy20() {
+  /** Buy the selected pack — real Razorpay checkout when keys are set. */
+  async function buyPack() {
     setShowPaywall(false);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "x-device-id": getDeviceId() },
+        body: JSON.stringify({ amountPaise: selectedPack.price * 100 }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "Order failed");
 
       if (data.simulated) {
         // Experiment path: grant immediately (no real payment yet).
-        grantPack();
+        grantPack(selectedPack.questions);
         return;
       }
 
       // Real Razorpay checkout.
       const ok = await openRazorpay(data);
-      if (ok) grantPack();
+      if (ok) grantPack(selectedPack.questions);
     } catch {
       setShowPaywall(true);
     }
   }
 
-  function grantPack() {
-    setPaid20(true);
-    localStorage.setItem(PAID20_KEY, "1");
+  function grantPack(questions: number) {
+    setPaidQuestions(questions);
+    localStorage.setItem(PAID_Q_KEY, String(questions));
   }
 
   async function open() {
@@ -455,11 +470,29 @@ export default function ChatPage() {
       {showPaywall && (
         <div className="gate-modal">
           <div className="gate-modal__card">
-            <span className="gate-modal__offer">₹15</span>
             <h2 className="gate-modal__title">{t("paywallTitle")}</h2>
             <p className="gate-modal__sub">{t("paywallSub")}</p>
-            <button className="btn btn--gold" onClick={buy20}>
-              {t("buy20")}
+
+            <div className="pack-list">
+              {PACKS.map((p) => (
+                <button
+                  key={p.id}
+                  className={`pack-option ${
+                    selectedPack.id === p.id ? "pack-option--on" : ""
+                  }`}
+                  onClick={() => setSelectedPack(p)}
+                >
+                  <span className="pack-option__price">₹{p.price}</span>
+                  <span className="pack-option__q">
+                    {p.questions} {t("packQ")}
+                  </span>
+                  {p.popular && <span className="badge badge--popular">Best value</span>}
+                </button>
+              ))}
+            </div>
+
+            <button className="btn btn--gold" onClick={buyPack}>
+              {t("payBtn")} ₹{selectedPack.price}
             </button>
             <button
               className="gate-modal__ghost"

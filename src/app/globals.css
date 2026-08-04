@@ -1268,6 +1268,34 @@ button {
   display: grid;
   place-items: center;
 }
+.pack-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.pack-option {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  background: var(--night-2);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 8px;
+}
+.pack-option--on {
+  border-color: var(--marigold);
+  background: var(--glow-marigold);
+}
+.pack-option__price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--gold);
+}
+.pack-option__q {
+  font-size: 0.72rem;
+  color: var(--ivory-muted);
+}
 .gate-modal__title {
   font-family: var(--stack-display);
   font-size: 1.35rem;

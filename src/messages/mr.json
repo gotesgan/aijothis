@@ -91,12 +91,13 @@
     "doneTitle": "Questions संपले",
     "doneSub": "तुम्ही सर्व questions वापरले. चाचणीसाठी धन्यवाद!",
     "simNote": "(Simulated signup — खरे करण्यासाठी Google Client ID जोडा)",
-    "paywallTitle": "आणखी 20 questions फक्त ₹15 मध्ये",
-    "paywallSub": "तुमचे free questions संपले. आर्यकडून आणखी 20 questions अनलॉक करा — एकदाचे ₹15.",
-    "buy20": "₹15 द्या · 20 questions",
+    "paywallTitle": "अधिक questions अनलॉक करा",
+    "paywallSub": "एक pack निवडा — एकदाचे पेमेंट. Questions कधीही expire होत नाहीत.",
     "agree": "पुढे जाताना तुम्ही सहमत आहात:",
     "agreePrivacy": "गोपनीयता धोरण",
-    "agreeTerms": "अटी व शर्ती"
+    "agreeTerms": "अटी व शर्ती",
+    "packQ": "questions",
+    "payBtn": "पैसे द्या"
   },
   "Lang": {
     "label": "भाषा"
