@@ -24,12 +24,14 @@ export function trackInitiateCheckout() {
   fbq()?.("track", "InitiateCheckout");
 }
 
-/** A pack was granted — value in INR. */
-export function trackPurchase(amountInRupees: number) {
-  fbq()?.("track", "Purchase", {
+/** A real pack was paid — value in INR. `eventId` enables Conversions API dedup. */
+export function trackPurchase(amountInRupees: number, eventId?: string) {
+  const params: Record<string, unknown> = {
     value: amountInRupees,
     currency: "INR",
-  });
+  };
+  if (eventId) params.event_id = eventId;
+  fbq()?.("track", "Purchase", params);
 }
 
 /** Custom event with optional params. */

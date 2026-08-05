@@ -369,20 +369,25 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       if (!res.ok) throw new Error(data.message ?? "Order failed");
 
       if (data.simulated) {
-        grantPack(selectedPack.questions);
+        // Experiment path: grant immediately, but do NOT fire a Purchase event —
+        // no real money changed hands, so it would pollute Meta's data.
+        grantPack(selectedPack.questions, false);
         return;
       }
       const ok = await openRazorpay(data);
-      if (ok) grantPack(selectedPack.questions);
+      if (ok) grantPack(selectedPack.questions, true, data.amount);
     } catch {
       setShowPaywall(true);
     }
   }
 
-  function grantPack(questions: number) {
+  function grantPack(questions: number, real = true, amountPaise?: number) {
     setPaidQuestions(questions);
     localStorage.setItem(PAID_Q_KEY, String(questions));
-    trackPurchase(selectedPack.price);
+    if (real) {
+      // Value = the actual order amount paid, not a hardcoded figure.
+      trackPurchase((amountPaise ?? selectedPack.price * 100) / 100, newUuid());
+    }
   }
 
   useEffect(() => {
