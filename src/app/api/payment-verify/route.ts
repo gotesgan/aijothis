@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Client-side checkout success → verifies the Razorpay signature,
- * then grants the 20-question pack (sets paid20_at on the profile).
+ * marks the order as paid, then grants the pack (sets paid20_at).
  */
 export async function POST(request: Request) {
   const deviceId = request.headers.get("x-device-id");
@@ -29,6 +29,21 @@ export async function POST(request: Request) {
 
   const admin = getSupabaseAdmin();
   if (admin) {
+    // Record the actual payment on the order row (non-fatal).
+    try {
+      await admin
+        .from("orders")
+        .update({
+          status: "paid",
+          payment_id: razorpay_payment_id,
+          signature: razorpay_signature,
+          verified_at: new Date().toISOString(),
+        })
+        .eq("order_id", razorpay_order_id);
+    } catch (err) {
+      console.warn("[supabase] order verify skipped:", (err as Error).message);
+    }
+
     const { error } = await admin
       .from("profiles")
       .update({ paid20_at: new Date().toISOString() })

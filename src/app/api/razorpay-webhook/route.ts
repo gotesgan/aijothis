@@ -23,11 +23,26 @@ export async function POST(request: Request) {
   }
 
   const orderId = event?.payload?.payment?.entity?.order_id as string | undefined;
+  const paymentId = event?.payload?.payment?.entity?.id as string | undefined;
   const deviceId = orderId ? await getOrderReceipt(orderId) : null;
 
   if (deviceId) {
     const admin = getSupabaseAdmin();
     if (admin) {
+      // Record the captured payment on the order row (non-fatal).
+      try {
+        await admin
+          .from("orders")
+          .update({
+            status: "paid",
+            payment_id: paymentId ?? null,
+            verified_at: new Date().toISOString(),
+          })
+          .eq("order_id", orderId);
+      } catch (err) {
+        console.warn("[supabase] order webhook skipped:", (err as Error).message);
+      }
+
       const { error } = await admin
         .from("profiles")
         .update({ paid20_at: new Date().toISOString() })

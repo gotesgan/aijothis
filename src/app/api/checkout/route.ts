@@ -18,10 +18,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_amount" }, { status: 400 });
   }
 
+  const packId = String(body?.packId ?? "");
+  const packQuestions = Number(body?.packQuestions ?? 0);
+
   // Real payment path.
   if (razorpayConfigured()) {
     try {
       const order = await createRazorpayOrder(deviceId, amountPaise);
+      await recordOrder({
+        deviceId,
+        amountPaise: order.amount,
+        currency: order.currency,
+        packId,
+        packQuestions,
+        orderId: order.id,
+        status: "created",
+      });
       return NextResponse.json({
         orderId: order.id,
         amount: order.amount,
@@ -47,5 +59,52 @@ export async function POST(request: Request) {
       .eq("device_id", deviceId);
     if (error) console.warn("[supabase] checkout record failed:", error.message);
   }
+  await recordOrder({
+    deviceId,
+    amountPaise,
+    currency: "INR",
+    packId,
+    packQuestions,
+    status: "simulated",
+  });
   return NextResponse.json({ simulated: true, ok: true });
+}
+
+/** Inserts an order row. Non-fatal — existing flow keeps working even if the
+ *  `orders` table doesn't exist yet (migration not applied). */
+async function recordOrder(params: {
+  deviceId: string;
+  amountPaise: number;
+  currency: string;
+  packId: string;
+  packQuestions: number;
+  orderId?: string;
+  status: "created" | "simulated" | "paid";
+}) {
+  const admin = getSupabaseAdmin();
+  if (!admin) return;
+  try {
+    // Link the profile when it exists.
+    let profileId: string | null = null;
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("device_id", params.deviceId)
+      .maybeSingle();
+    if (profile?.id) profileId = profile.id;
+
+    await admin.from("orders").insert({
+      device_id: params.deviceId,
+      profile_id: profileId,
+      amount_paise: params.amountPaise,
+      currency: params.currency,
+      pack_id: params.packId || null,
+      pack_questions: params.packQuestions || null,
+      order_id: params.orderId ?? null,
+      status: params.status,
+      verified_at: params.status === "simulated" ? new Date().toISOString() : null,
+    });
+  } catch (err) {
+    console.warn("[supabase] order record skipped:", (err as Error).message);
+  }
 }

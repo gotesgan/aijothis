@@ -363,7 +363,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "x-device-id": getDeviceId() },
-        body: JSON.stringify({ amountPaise: selectedPack.price * 100 }),
+        body: JSON.stringify({
+          amountPaise: selectedPack.price * 100,
+          packId: selectedPack.id,
+          packQuestions: selectedPack.questions,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "Order failed");
