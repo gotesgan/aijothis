@@ -26,7 +26,6 @@ import { BirthDetailsCard } from "@/components/birth-details-card";
 import { AppNav } from "@/components/app-nav";
 import { Send, Gem } from "lucide-react";
 
-const OPENING_KEY = "jyotish_opening_v1";
 const SIGNED_UP_KEY = "jyotish_signed_up_v1";
 const PAID_Q_KEY = "jyotish_paid_questions_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
@@ -338,19 +337,6 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     trackFirstAnswer();
   }
 
-  async function open() {
-    if (streaming) return;
-    setStreaming(true);
-    try {
-      await streamReply([{ role: "user", content: t("opener") }], []);
-      if (typeof window !== "undefined") localStorage.setItem(OPENING_KEY, "1");
-    } catch {
-      // ignore
-    } finally {
-      setStreaming(false);
-    }
-  }
-
   /** After the in-chat details form computes the chart: answer the pending question. */
   async function onDetailsComplete(newKundli: KundliResult) {
     saveKundli(newKundli);
@@ -371,18 +357,13 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     }
   }
 
-  // First message: if a question was carried from the landing, auto-send it.
-  // Otherwise Arya speaks a personalised opener (once per device).
+  // If a question was carried from the landing, auto-send it.
   useEffect(() => {
     if (!kundli) return;
     const timer = setTimeout(() => {
       if (initialQ && !initialSentRef.current) {
         initialSentRef.current = true;
         void sendText(initialQ);
-        return;
-      }
-      if (!initialQ && messages.length === 0 && !localStorage.getItem(OPENING_KEY)) {
-        void open();
       }
     }, 400);
     return () => clearTimeout(timer);
@@ -403,13 +384,13 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         }\n\n${t("glanceAsk")}`
       : null;
 
-  // Starter chips — context-aware, shown once the first reply has landed.
+  // Starter chips — shown from the very start (empty chat) and after each reply.
   const showStarters =
     !!kundli &&
-    messages.length > 0 &&
+    !needDetails &&
     !streaming &&
     !experimentDone &&
-    messages[messages.length - 1]?.role === "assistant";
+    (messages.length === 0 || messages[messages.length - 1]?.role === "assistant");
 
   const starters = useMemo(() => {
     if (!showStarters) return [];
