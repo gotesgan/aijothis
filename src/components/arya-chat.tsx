@@ -28,6 +28,7 @@ import { Send, Gem } from "lucide-react";
 
 const SIGNED_UP_KEY = "jyotish_signed_up_v1";
 const PAID_Q_KEY = "jyotish_paid_questions_v1";
+const ASKED_KEY = "jyotish_asked_count_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
 
 interface QuestionPack {
@@ -163,13 +164,25 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     return Number(localStorage.getItem(PAID_Q_KEY) ?? 0) || 0;
   });
   const [selectedPack, setSelectedPack] = useState<QuestionPack>(PACKS[1]);
-  const [askedCount, setAskedCount] = useState(0);
+  const [askedCount, setAskedCount] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return Number(localStorage.getItem(ASKED_KEY) ?? 0) || 0;
+  });
   const [showSignup, setShowSignup] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [experimentDone, setExperimentDone] = useState(false);
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const initialSentRef = useRef(false);
+
+  /** Increment + persist the asked-question counter so the gate survives refreshes. */
+  function bumpAskedCount() {
+    setAskedCount((c) => {
+      const n = c + 1;
+      localStorage.setItem(ASKED_KEY, String(n));
+      return n;
+    });
+  }
 
   useEffect(() => {
     bodyRef.current?.scrollTo({
@@ -252,7 +265,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
 
     const next: ChatMessage[] = [...messages, { role: "user", content: text }];
     setMessages([...next, { role: "assistant", content: "" }]);
-    setAskedCount((c) => c + 1);
+    bumpAskedCount();
     setStreaming(true);
     try {
       await streamReply(next, next);
@@ -345,7 +358,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     const display = messages;
     setNeedDetails(false);
     setPendingQuestion("");
-    setAskedCount((c) => c + 1);
+    bumpAskedCount();
     setStreaming(true);
     try {
       await streamReply([{ role: "user", content: question }], display, newKundli);
