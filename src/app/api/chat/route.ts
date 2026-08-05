@@ -1,5 +1,5 @@
 import { streamChatCompletion } from "@/lib/llm";
-import { buildSystemPrompt } from "@/lib/prompt";
+import { buildSystemPrompt, extractTimingStatements } from "@/lib/prompt";
 import { computeTransits } from "@/lib/transit";
 import { classifyTopic, getChartFocus } from "@/lib/routing";
 import { retrieveVedicContext } from "@/lib/rag";
@@ -14,6 +14,12 @@ export const dynamic = "force-dynamic";
 
 /** Sentinel the client watches for to replace the streamed draft. */
 export const REFINE_MARKER = "\n[[REFINED]]\n";
+
+/** How much recent conversation to send to the model (keeps context, limits cost). */
+const HISTORY_WINDOW = 30;
+
+/** Minimum answer length before we consider a stream a silent failure. */
+const MIN_DRAFT = 20;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -67,9 +73,17 @@ export async function POST(request: Request) {
     vedicChunks
   );
 
+  // Keep prior timing windows visible even when history is truncated.
+  const priorWindows = extractTimingStatements(messages);
+  const systemWithHistory =
+    system +
+    (priorWindows
+      ? `\n\nPREVIOUS TIMING STATEMENTS FROM THIS CHAT (you MUST stay consistent with these — if the user asks for timing again, repeat the most recent relevant window and only add detail, never a different month/year):\n${priorWindows}`
+      : "");
+
   const llmMessages = [
-    { role: "system" as const, content: system },
-    ...messages.slice(-12).map((m) => ({
+    { role: "system" as const, content: systemWithHistory },
+    ...messages.slice(-HISTORY_WINDOW).map((m) => ({
       role: m.role,
       content: m.content,
     })),
@@ -80,25 +94,49 @@ export async function POST(request: Request) {
       let draft = "";
 
       // 4) Compose node: stream Arya's draft answer.
-      await streamChatCompletion({
-        messages: llmMessages,
-        onToken: (token) => {
-          draft += token;
-          controller.enqueue(encoder.encode(token));
-        },
-        onUsage: (u) => {
-          console.log(
-            `[aryad] device=${deviceId} model=${process.env.LLM_MODEL ?? "-"} ` +
-              `prompt=${u.promptTokens} cached=${u.cachedTokens} ` +
-              `completion=${u.completionTokens} reasoning=${u.reasoningTokens} total=${u.totalTokens}`
-          );
-        },
-      }).catch((err) => {
-        const msg = (err as Error).message;
-        controller.enqueue(
-          encoder.encode(`\n\n[Oops, something went wrong: ${msg}]`)
+      //    `live` streams tokens to the client; retries buffer silently so a
+      //    failed attempt can't leave a half-written/empty bubble behind.
+      const attempt = async (live: boolean) => {
+        await streamChatCompletion({
+          messages: llmMessages,
+          onToken: (token) => {
+            draft += token;
+            if (live) controller.enqueue(encoder.encode(token));
+          },
+          onUsage: (u) => {
+            console.log(
+              `[aryad] device=${deviceId} model=${process.env.LLM_MODEL ?? "-"} ` +
+                `prompt=${u.promptTokens} cached=${u.cachedTokens} ` +
+                `completion=${u.completionTokens} reasoning=${u.reasoningTokens} total=${u.totalTokens}`
+            );
+          },
+        });
+      };
+
+      try {
+        await attempt(true);
+      } catch (err) {
+        console.warn("[aryad] compose attempt 1 failed:", (err as Error).message);
+        draft = "";
+      }
+
+      if (draft.trim().length < MIN_DRAFT) {
+        console.warn(
+          `[aryad] draft too short (${draft.length} chars), retrying silently`
         );
-      });
+        draft = "";
+        try {
+          await attempt(false);
+        } catch (err) {
+          console.warn("[aryad] retry failed:", (err as Error).message);
+          draft = "";
+        }
+      }
+
+      if (draft.trim().length < MIN_DRAFT) {
+        draft = "Hmm, the stars got a bit tangled there 🙏 Mind asking that again?";
+        controller.enqueue(encoder.encode(draft));
+      }
 
       // 5) Reflection node: fact-check the draft against the real chart.
       let final = draft;

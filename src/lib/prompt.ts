@@ -97,7 +97,8 @@ RULES:
 10. CONSISTENCY ACROSS THE CHAT — The conversation history above contains your earlier answers. NEVER contradict a timing window, month/year, Dasha, or placement you already gave in this chat. If the user re-asks the same question (marriage timing, job, money, etc.), re-confirm and refine your earlier window — never announce a different month or year than before. When in doubt, keep the earlier answer.`;
 }
 
-function formatNow(now: Date, timezone: string): string {  const weekday = now.toLocaleDateString("en-GB", {
+function formatNow(now: Date, timezone: string): string {
+  const weekday = now.toLocaleDateString("en-GB", {
     weekday: "long",
     timeZone: timezone,
   });
@@ -178,5 +179,28 @@ Guidelines per section (40–60 words each):
 - wealth: 2nd and 11th houses, Jupiter, current transits to those houses.
 - health: lagna strength, Moon, 6th/8th house; gentle care advice, never diagnose.
 
-Be warm, specific, practical, and reference the user's own placements — never generic sign-level astrology.`;
+  Be warm, specific, practical, and reference the user's own placements — never generic sign-level astrology.`;
+}
+
+/**
+ * Scans all prior assistant answers for sentences that mention a year, so the
+ * model can stay consistent with windows it already gave — even in long chats
+ * where the raw history is truncated.
+ */
+export function extractTimingStatements(
+  messages: { role: string; content: string }[],
+  max = 4
+): string {
+  const out: string[] = [];
+  for (const m of messages) {
+    if (m.role !== "assistant" || out.length >= max) continue;
+    const sentences = m.content.split(/(?<=[.!?])\s+/);
+    for (const s of sentences) {
+      if (/\b20\d\d\b/.test(s)) {
+        out.push(s.replace(/\s+/g, " ").trim());
+        if (out.length >= max) break;
+      }
+    }
+  }
+  return out.join("\n");
 }
