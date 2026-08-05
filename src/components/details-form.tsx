@@ -6,7 +6,7 @@ import { saveKundli, getDeviceId } from "@/lib/storage";
 import { trackLead, trackQuestionChip } from "@/lib/pixel";
 import type { KundliResult } from "@/lib/types";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
-import { ArrowRight, Loader2, Clock } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 export function DetailsForm({ initialQ }: { initialQ?: string }) {
   const t = useTranslations("Details");
@@ -16,25 +16,19 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [timeUnknown, setTimeUnknown] = useState(false);
   const [selected, setSelected] = useState<PlaceSelection | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const canSubmit = name.trim() && date && time && selected && !submitting;
+  const canSubmit = name.trim() && date && selected && !submitting;
+
+  // Time is optional — if empty we use the standard 12:00 noon default.
+  const effectiveTime = time || "12:00";
 
   // A carried question means the user came in via a landing chip.
   useEffect(() => {
     if (initialQ) trackQuestionChip(initialQ);
   }, [initialQ]);
-
-  function toggleUnknownTime() {
-    setTimeUnknown((v) => {
-      const next = !v;
-      setTime(next ? "12:00" : "");
-      return next;
-    });
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,7 +46,7 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
         body: JSON.stringify({
           name: name.trim(),
           date,
-          time,
+          time: effectiveTime,
           place: selected.place,
           lat: selected.lat,
           lng: selected.lng,
@@ -116,15 +110,7 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
         </label>
       </div>
 
-      <button
-        type="button"
-        className="time-toggle"
-        onClick={toggleUnknownTime}
-      >
-        <Clock size={15} />
-        {t("toggleUnknown")}
-      </button>
-      {timeUnknown && (
+      {!time && (
         <p className="faint" style={{ fontSize: 12, marginTop: -8 }}>
           {t("unknownTime")}
         </p>

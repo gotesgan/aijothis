@@ -37,7 +37,10 @@ export function MatchCard({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const canSubmit = date && time && selected && !submitting;
+  const canSubmit = date && selected && !submitting;
+
+  // Time is optional — if empty we use the standard 12:00 noon default.
+  const effectiveTime = time || "12:00";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +57,7 @@ export function MatchCard({
         body: JSON.stringify({
           name: name.trim() || "Partner",
           date,
-          time,
+          time: effectiveTime,
           place: selected.place,
           lat: selected.lat,
           lng: selected.lng,
@@ -113,6 +116,12 @@ export function MatchCard({
           />
         </label>
       </div>
+
+      {!time && (
+        <p className="faint" style={{ fontSize: 12, marginTop: -8 }}>
+          {t("unknownTime")}
+        </p>
+      )}
 
       <PlaceAutocomplete
         label={t("pob")}
