@@ -102,6 +102,7 @@ function runGoogleIdentity(clientId: string): Promise<boolean> {
     const finish = (ok: boolean) => {
       if (settled) return;
       settled = true;
+      clearTimeout(timeout);
       try {
         const g = (window as unknown as {
           google?: { accounts?: { id?: { cancel: () => void } } };
@@ -112,6 +113,10 @@ function runGoogleIdentity(clientId: string): Promise<boolean> {
       }
       resolve(ok);
     };
+
+    // Never let the signup hang — if Google Identity doesn't respond in time,
+    // resolve false so the caller can fall back gracefully.
+    const timeout = setTimeout(() => finish(false), 12000);
 
     const done = () => {
       const g = (window as unknown as {
@@ -330,7 +335,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (clientId) {
       const ok = await runGoogleIdentity(clientId);
-      if (!ok) return;
+      if (!ok) {
+        // Google Identity failed or timed out — don't dead-end the user.
+        // Fall back to a graceful signup so the chat can continue.
+        console.warn("[aryad] google identity unavailable; simulated signup");
+      }
     }
     setSignedUp(true);
     localStorage.setItem(SIGNED_UP_KEY, "1");

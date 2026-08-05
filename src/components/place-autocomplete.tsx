@@ -30,6 +30,8 @@ export function PlaceAutocomplete({
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<GeocodeResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [googleFailed, setGoogleFailed] = useState(false);
+  const [picked, setPicked] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSelectedRef = useRef("");
 
@@ -39,6 +41,12 @@ export function PlaceAutocomplete({
 
     setOptions({ key: apiKey, language: "en" });
     let disposed = false;
+
+    // If Google doesn't come up quickly, fall back to Open-Meteo so the user
+    // is never stuck unable to pick a place (the cause of the rage-click loop).
+    const timeout = setTimeout(() => {
+      if (!disposed) setGoogleFailed(true);
+    }, 7000);
 
     importLibrary("places")
       .then(async (places) => {
@@ -61,21 +69,25 @@ export function PlaceAutocomplete({
 
           const timezone = await resolveTimezone(lat, lng);
           lastSelectedRef.current = address;
+          setPicked(true);
           onSelect({ place: address, lat, lng, timezone });
         });
       })
       .catch(() => {
-        // Fall through to the Open-Meteo search if the Google script fails.
-      });
+        // Google script failed → use the Open-Meteo fallback.
+        if (!disposed) setGoogleFailed(true);
+      })
+      .finally(() => clearTimeout(timeout));
 
     return () => {
       disposed = true;
+      clearTimeout(timeout);
     };
   }, [apiKey, onSelect]);
 
-  /* ── Open-Meteo fallback search (no Google key) ── */
+  /* ── Open-Meteo fallback search (no Google key, or Google failed) ── */
   useEffect(() => {
-    if (apiKey) return;
+    if (apiKey && !googleFailed) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (query.trim().length < 3) return;
 
@@ -89,7 +101,26 @@ export function PlaceAutocomplete({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, apiKey]);
+  }, [query, apiKey, googleFailed]);
+
+  const showFallbackList = !apiKey || googleFailed;
+  const showManual =
+    query.trim().length >= 3 && !picked;
+
+  async function pickManual(text: string) {
+    const res = await geocodePlace(text);
+    if (!res.length) return;
+    onSelect({
+      place: res[0].place,
+      lat: res[0].lat,
+      lng: res[0].lng,
+      timezone: res[0].timezone,
+    });
+    lastSelectedRef.current = res[0].place;
+    setQuery(res[0].place);
+    setPicked(true);
+    setSuggestions([]);
+  }
 
   return (
     <div className="field">
@@ -99,21 +130,32 @@ export function PlaceAutocomplete({
         className="field__input"
         type="text"
         placeholder={placeholder}
-        value={apiKey ? undefined : query}
+        value={showFallbackList ? query : undefined}
         onChange={(e) => {
           const next = e.target.value;
-          if (!apiKey) setQuery(next);
+          setQuery(next);
           // Clear a previously chosen place when the text is edited away.
           if (lastSelectedRef.current && next !== lastSelectedRef.current) {
             lastSelectedRef.current = "";
+            setPicked(false);
             onEdit();
           }
         }}
       />
 
-      {!apiKey && (searching || suggestions.length > 0) && (
+      {(showFallbackList || showManual) && (
         <div className="place-suggest">
-          {searching && (
+          {showManual && (
+            <button
+              type="button"
+              className="place-suggest__item"
+              onClick={() => void pickManual(query.trim())}
+            >
+              <MapPin size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+              Use “{query.trim()}”
+            </button>
+          )}
+          {showFallbackList && searching && (
             <span
               className="place-suggest__item faint"
               style={{ display: "flex", gap: 8, alignItems: "center" }}
@@ -121,27 +163,29 @@ export function PlaceAutocomplete({
               <Loader2 size={14} className="spin" /> …
             </span>
           )}
-          {suggestions.map((s, i) => (
-            <button
-              type="button"
-              key={i}
-              className="place-suggest__item"
-              onClick={() => {
-                onSelect({
-                  place: s.place,
-                  lat: s.lat,
-                  lng: s.lng,
-                  timezone: s.timezone,
-                });
-                lastSelectedRef.current = s.place;
-                setQuery(s.place);
-                setSuggestions([]);
-              }}
-            >
-              <MapPin size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
-              {s.place}
-            </button>
-          ))}
+          {showFallbackList &&
+            suggestions.map((s, i) => (
+              <button
+                type="button"
+                key={i}
+                className="place-suggest__item"
+                onClick={() => {
+                  onSelect({
+                    place: s.place,
+                    lat: s.lat,
+                    lng: s.lng,
+                    timezone: s.timezone,
+                  });
+                  lastSelectedRef.current = s.place;
+                  setQuery(s.place);
+                  setPicked(true);
+                  setSuggestions([]);
+                }}
+              >
+                <MapPin size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+                {s.place}
+              </button>
+            ))}
         </div>
       )}
     </div>
