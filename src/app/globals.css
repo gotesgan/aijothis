@@ -634,6 +634,61 @@ button {
   font-size: 0.86rem;
 }
 
+/* kundli matching */
+.match-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #ff9db1;
+  margin-bottom: 6px;
+}
+.match-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.match-row {
+  display: flex;
+  justify-content: center;
+  padding: 2px 0 4px;
+}
+.match-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: rgba(255, 157, 177, 0.5);
+  color: #ffb3c4;
+}
+.match-chip:hover {
+  border-color: #ff9db1;
+  background: rgba(255, 157, 177, 0.08);
+}
+.match-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 157, 177, 0.45);
+  background: rgba(255, 157, 177, 0.08);
+  color: #ffc3d0;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.match-bar__clear {
+  display: inline-flex;
+  align-items: center;
+  color: #ff9db1;
+  margin-left: 2px;
+  padding: 2px;
+}
+.match-bar__clear:hover {
+  color: #fff;
+}
+
 /* stats — hairline-divided row, not boxes */.stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

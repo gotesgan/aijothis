@@ -4,6 +4,7 @@ import type { TransitPosition } from "./transit";
 import { formatTransits } from "./transit";
 import type { ChartFocus } from "./routing";
 import { ordinalList } from "./routing";
+import type { MatchScore } from "./ashtakoota";
 
 const LANG_NAMES: Record<string, string> = {
   en: "English",
@@ -11,13 +12,20 @@ const LANG_NAMES: Record<string, string> = {
   mr: "Marathi",
 };
 
+/** Optional second chart for kundli-matching (compatibility) questions. */
+export interface MatchContext {
+  kundli: KundliResult;
+  score: MatchScore;
+}
+
 export function buildSystemPrompt(
   kundli: KundliResult,
   lang: string,
   now: Date = new Date(),
   transits?: TransitPosition[],
   focus?: ChartFocus,
-  vedicChunks: string[] = []
+  vedicChunks: string[] = [],
+  match?: MatchContext
 ): string {
   const c = kundli.computed;
   const current = kundli.dasha.periods.find((p) => p.current);
@@ -74,7 +82,7 @@ THE USER'S CHART:
 
 PLANET POSITIONS:
 ${planetLines}
-
+${match ? buildMatchSection(kundli, match.kundli, match.score) : ""}
 RULES:
 1. Reply in the user's language and script (English, Hindi, or Marathi). For Hindi and Marathi: write in Devanagari, but speak like a normal Indian person — freely mix everyday English words into the sentence (job, career, love, marriage, money, health, relationship, question, lucky, date, month, family, partner, etc.). NEVER use stiff, pure, or textbook Hindi/Marathi.
 2. Ground every prediction in the chart above AND the retrieved Vedic knowledge. If a question can't be answered from the chart, say so honestly and gently.
@@ -95,6 +103,39 @@ RULES:
    - Keep intimate/relationship topics respectful, tasteful, and non-explicit — answer with maturity, never sexual content.
    - Never encourage self-harm or harm to others. If a user seems distressed or mentions self-harm, respond with warmth and encourage reaching out to a trusted person or professional.
 10. CONSISTENCY ACROSS THE CHAT — The conversation history above contains your earlier answers. NEVER contradict a timing window, month/year, Dasha, or placement you already gave in this chat. If the user re-asks the same question (marriage timing, job, money, etc.), re-confirm and refine your earlier window — never announce a different month or year than before. When in doubt, keep the earlier answer.`;
+}
+
+/** Compatibility section appended to the system prompt when matching is active. */
+function buildMatchSection(
+  user: KundliResult,
+  partner: KundliResult,
+  score: MatchScore
+): string {
+  const uc = user.computed;
+  const pc = partner.computed;
+  const up = user.planets.find((p) => p.name.toLowerCase() === "venus");
+  const pp = partner.planets.find((p) => p.name.toLowerCase() === "venus");
+  const uh7 = user.planets.find((p) => p.house === 7);
+  const ph7 = partner.planets.find((p) => p.house === 7);
+  const breakdown = score.parts
+    .map((p) => `${p.label} ${p.gained}/${p.max}`)
+    .join(", ");
+  return `
+KUNDLI MATCHING — the user is asking about their compatibility with ${partner.profile.name || "the partner"}. Answer the user's question grounded in BOTH charts below and the Ashtakoota score. Never invent placements for either chart.
+
+USER (${user.profile.name || "the user"}):
+- Lagna ${RASHI_NAMES[uc.lagnaRashi]}, Moon ${RASHI_NAMES[uc.moonRashi]} (${NAKSHATRA_NAMES[uc.moonNakshatra]}), Sun ${RASHI_NAMES[uc.sunRashi]}
+- 7th house: ${uh7 ? `${uh7.name} in ${RASHI_NAMES[uh7.rashi]}` : "—"}
+- Venus: ${up ? `${up.name} in ${RASHI_NAMES[up.rashi]} (${up.house}${up.house === 1 ? "st" : "th"} house)` : "—"}
+
+PARTNER (${partner.profile.name || "the partner"}):
+- Lagna ${RASHI_NAMES[pc.lagnaRashi]}, Moon ${RASHI_NAMES[pc.moonRashi]} (${NAKSHATRA_NAMES[pc.moonNakshatra]}), Sun ${RASHI_NAMES[pc.sunRashi]}
+- 7th house: ${ph7 ? `${ph7.name} in ${RASHI_NAMES[ph7.rashi]}` : "—"}
+- Venus: ${pp ? `${pp.name} in ${RASHI_NAMES[pp.rashi]} (${pp.house}${pp.house === 1 ? "st" : "th"} house)` : "—"}
+
+ASHTAKOOTA (guna milan): ${score.total}/36 — ${score.verdict}
+Breakdown: ${breakdown}
+`;
 }
 
 function formatNow(now: Date, timezone: string): string {

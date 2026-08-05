@@ -6,6 +6,7 @@ import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
 import { getDeviceId, getOrCreateChatId, newUuid, saveKundli } from "@/lib/storage";
+import { detectMatchRequest } from "@/lib/match";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import { pickStarters } from "@/lib/starters";
 import {
@@ -23,12 +24,14 @@ import type { ChatMessage, KundliResult } from "@/lib/types";
 import Image from "next/image";
 import { ChatMarkdown } from "@/components/chat-markdown";
 import { BirthDetailsCard } from "@/components/birth-details-card";
+import { MatchCard, type MatchPrefill } from "@/components/match-card";
 import { AppNav } from "@/components/app-nav";
-import { Send, Gem } from "lucide-react";
+import { Send, Gem, Heart, X } from "lucide-react";
 
 const SIGNED_UP_KEY = "jyotish_signed_up_v1";
 const PAID_Q_KEY = "jyotish_paid_questions_v1";
 const ASKED_KEY = "jyotish_asked_count_v1";
+const MATCH_KEY = "jyotish_match_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
 
 interface QuestionPack {
@@ -144,6 +147,7 @@ function runGoogleIdentity(clientId: string): Promise<boolean> {
 
 export function AryaChat({ initialQ }: { initialQ?: string }) {
   const t = useTranslations("Chat");
+  const tm = useTranslations("Match");
   const locale = useLocale() as Locale;
   const router = useRouter();
   const kundli = useKundli();
@@ -172,6 +176,20 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   const [showPaywall, setShowPaywall] = useState(false);
   const [experimentDone, setExperimentDone] = useState(false);
 
+  // Kundli matching state.
+  const [matchCard, setMatchCard] = useState<MatchPrefill | null>(null);
+  const [matchCardOpen, setMatchCardOpen] = useState(false);
+  const [matchKundli, setMatchKundli] = useState<KundliResult | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(MATCH_KEY);
+      return raw ? (JSON.parse(raw) as KundliResult) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [pendingMatch, setPendingMatch] = useState("");
+
   const bodyRef = useRef<HTMLDivElement>(null);
   const initialSentRef = useRef(false);
 
@@ -195,7 +213,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   async function streamReply(
     apiMessages: ChatMessage[],
     display: ChatMessage[],
-    chart: KundliResult | null = kundli
+    chart: KundliResult | null = kundli,
+    matchChart: KundliResult | null = matchKundli
   ) {
     const chatId = getOrCreateChatId();
     const messageId = newUuid();
@@ -205,7 +224,14 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         "Content-Type": "application/json",
         "x-device-id": getDeviceId(),
       },
-      body: JSON.stringify({ kundli: chart, messages: apiMessages, lang: locale, chatId, messageId }),
+      body: JSON.stringify({
+        kundli: chart,
+        messages: apiMessages,
+        lang: locale,
+        chatId,
+        messageId,
+        matchKundli: matchChart ?? undefined,
+      }),
     });
 
     if (!res.ok || !res.body) throw new Error("Bad response");
@@ -245,6 +271,18 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       setPendingQuestion(text);
       const next: ChatMessage[] = [...messages, { role: "user", content: text }];
       setMessages([...next, { role: "assistant", content: t("needDetails") }]);
+      return;
+    }
+
+    // Kundli matching: if the message carries another person's birth details,
+    // open the match card (pre-filled) instead of answering from one chart.
+    const detected = detectMatchRequest(text, kundli.profile.date);
+    if (detected) {
+      setMatchCard({ name: detected.name, date: detected.date, time: detected.time });
+      setMatchCardOpen(true);
+      setPendingMatch(text);
+      const next: ChatMessage[] = [...messages, { role: "user", content: text }];
+      setMessages([...next, { role: "assistant", content: tm("matchPrompt") }]);
       return;
     }
 
@@ -370,6 +408,34 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     }
   }
 
+  /** After the match card computes the partner chart: answer the held question. */
+  async function onMatchComplete(partner: KundliResult) {
+    setMatchKundli(partner);
+    localStorage.setItem(MATCH_KEY, JSON.stringify(partner));
+    const question = pendingMatch;
+    const display = messages;
+    setMatchCard(null);
+    setMatchCardOpen(false);
+    setPendingMatch("");
+    bumpAskedCount();
+    setStreaming(true);
+    try {
+      await streamReply([{ role: "user", content: question }], display, kundli, partner);
+      maybeFireFirstAnswer();
+    } catch {
+      // ignore
+    } finally {
+      setStreaming(false);
+    }
+  }
+
+  function clearMatch() {
+    setMatchKundli(null);
+    setMatchCard(null);
+    setMatchCardOpen(false);
+    localStorage.removeItem(MATCH_KEY);
+  }
+
   // If a question was carried from the landing, auto-send it.
   useEffect(() => {
     if (!kundli) return;
@@ -482,6 +548,19 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           </div>
         )}
 
+        {matchCardOpen && kundli && (
+          <div className="birth-card-wrap">
+            <MatchCard
+              prefill={matchCard ?? undefined}
+              onComplete={onMatchComplete}
+              onCancel={() => {
+                setMatchCardOpen(false);
+                setMatchCard(null);
+              }}
+            />
+          </div>
+        )}
+
         {showStarters && starters.length > 0 && (
           <div className="starter-chips">
             {starters.map((q) => (
@@ -489,6 +568,33 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
                 {q}
               </button>
             ))}
+          </div>
+        )}
+
+        {kundli && !needDetails && !matchCardOpen && (
+          <div className="match-row">
+            {matchKundli ? (
+              <div className="match-bar">
+                <Heart size={13} />
+                <span>
+                  {tm("matchingWith")} {matchKundli.profile.name || "Partner"} ·{" "}
+                  {matchKundli.computed.moonNakshatra !== undefined ? RASHI[locale][matchKundli.computed.moonRashi] : ""}
+                </span>
+                <button className="match-bar__clear" onClick={clearMatch} aria-label={tm("clear")}>
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                className="chip match-chip"
+                onClick={() => {
+                  setMatchCard({});
+                  setMatchCardOpen(true);
+                }}
+              >
+                <Heart size={13} /> {tm("matchChip")}
+              </button>
+            )}
           </div>
         )}
 

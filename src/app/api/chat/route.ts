@@ -5,6 +5,7 @@ import { classifyTopic, getChartFocus } from "@/lib/routing";
 import { retrieveVedicContext } from "@/lib/rag";
 import { needsReflection, reflectOnAnswer } from "@/lib/reflection";
 import { detectCrisis, crisisReply } from "@/lib/safety";
+import { ashtakoota } from "@/lib/ashtakoota";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { newUuid } from "@/lib/storage";
 import type { ChatMessage, KundliResult } from "@/lib/types";
@@ -25,12 +26,13 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body) return new Response("invalid_json", { status: 400 });
 
-  const { kundli, messages, lang, chatId, messageId }: {
+  const { kundli, messages, lang, chatId, messageId, matchKundli }: {
     kundli: KundliResult;
     messages: ChatMessage[];
     lang: string;
     chatId?: string;
     messageId?: string;
+    matchKundli?: KundliResult;
   } = body;
 
   if (!kundli || !Array.isArray(messages) || messages.length === 0) {
@@ -64,13 +66,38 @@ export async function POST(request: Request) {
   // 3) RAG node: retrieve authoritative Vedic knowledge for this topic/chart.
   const vedicChunks = retrieveVedicContext({ focus, kundli });
 
+  // Optional kundli-matching: score both charts and ground the answer in both.
+  let matchCtx: { kundli: KundliResult; score: ReturnType<typeof ashtakoota> } | undefined;
+  if (matchKundli && matchKundli.computed) {
+    try {
+      matchCtx = {
+        kundli: matchKundli,
+        score: ashtakoota(
+          {
+            moonRashi: kundli.computed.moonRashi,
+            moonNakshatra: kundli.computed.moonNakshatra,
+            moonNakshatraPad: kundli.computed.moonNakshatraPad,
+          },
+          {
+            moonRashi: matchKundli.computed.moonRashi,
+            moonNakshatra: matchKundli.computed.moonNakshatra,
+            moonNakshatraPad: matchKundli.computed.moonNakshatraPad,
+          }
+        ),
+      };
+    } catch (err) {
+      console.warn("[aryad] match scoring failed:", (err as Error).message);
+    }
+  }
+
   const system = buildSystemPrompt(
     kundli,
     lang ?? "en",
     now,
     transits,
     focus,
-    vedicChunks
+    vedicChunks,
+    matchCtx
   );
 
   // Keep prior timing windows visible even when history is truncated.

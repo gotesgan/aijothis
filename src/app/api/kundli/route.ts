@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const { name, date, time, place, lat, lng, timezone, lang, mobile } = body;
+  const { name, date, time, place, lat, lng, timezone, lang, mobile, match } = body;
 
   if (!date || !time || lat == null || lng == null || !timezone) {
     return NextResponse.json(
@@ -38,27 +38,31 @@ export async function POST(request: Request) {
       utcOffsetMinutes: offsetMinutes,
     });
 
-    // Persist the profile (device-keyed) when Supabase is configured.
-    const deviceId = request.headers.get("x-device-id");
-    const admin = getSupabaseAdmin();
-    if (deviceId && admin) {
-      const { error } = await admin.from("profiles").upsert(
-        {
-          device_id: deviceId,
-          lang: String(lang ?? "en"),
-          name: String(name ?? ""),
-          mobile: mobile ? String(mobile).replace(/\s/g, "") : null,
-          birth_date: date,
-          birth_time: time,
-          birth_place: String(place ?? ""),
-          lat: Number(lat),
-          lng: Number(lng),
-          timezone,
-          kundli_json: kundli,
-        },
-        { onConflict: "device_id" }
-      );
-      if (error) console.warn("[supabase] profile upsert:", error.message);
+    // A "match" chart is a second person for kundli-matching — do NOT overwrite
+    // the user's own profile with the partner's birth data.
+    if (!match) {
+      // Persist the profile (device-keyed) when Supabase is configured.
+      const deviceId = request.headers.get("x-device-id");
+      const admin = getSupabaseAdmin();
+      if (deviceId && admin) {
+        const { error } = await admin.from("profiles").upsert(
+          {
+            device_id: deviceId,
+            lang: String(lang ?? "en"),
+            name: String(name ?? ""),
+            mobile: mobile ? String(mobile).replace(/\s/g, "") : null,
+            birth_date: date,
+            birth_time: time,
+            birth_place: String(place ?? ""),
+            lat: Number(lat),
+            lng: Number(lng),
+            timezone,
+            kundli_json: kundli,
+          },
+          { onConflict: "device_id" }
+        );
+        if (error) console.warn("[supabase] profile upsert:", error.message);
+      }
     }
 
     return NextResponse.json({ kundli });

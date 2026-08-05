@@ -181,5 +181,20 @@
   "Footer": {
     "privacy": "Privacy Policy",
     "terms": "Terms & Conditions"
+  },
+  "Match": {
+    "badge": "Kundli matching",
+    "name": "Their name",
+    "namePh": "Partner's name",
+    "dob": "Date of birth",
+    "tob": "Time of birth",
+    "pob": "Place of birth",
+    "pobPh": "City or town",
+    "submit": "Check compatibility",
+    "cancel": "Cancel",
+    "matchPrompt": "Tell me their birth details and I'll compare both charts for you 🙏",
+    "matchingWith": "Matching with",
+    "clear": "Clear match",
+    "matchChip": "Check kundli matching"
   }
 }
