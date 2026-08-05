@@ -504,6 +504,26 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     return pickStarters(context.join(" "), locale, asked);
   }, [messages, showStarters, locale]);
 
+  // Teaser → one-tap continuation: the last question-sentence of the latest
+  // answer becomes a tappable chip, so the next step is one tap, not typing.
+  const teaser = useMemo(() => {
+    if (!showStarters) return null;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return null;
+    const sentences = last.content
+      .split(/(?<=[.?!।])\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const candidate = (sentences[sentences.length - 1] ?? "")
+      .replace(/[*_#`]/g, "")
+      .trim();
+    if (!candidate.endsWith("?") || candidate.length > 100) return null;
+    const alreadyAsked = messages.some(
+      (m) => m.role === "user" && m.content === candidate
+    );
+    return alreadyAsked ? null : candidate;
+  }, [messages, showStarters]);
+
   return (
     <div className="chat-view">
       <header className="chat-header">
@@ -579,8 +599,13 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           </div>
         )}
 
-        {showStarters && starters.length > 0 && (
+        {showStarters && (teaser || starters.length > 0) && (
           <div className="starter-chips">
+            {teaser && (
+              <button className="chip chip--teaser" onClick={() => void sendText(teaser)}>
+                {teaser}
+              </button>
+            )}
             {starters.map((q) => (
               <button key={q} className="chip" onClick={() => void sendText(q)}>
                 {q}

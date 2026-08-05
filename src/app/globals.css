@@ -612,6 +612,16 @@ button {
 .starter-chips .chip {
   background: var(--ai-bubble);
 }
+.chip--teaser {
+  border-color: var(--marigold);
+  background: var(--glow-marigold);
+  color: var(--night);
+  font-weight: 700;
+}
+.chip--teaser:hover {
+  border-color: var(--marigold);
+  background: var(--marigold);
+}
 
 /* details: unknown-time toggle */
 .time-toggle {
