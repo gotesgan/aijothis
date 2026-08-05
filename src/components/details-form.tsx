@@ -85,6 +85,7 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
         <input
           className="field__input"
           type="text"
+          data-exclude="true"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t("namePh")}
@@ -97,6 +98,7 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
           <input
             className="field__input"
             type="date"
+            data-exclude="true"
             value={date}
             max={new Date().toISOString().slice(0, 10)}
             onChange={(e) => setDate(e.target.value)}
@@ -107,6 +109,7 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
           <input
             className="field__input"
             type="time"
+            data-exclude="true"
             value={time}
             onChange={(e) => setTime(e.target.value)}
           />
