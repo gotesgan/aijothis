@@ -2,7 +2,7 @@
 
 **Product:** Jyotish — AI Vedic astrology chat (live at https://www.hiarya.in)
 **Report date:** 5–6 August 2026
-**Status:** Pre-₹2,500 ad test baseline · 2 real paying customers · full funnel instrumentation live
+**Status:** ₹454 ad spend · 8 unique paying customers · ₹200 real revenue · funnel instrumentation + safety + panchang all live
 
 ---
 
@@ -212,14 +212,21 @@ Session replays, heatmaps, click/scroll maps, rage-click detection. Birth fields
 - **Purchase data quality** — simulated grants fired fake Purchase events at one price (Meta warning).
 - **Blind order data** — couldn't tell who paid what until the `orders` table.
 
-### 7.4 Real revenue (verified from Razorpay)
+### 7.4 Real revenue (verified from Razorpay) — as of 6 Aug 2026, 18:00 UTC
 
-| Customer | Order | Amount | Pack |
-|---|---|---|---|
-| Gourav Kumar | `order_TMBfXcCL6LW7EN` | **₹10** | p10 (10 Qs) |
-| Pratiksha | `order_TMABeVnZufBJTM` | **₹30** | p30 (50 Qs) |
+| Customer | Packs | Amount |
+|---|---|---|
+| Gourav Kumar | p10 | **₹10** |
+| Pratiksha | p30 ×3 | **₹90** |
+| Shivangi | p20 | **₹20** |
+| Praveen s Kumar | p20 | **₹20** |
+| Pooja rajbhar | p20 | **₹20** |
+| Bharat ral | p10 | **₹10** |
+| Purnima | p10 | **₹10** |
+| ganesh | p20 | **₹20** |
+| **Total** | 10 orders / 8 unique payers | **₹200** |
 
-*(Pratiksha actually paid ₹30, not ₹20 — the legacy `paid20_at` column name misled us.)*
+*(Pratiksha actually paid ₹30, not ₹20 — the legacy `paid20_at` column name misled us. She has since bought twice more: 3× ₹30 total.)*
 
 ---
 
@@ -243,6 +250,43 @@ Session replays, heatmaps, click/scroll maps, rage-click detection. Birth fields
 5. **Restore-chat UX** — returning users should resume their last thread, not start blank.
 6. **Publish Google consent screen** + add OAuth origin.
 
+## 10. Development update — 6 Aug 2026 (post-ad-launch)
+
+### 10.1 The ad campaign is live
+
+Campaign **"Arya | Maharashtra | Test 01"** (`ID 120248271176420438`): ₹454 spend, **ROAS 0.20**, 6 attributed purchases, 51 leads, 9 checkouts, 2,150 impressions, CTR 5.21%, CPC ₹4.06. **The funnel converts but unit economics don't — spend does not scale until ROAS ≥ 1.**
+
+### 10.2 Shipped this session (all live in production)
+
+| Commit | Change | Why |
+|---|---|---|
+| `1567a8e` | **p60 repeat-buyer plan** — ₹60 = unlimited questions for 7 days, shown **only** to users with a prior purchase (`jyotish_unlimited_until_v1`); `isUnlimited()` bypasses the question gate; checkout cap 5000→6000 paise | Upsell repeat buyers (Pratiksha/Purnima); LTV capture. Verified in-browser: repeat buyer sees p60, first-time buyer doesn't, active pass skips paywall |
+| `b69c55b` | **Crisis guard hardening** — regex now catches spaced/variant self-harm ("kill my *self*", "best time to die", "ending it all", Marathi/Hindi variants) | A real user wrote *"kill my self… best time to die"* (6 Aug 16:30) and the guard **missed it** — only the LLM caught it. Verified: 11 crisis phrases caught, 0 false positives on relationship/career questions |
+| `66272c1` | **Panchang / tithi / muhurat grounding** — `src/lib/panchang.ts` computes sidereal tithi/nakshatra/yoga/karana offline (validated against the drikPanchang production reference — reproduces tithi 22 Saptami, Mrigashira, Siddhi, karana Bava exactly); new `panchang` routing topic; lazy drikPanchang client (`DRIKPANCHANG_API_KEY`, cached, 5s timeout, fallback) for sunrise/sunset + rahu kalam | Tithi/muhurat questions get real data, not LLM guesses. Strictly lazy: API only for timing-intent, cache per date+place |
+
+### 10.3 Live data (Supabase, 6 Aug 18:00 UTC)
+
+- **100 profiles** (≈85 real), **97 chats, 1,218 messages**, 17 orders (10 paid + 7 abandoned).
+- **~12 new signups in the final 45 min** of the session — traffic healthy.
+- **Hot live session:** Manoj Deshpande (mr, Pune) in a long crisis-driven chat about "Suryakant" — rapid-fire "Hoo sanga" follow-ups. Same archetype as every payer.
+
+### 10.4 Findings (updated)
+
+1. **Repeat purchase is real.** Pratiksha bought **3× in 48 h** (₹90) — the crisis-binge pattern persists; she's the exact user p60 targets. She still chose p30 over the ₹60 unlimited (offer didn't convert her; 7-day framing may need to be more visible/compelling).
+2. **Demand for tithi/muhurat is still unproven** — zero organic panchang questions across 1,200+ messages (the only hit was the Marathi false positive "stithi" = *situation*). The capability is live and correct; it will pay off only if users actually ask.
+3. **Panchang cross-validation paid off** — my first karana formula was off by one (classical sequence starts at 6° elong, not 0°); the drikPanchang reference caught it. Free calc and API now agree.
+4. **The crisis guard was the real gap** — a genuine self-harm message slipped through the hard guard and was caught only by the LLM. That's now fixed with no false positives.
+
+### 10.5 Watch-outs
+
+- **p60 hasn't sold yet.** Repeat buyers see it but keep buying packs. Consider: make p60 the highlighted default for repeat buyers, or drop to ₹49, before judging it.
+- **ROAS 0.20.** Don't scale spend; iterate the funnel (details-form rage clicks + abandoned checkout are the open Clarity signals) or retarget with video per Meta's recommendation.
+- **2 abandoned carts** open at session end (₹20 + ₹10).
+- **drikPanchang key** is set locally; must be added to Vercel env vars to activate in production.
+- **Google OAuth** consent screen still unpublished; **migrations 0002 + 0004** still not applied in the SQL editor.
+
 ---
 
 *Diagrams rendered with Mermaid. Data pulled live from Supabase + Razorpay; all changes verified in-browser before shipping.*
+
+
