@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
-import { getDeviceId, getOrCreateChatId, newUuid, saveKundli } from "@/lib/storage";
+import { getDeviceId, getOrCreateChatId, newUuid, saveKundli, setChatId } from "@/lib/storage";
 import { detectMatchRequest } from "@/lib/match";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import { pickStarters } from "@/lib/starters";
@@ -194,6 +194,13 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   });
   const [pendingMatch, setPendingMatch] = useState("");
 
+  // Restored-history state (returning users).
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  const oldestMsgIdRef = useRef<string | null>(null);
+  const paywallPendingRef = useRef<string | null>(null);
+
   const bodyRef = useRef<HTMLDivElement>(null);
   const initialSentRef = useRef(false);
 
@@ -204,6 +211,64 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       localStorage.setItem(ASKED_KEY, String(n));
       return n;
     });
+  }
+
+  /** Restore the user's last thread so returning users keep their history. */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/history", {
+          headers: { "x-device-id": getDeviceId() },
+        });
+        const data = await res.json();
+        if (cancelled || !data.messages?.length) return;
+        setChatId(data.chatId);
+        oldestMsgIdRef.current = data.messages[0].id ?? null;
+        setMessages(
+          data.messages.map((m: { role: string; content: string }) => ({
+            role: m.role as ChatMessage["role"],
+            content: m.content,
+          }))
+        );
+        setHasMoreHistory(!!data.hasMore);
+      } catch {
+        // non-fatal — start fresh
+      } finally {
+        if (!cancelled) setHistoryLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function loadEarlier() {
+    if (!oldestMsgIdRef.current || loadingEarlier) return;
+    setLoadingEarlier(true);
+    try {
+      const res = await fetch(`/api/history?before=${oldestMsgIdRef.current}`, {
+        headers: { "x-device-id": getDeviceId() },
+      });
+      const data = await res.json();
+      if (data.messages?.length) {
+        oldestMsgIdRef.current = data.messages[0].id ?? oldestMsgIdRef.current;
+        setMessages((prev) => [
+          ...data.messages.map((m: { role: string; content: string }) => ({
+            role: m.role as ChatMessage["role"],
+            content: m.content,
+          })),
+          ...prev,
+        ]);
+        setHasMoreHistory(!!data.hasMore);
+      } else {
+        setHasMoreHistory(false);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingEarlier(false);
+    }
   }
 
   useEffect(() => {
@@ -299,6 +364,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     if (askedCount >= limit) {
       // Out of questions (free or bought) → always offer the packs so the user
       // can keep buying as many times as they want. No dead-end.
+      // Hold the question so it can auto-send right after the purchase.
+      paywallPendingRef.current = text;
       setShowPaywall(true);
       return;
     }
@@ -393,6 +460,35 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       // Value = the actual order amount paid, not a hardcoded figure.
       trackPurchase((amountPaise ?? selectedPack.price * 100) / 100, newUuid());
     }
+    // The user landed on the paywall with a question in hand — send it now that
+    // they've paid, so they stay in the same spot instead of being dropped.
+    const pending = paywallPendingRef.current;
+    paywallPendingRef.current = null;
+    if (pending) {
+      void sendTextAfterPaywall(pending);
+    }
+  }
+
+  /** Send a question without re-checking the gates (used right after a purchase). */
+  async function sendTextAfterPaywall(text: string) {
+    const content = text.trim();
+    if (!content || streaming || !kundli) return;
+    setRefined(false);
+    const next: ChatMessage[] = [...messages, { role: "user", content }];
+    setMessages([...next, { role: "assistant", content: "" }]);
+    bumpAskedCount();
+    setStreaming(true);
+    try {
+      await streamReply(next, next);
+      maybeFireFirstAnswer();
+    } catch (err) {
+      setMessages([
+        ...next,
+        { role: "assistant", content: `[Error: ${(err as Error).message}]` },
+      ]);
+    } finally {
+      setStreaming(false);
+    }
   }
 
   useEffect(() => {
@@ -455,9 +551,9 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     localStorage.removeItem(MATCH_KEY);
   }
 
-  // If a question was carried from the landing, auto-send it.
+  // If a question was carried from the landing, auto-send it (once history is restored).
   useEffect(() => {
-    if (!kundli) return;
+    if (!kundli || !historyLoaded) return;
     const timer = setTimeout(() => {
       if (initialQ && !initialSentRef.current) {
         initialSentRef.current = true;
@@ -466,7 +562,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     }, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kundli]);
+  }, [kundli, historyLoaded]);
 
   // Instant deterministic chart-at-a-glance (no LLM, <1s).
   const glance =
@@ -495,7 +591,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     const context: string[] = [];
     for (const m of messages) {
       if (m.role === "user") {
-        asked.add(m.content);
+        asked.add(m.content.trim());
         context.push(m.content);
       } else {
         context.push(m.content);
@@ -555,6 +651,16 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
 
       <div className="chat-body" ref={bodyRef}>
         <div className="welcome-chip">{t("welcome")}</div>
+
+        {hasMoreHistory && (
+          <button
+            className="chip history-more"
+            onClick={() => void loadEarlier()}
+            disabled={loadingEarlier}
+          >
+            {loadingEarlier ? "…" : "↑ " + t("historyMore")}
+          </button>
+        )}
 
         {glance && (
           <div className="msg msg--ai msg--glance">
@@ -735,6 +841,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             <button
               className="gate-modal__ghost"
               onClick={() => {
+                paywallPendingRef.current = null;
                 setShowPaywall(false);
                 trackPaywallDismissed();
               }}

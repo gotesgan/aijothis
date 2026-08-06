@@ -101,11 +101,17 @@ export async function POST(request: Request) {
   );
 
   // Keep prior timing windows visible even when history is truncated.
-  const priorWindows = extractTimingStatements(messages);
+  // Prefer the FULL stored thread (cross-session memory) over just the
+  // messages the client sent in this request.
+  const storedHistory = await loadStoredHistory(deviceId, chatId).catch(() => null);
+  const historyForContext = storedHistory && storedHistory.length > 0
+    ? storedHistory
+    : messages;
+  const priorWindows = extractTimingStatements(historyForContext);
   const systemWithHistory =
     system +
     (priorWindows
-      ? `\n\nPREVIOUS TIMING STATEMENTS FROM THIS CHAT (you MUST stay consistent with these — if the user asks for timing again, repeat the most recent relevant window and only add detail, never a different month/year):\n${priorWindows}`
+      ? `\n\nPREVIOUS TIMING STATEMENTS (these are windows you ALREADY gave this user, possibly in an earlier visit. You MUST repeat them verbatim when re-asked; never give a different month/year):\n${priorWindows}`
       : "");
 
   const llmMessages = [
@@ -212,7 +218,38 @@ export async function POST(request: Request) {
   });
 }
 
-/** Server-side persistence of one user→Arya exchange (non-fatal). */async function persistExchange(params: {
+/** Loads the user's full stored thread so prior predictions stay consistent across sessions. */
+async function loadStoredHistory(
+  deviceId: string,
+  chatId?: string
+): Promise<{ role: string; content: string }[] | null> {
+  const admin = getSupabaseAdmin();
+  if (!admin || deviceId === "-") return null;
+  try {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("device_id", deviceId)
+      .maybeSingle();
+    if (!profile) return null;
+
+    const cid = chatId ?? newUuid();
+    const { data } = await admin
+      .from("messages")
+      .select("role,content")
+      .eq("chat_id", cid)
+      .order("created_at", { ascending: true })
+      .limit(120);
+    if (!data || data.length === 0) return null;
+    return data.filter((m) => m.role === "user" || m.role === "assistant");
+  } catch (err) {
+    console.warn("[supabase] history load skipped:", (err as Error).message);
+    return null;
+  }
+}
+
+/** Server-side persistence of one user→Arya exchange (non-fatal). */
+async function persistExchange(params: {
   deviceId: string;
   chatId?: string;
   messageId?: string;

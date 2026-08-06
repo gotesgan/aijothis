@@ -91,3 +91,9 @@ export function getOrCreateChatId(): string {
   }
   return id;
 }
+
+/** Adopt a server-returned chat id (so restores use the real thread). */
+export function setChatId(id: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("jyotish_chat_id_v1", id);
+}

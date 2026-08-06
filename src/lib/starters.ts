@@ -212,7 +212,7 @@ export function pickStarters(
   for (const [topic] of scored) {
     if (out.length >= 3) break;
     const q = BANK.find(
-      (s) => s.topic === topic && !asked.has(s.q[locale])
+      (s) => s.topic === topic && !asked.has(s.q[locale].trim())
     )?.q[locale];
     if (q && !out.includes(q)) out.push(q);
   }

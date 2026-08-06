@@ -109,7 +109,8 @@
     "payBtn": "Pay",
     "glance": "Here's your chart at a glance",
     "glanceAsk": "Ask me anything you'd like — love, career, money, anything on your mind.",
-    "buyMore": "Buy more questions"
+    "buyMore": "Buy more questions",
+    "historyMore": "Earlier messages"
   },
   "Lang": {
     "label": "Language"
