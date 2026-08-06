@@ -69,6 +69,8 @@ export default async function HomePage({
             </Link>
           ))}
         </div>
+
+        <p className="hero__purpose">{t("purpose")}</p>
       </section>
 
       <section className="stats">

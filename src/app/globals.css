@@ -601,6 +601,15 @@ button {
 .chip:active {
   transform: scale(0.97);
 }
+
+/* crawlable app-purpose statement (also used for OAuth branding review) */
+.hero__purpose {
+  max-width: 480px;
+  margin: 18px auto 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--ivory-faint);
+}
 .starter-chips {
   display: flex;
   flex-wrap: wrap;
