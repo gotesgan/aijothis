@@ -35,14 +35,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   return {
-    title: "Jyotish — AI Vedic Astrologer",
+    title: "Jyotish",
+    applicationName: "Jyotish",
     description:
       locale === "en"
         ? "Chat with Arya, your AI Vedic astrologer. Get your personal Kundli in seconds."
         : locale === "hi"
-          ? "आर्य से बात करें — आपका AI वैदिक ज्योतिषी। मुफ्त कुंडली सेकंडों में।"
+          ? "आर्य से बात करें — आपका AI वैदिक ज्योतिषी। मुफ्त कुंडली सेकंदों में।"
           : "आर्यशी बोला — तुमचा AI वैदिक ज्योतिषी. मोफत कुंडली सेकंदात.",
+    openGraph: {
+      title: "Jyotish",
+      siteName: "Jyotish",
+      description:
+        "Jyotish is an AI Vedic astrology app. Share your birth details and chat with Arya for personal answers on love, marriage, career, money and health — grounded in your real Kundli.",
+    },
   };
+
 }
 
 export default async function LocaleLayout({
