@@ -179,7 +179,6 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   });
   const [showSignup, setShowSignup] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [experimentDone, setExperimentDone] = useState(false);
 
   // Kundli matching state.
   const [matchCard, setMatchCard] = useState<MatchPrefill | null>(null);
@@ -298,11 +297,9 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     }
     const limit = FREE_LIMIT + paidQuestions;
     if (askedCount >= limit) {
-      if (paidQuestions > 0) {
-        setExperimentDone(true);
-      } else {
-        setShowPaywall(true);
-      }
+      // Out of questions (free or bought) → always offer the packs so the user
+      // can keep buying as many times as they want. No dead-end.
+      setShowPaywall(true);
       return;
     }
 
@@ -386,8 +383,12 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   }
 
   function grantPack(questions: number, real = true, amountPaise?: number) {
-    setPaidQuestions(questions);
-    localStorage.setItem(PAID_Q_KEY, String(questions));
+    // Cumulative — repeat purchases add to the balance, never reset it.
+    setPaidQuestions((prev) => {
+      const next = prev + questions;
+      localStorage.setItem(PAID_Q_KEY, String(next));
+      return next;
+    });
     if (real) {
       // Value = the actual order amount paid, not a hardcoded figure.
       trackPurchase((amountPaise ?? selectedPack.price * 100) / 100, newUuid());
@@ -486,7 +487,6 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     !!kundli &&
     !needDetails &&
     !streaming &&
-    !experimentDone &&
     (messages.length === 0 || messages[messages.length - 1]?.role === "assistant");
 
   const starters = useMemo(() => {
@@ -741,15 +741,6 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             >
               {t("notNow")}
             </button>
-          </div>
-        </div>
-      )}
-
-      {experimentDone && (
-        <div className="gate-modal">
-          <div className="gate-modal__card">
-            <h2 className="gate-modal__title">{t("doneTitle")}</h2>
-            <p className="gate-modal__sub">{t("doneSub")}</p>
           </div>
         </div>
       )}

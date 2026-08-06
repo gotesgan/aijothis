@@ -95,7 +95,7 @@
     "continueGoogle": "Google से continue करें",
     "notNow": "अभी नहीं",
     "doneTitle": "Questions खत्म",
-    "doneSub": "आपने सारे questions इस्तेमाल कर लिए। टेस्ट करने के लिए धन्यवाद!",
+    "doneSub": "आपने pack के सारे questions इस्तेमाल कर लिए।",
     "simNote": "(Simulated signup — असली के लिए Google Client ID जोड़ें)",
     "paywallTitle": "अधिक questions अनलॉक करें",
     "paywallSub": "एक pack चुनें — एक बार का भुगतान। Questions कभी expire नहीं होते।",
@@ -105,7 +105,8 @@
     "packQ": "questions",
     "payBtn": "भुगतान करें",
     "glance": "आपकी कुंडली एक नज़र में",
-    "glanceAsk": "अब आप जो भी पूछना चाहें — प्रेम, करियर, धन, कुछ भी।"
+    "glanceAsk": "अब आप जो भी पूछना चाहें — प्रेम, करियर, धन, कुछ भी।",
+    "buyMore": "और questions खरीदें"
   },
   "Lang": {
     "label": "भाषा"

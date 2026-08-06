@@ -95,7 +95,7 @@
     "continueGoogle": "Continue with Google",
     "notNow": "Not now",
     "doneTitle": "Questions complete",
-    "doneSub": "You've used all your questions. Thanks for testing!",
+    "doneSub": "You've used all the questions in your pack.",
     "simNote": "(Simulated signup — add a Google Client ID to make it real)",
     "paywallTitle": "Unlock more questions",
     "paywallSub": "Pick a pack — one-time payment. Questions never expire.",
@@ -105,7 +105,8 @@
     "packQ": "questions",
     "payBtn": "Pay",
     "glance": "Here's your chart at a glance",
-    "glanceAsk": "Ask me anything you'd like — love, career, money, anything on your mind."
+    "glanceAsk": "Ask me anything you'd like — love, career, money, anything on your mind.",
+    "buyMore": "Buy more questions"
   },
   "Lang": {
     "label": "Language"
