@@ -40,6 +40,7 @@ export default async function HomePage({
           {t("title")} <em>{t("titleHighlight")}</em>
         </h2>
         <p className="hero__sub">{t("subtitle")}</p>
+        <p className="hero__purpose">{t("purpose")}</p>
 
         {/* sample Arya chat bubble — sets expectation it's a chat */}
         <div className="chat-preview">
@@ -71,8 +72,6 @@ export default async function HomePage({
             </Link>
           ))}
         </div>
-
-        <p className="hero__purpose">{t("purpose")}</p>
       </section>
 
       <section className="stats">

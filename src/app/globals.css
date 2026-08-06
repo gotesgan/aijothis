@@ -517,14 +517,10 @@ button {
 }
 .hero__brand {
   font-family: var(--stack-display);
-  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-size: clamp(1.6rem, 6vw, 2.1rem);
   font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  background: linear-gradient(120deg, var(--gold), var(--marigold));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  letter-spacing: 0.14em;
+  color: var(--gold);
   margin: 0 0 2px;
 }
 .hero__brand-tag {
