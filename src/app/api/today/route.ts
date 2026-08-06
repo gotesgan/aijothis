@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { chatCompletion } from "@/lib/llm";
 import { computeTransits, formatTransits, type TransitPosition } from "@/lib/transit";
 import { computeUpcoming, getDayMeta, type UpcomingEvent } from "@/lib/today";
+import { getPanchang, formatPanchang } from "@/lib/panchang";
 import { getChartFocus } from "@/lib/routing";
 import { retrieveVedicContext } from "@/lib/rag";
 import type { KundliResult } from "@/lib/types";
@@ -28,15 +29,16 @@ export async function POST(request: Request) {
   }
 
   const now = new Date();
-  const [transits, upcoming, meta] = await Promise.all([
+  const [transits, upcoming, meta, panchang] = await Promise.all([
     computeTransits(now).catch(() => undefined),
     computeUpcoming(kundli, now).catch(() => []),
     Promise.resolve(getDayMeta(now)),
+    getPanchang(now).catch(() => undefined),
   ]);
 
   const focus = getChartFocus("general");
   const vedic = retrieveVedicContext({ focus, kundli, max: 3 });
-  const prompt = buildTodayPrompt(kundli, lang ?? "en", now, meta, transits, upcoming, vedic);
+  const prompt = buildTodayPrompt(kundli, lang ?? "en", now, meta, transits, upcoming, vedic, panchang);
 
   try {
     const { text, usage } = await chatCompletion({
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         date: now.toISOString().slice(0, 10),
         meta,
+        panchang: panchang ? formatPanchang(panchang) : undefined,
         luckyTime: summary.luckyTime,
         summary,
         influences: transits ?? [],
@@ -79,7 +82,8 @@ function buildTodayPrompt(
   meta: { rulerId: string; luckyColor: string },
   transits: TransitPosition[] | undefined,
   upcoming: UpcomingEvent[],
-  vedic: string[]
+  vedic: string[],
+  panchang?: { tithi: { name: string; paksha: string }; nakshatra: { name: string }; yoga: { name: string }; karana: { name: string } }
 ): string {
   const c = kundli.computed;
   const langName = lang === "hi" ? "Hindi" : lang === "mr" ? "Marathi" : "English";
@@ -100,6 +104,9 @@ function buildTodayPrompt(
           .join("\n")
       : "no major shifts expected in the next 12 days";
   const vedicText = vedic.length ? vedic.join("\n") : "none";
+  const panchangText = panchang
+    ? `${panchang.tithi.paksha} Paksha, ${panchang.tithi.name} · Nakshatra ${panchang.nakshatra.name} · Yoga ${panchang.yoga.name} · Karana ${panchang.karana.name}`
+    : "not computed";
 
   return `You are Arya writing today's personalised Vedic daily reading for ${
     kundli.profile.name || "the user"
@@ -115,6 +122,7 @@ Current Mahadasha: ${
 
 TODAY (${weekday} in ${tz}): ${now.toISOString().slice(0, 10)}.
 Today's day-ruler planet: ${meta.rulerId}. Suggested lucky color: ${meta.luckyColor}.
+TODAY'S PANCHANG: ${panchangText}.
 
 TODAY'S TRANSITS (house from Lagna):
 ${transitText}
