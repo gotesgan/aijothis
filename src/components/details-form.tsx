@@ -149,14 +149,14 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
 
       <p className="faint" style={{ fontSize: 11.5, textAlign: "center", lineHeight: 1.5 }}>
         {t.rich("agreeSubmit", {
-          t: (chunks) => (
+          t: () => (
             <Link href="/legal/terms" style={{ textDecoration: "underline" }}>
-              {chunks}
+              {t("terms")}
             </Link>
           ),
-          p: (chunks) => (
+          p: () => (
             <Link href="/legal/privacy" style={{ textDecoration: "underline" }}>
-              {chunks}
+              {t("privacy")}
             </Link>
           ),
         })}
