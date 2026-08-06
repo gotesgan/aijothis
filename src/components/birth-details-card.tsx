@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { getDeviceId } from "@/lib/storage";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
 import type { KundliResult } from "@/lib/types";
@@ -143,6 +144,21 @@ export function BirthDetailsCard({
           </>
         )}
       </button>
+
+      <p className="faint" style={{ fontSize: 11.5, textAlign: "center", lineHeight: 1.5 }}>
+        {t.rich("agreeSubmit", {
+          t: (chunks) => (
+            <Link href="/legal/terms" style={{ textDecoration: "underline" }}>
+              {chunks}
+            </Link>
+          ),
+          p: (chunks) => (
+            <Link href="/legal/privacy" style={{ textDecoration: "underline" }}>
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
     </form>
   );
 }

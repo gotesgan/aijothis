@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";import { useTranslations, useLocale } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { saveKundli, getDeviceId } from "@/lib/storage";
 import { trackLead, trackQuestionChip } from "@/lib/pixel";
 import type { KundliResult } from "@/lib/types";
@@ -145,6 +145,21 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
 
       <p className="faint" style={{ fontSize: 13, textAlign: "center" }}>
         {t("noSignup")}
+      </p>
+
+      <p className="faint" style={{ fontSize: 11.5, textAlign: "center", lineHeight: 1.5 }}>
+        {t.rich("agreeSubmit", {
+          t: (chunks) => (
+            <Link href="/legal/terms" style={{ textDecoration: "underline" }}>
+              {chunks}
+            </Link>
+          ),
+          p: (chunks) => (
+            <Link href="/legal/privacy" style={{ textDecoration: "underline" }}>
+              {chunks}
+            </Link>
+          ),
+        })}
       </p>
     </form>
   );

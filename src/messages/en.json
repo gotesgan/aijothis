@@ -59,7 +59,8 @@
     "back": "Back",
     "mobile": "Mobile number (optional)",
     "noSignup": "No sign-up needed — takes 20 seconds",
-    "toggleUnknown": "Don't know exact time? Tap here"
+    "toggleUnknown": "Don't know exact time? Tap here",
+    "agreeSubmit": "By continuing, you agree to the {t} and {p}. All readings are AI-generated and for reference only."
   },
   "Kundli": {
     "title": "Your Kundli",
