@@ -60,7 +60,7 @@
     "mobile": "Mobile number (optional)",
     "noSignup": "No sign-up needed — takes 20 seconds",
     "toggleUnknown": "Don't know exact time? Tap here",
-    "agreeSubmit": "By continuing, you agree to the {t} and {p}. All readings are AI-generated and for reference only."
+    "agreeSubmit": "By continuing, you agree to the {t} and {p}."
   },
   "Kundli": {
     "title": "Your Kundli",
