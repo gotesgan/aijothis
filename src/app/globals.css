@@ -515,6 +515,25 @@ button {
   text-align: center;
   padding: 34px 0 8px;
 }
+.hero__brand {
+  font-family: var(--stack-display);
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, var(--gold), var(--marigold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0 0 2px;
+}
+.hero__brand-tag {
+  color: var(--ivory-faint);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 14px;
+}
 .hero__title {
   font-family: var(--stack-display);
   font-size: clamp(2.1rem, 8.5vw, 2.9rem);

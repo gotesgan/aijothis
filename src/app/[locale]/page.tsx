@@ -30,13 +30,15 @@ export default async function HomePage({
 
       <section className="hero">
         <NavagrahaMandala />
+        <h1 className="hero__brand">{t("brand")}</h1>
+        <p className="hero__brand-tag">{t("brandTag")}</p>
         <span className="eyebrow">
           <span className="eyebrow__om">ॐ</span>
           {t("eyebrow")}
         </span>
-        <h1 className="hero__title">
+        <h2 className="hero__title">
           {t("title")} <em>{t("titleHighlight")}</em>
-        </h1>
+        </h2>
         <p className="hero__sub">{t("subtitle")}</p>
 
         {/* sample Arya chat bubble — sets expectation it's a chat */}
