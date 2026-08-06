@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   }
 
   const amountPaise = Number(body?.amountPaise ?? 1500);
-  if (!Number.isInteger(amountPaise) || amountPaise < 1000 || amountPaise > 5000) {
+  if (!Number.isInteger(amountPaise) || amountPaise < 1000 || amountPaise > 6000) {
     return NextResponse.json({ error: "invalid_amount" }, { status: 400 });
   }
 

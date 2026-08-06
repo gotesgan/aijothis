@@ -32,13 +32,16 @@ const SIGNED_UP_KEY = "jyotish_signed_up_v1";
 const PAID_Q_KEY = "jyotish_paid_questions_v1";
 const ASKED_KEY = "jyotish_asked_count_v1";
 const MATCH_KEY = "jyotish_match_v1";
+const UNLIMITED_KEY = "jyotish_unlimited_until_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
+const UNLIMITED_DAYS = 7; // repeat-buyer pass: unlimited questions for a week
 
 interface QuestionPack {
   id: string;
   price: number;
   questions: number;
   popular?: boolean;
+  unlimited?: boolean;
 }
 
 /** Pack menu — ₹10 to ₹30, more value per rupee at higher tiers. */
@@ -48,12 +51,21 @@ const PACKS: QuestionPack[] = [
   { id: "p30", price: 30, questions: 50 },
 ];
 
+/** Repeat-buyer only: ₹60 for unlimited questions over a week. */
+const UNLIMITED_PACK: QuestionPack = {
+  id: "p60",
+  price: 60,
+  questions: 0,
+  unlimited: true,
+};
+
 /** Loads Razorpay checkout and opens the payment sheet. */
 function openRazorpay(opts: {
   orderId: string;
   keyId: string;
   amount: number;
   currency: string;
+  description: string;
 }): Promise<boolean> {
   return new Promise((resolve) => {
     const loadScript = () => {
@@ -73,7 +85,7 @@ function openRazorpay(opts: {
         amount: opts.amount,
         currency: opts.currency,
         name: "Jyotish",
-        description: "20 questions with Arya",
+        description: opts.description,
         order_id: opts.orderId,
         handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           try {
@@ -172,6 +184,13 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     if (typeof window === "undefined") return 0;
     return Number(localStorage.getItem(PAID_Q_KEY) ?? 0) || 0;
   });
+  const [unlimitedUntil, setUnlimitedUntil] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(UNLIMITED_KEY);
+    if (!raw) return null;
+    const ts = new Date(raw).getTime();
+    return Number.isFinite(ts) && ts > Date.now() ? raw : null;
+  });
   const [selectedPack, setSelectedPack] = useState<QuestionPack>(PACKS[1]);
   const [askedCount, setAskedCount] = useState(() => {
     if (typeof window === "undefined") return 0;
@@ -211,6 +230,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       localStorage.setItem(ASKED_KEY, String(n));
       return n;
     });
+  }
+
+  /** Repeat-buyer pass is active while `unlimitedUntil` is in the future. */
+  function isUnlimited(): boolean {
+    return !!unlimitedUntil && new Date(unlimitedUntil).getTime() > Date.now();
   }
 
   /** Restore the user's last thread so returning users keep their history. */
@@ -361,7 +385,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       return;
     }
     const limit = FREE_LIMIT + paidQuestions;
-    if (askedCount >= limit) {
+    if (!isUnlimited() && askedCount >= limit) {
       // Out of questions (free or bought) → always offer the packs so the user
       // can keep buying as many times as they want. No dead-end.
       // Hold the question so it can auto-send right after the purchase.
@@ -439,13 +463,42 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       if (data.simulated) {
         // Experiment path: grant immediately, but do NOT fire a Purchase event —
         // no real money changed hands, so it would pollute Meta's data.
-        grantPack(selectedPack.questions, false);
+        if (selectedPack.unlimited) grantUnlimited(false);
+        else grantPack(selectedPack.questions, false);
         return;
       }
-      const ok = await openRazorpay(data);
-      if (ok) grantPack(selectedPack.questions, true, data.amount);
+      const ok = await openRazorpay({
+        ...data,
+        description: selectedPack.unlimited
+          ? "7-day unlimited questions with Arya"
+          : `${selectedPack.questions} questions with Arya`,
+      });
+      if (ok) {
+        if (selectedPack.unlimited) grantUnlimited(true, data.amount);
+        else grantPack(selectedPack.questions, true, data.amount);
+      }
     } catch {
       setShowPaywall(true);
+    }
+  }
+
+  /** Repeat-buyer pass: unlimited questions until 7 days from now. */
+  function grantUnlimited(real = true, amountPaise?: number) {
+    setUnlimitedUntil(() => {
+      const until = new Date(
+        Date.now() + UNLIMITED_DAYS * 24 * 60 * 60 * 1000
+      ).toISOString();
+      localStorage.setItem(UNLIMITED_KEY, until);
+      return until;
+    });
+    if (real) {
+      trackPurchase((amountPaise ?? UNLIMITED_PACK.price * 100) / 100, newUuid());
+    }
+    // Send the held question now that they've paid.
+    const pending = paywallPendingRef.current;
+    paywallPendingRef.current = null;
+    if (pending) {
+      void sendTextAfterPaywall(pending);
     }
   }
 
@@ -815,7 +868,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             <p className="gate-modal__sub">{t("paywallSub")}</p>
 
             <div className="pack-list">
-              {PACKS.map((p) => (
+              {(paidQuestions > 0 ? [...PACKS, UNLIMITED_PACK] : PACKS).map((p) => (
                 <button
                   key={p.id}
                   className={`pack-option ${
@@ -828,8 +881,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
                 >
                   <span className="pack-option__price">₹{p.price}</span>
                   <span className="pack-option__q">
-                    {p.questions} {t("packQ")}
+                    {p.unlimited ? t("packUnlimitedQ") : `${p.questions} ${t("packQ")}`}
                   </span>
+                  {p.unlimited && (
+                    <span className="badge badge--unlimited">{t("packUnlimitedBadge")}</span>
+                  )}
                   {p.popular && <span className="badge badge--popular">Best value</span>}
                 </button>
               ))}

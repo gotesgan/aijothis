@@ -190,6 +190,13 @@ button {
   border-color: rgba(143, 214, 159, 0.35);
   background: rgba(143, 214, 159, 0.1);
 }
+.badge--unlimited {
+  color: var(--marigold);
+  border-color: rgba(255, 184, 77, 0.4);
+  background: rgba(255, 184, 77, 0.12);
+  font-size: 0.62rem;
+  margin-top: 2px;
+}
 
 /* ─────────────── Cards ─────────────── */
 .card {
