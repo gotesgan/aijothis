@@ -5,7 +5,7 @@
  */
 
 const CRISIS_PATTERN =
-  /(suicide|suicid\w*|kill myself|killing myself|end my life|ending my life|want to die|wanna die|no reason to live|don'?t want to live|hurt myself|self.?harm|take my life|आत्महत्या|जिंदगी खत्म|जीना नहीं|मरना चाह|मर जाऊं|आत्महत्या कर|मला जगायचं नाही|मरायचं आहे|जगू नये)/i;
+  /(suicide|suicid\w*|kill my\s*self|killing my\s*self|take my (own )?life|end my life|ending my life|end it all|ending it all|end everything|ending everything|want to (die|end it)|wanna die|no reason to live|no point (in )?living|don'?t want to live|not want(ing)? to live|better off dead|die a painless|painless death|best time to die|hang my\s*self|overdose|cut my (wrists|wrist|veins)|jump (off|in front of)|shoot my\s*self|out of my misery|hurt my\s*self|self.?harm|आत्महत्या|जिंदगी खत्म|जीना नहीं|मरना चाह|मर जाऊं|मर जाना|खत्म करना चाहता|जीवन संपव|जिंदगी खत्म कर|आत्महत्या कर|मला जगायचं नाही|मला जगायचे नाही|मरायचं आहे|मरायचे आहे|आयुष्य संपव|जगू नये)/i;
 
 export function detectCrisis(text: string): boolean {
   return CRISIS_PATTERN.test(text);

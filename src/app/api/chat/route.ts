@@ -5,6 +5,13 @@ import { classifyTopic, getChartFocus } from "@/lib/routing";
 import { retrieveVedicContext } from "@/lib/rag";
 import { needsReflection, reflectOnAnswer } from "@/lib/reflection";
 import { detectCrisis, crisisReply } from "@/lib/safety";
+import { getPanchang, formatPanchang } from "@/lib/panchang";
+import {
+  drikPanchangConfigured,
+  fetchDrikPanchang,
+  formatDrikPanchang,
+  isMuhuratIntent,
+} from "@/lib/drikpanchang";
 import { updateChatSummary } from "@/lib/summarize";
 import { ashtakoota } from "@/lib/ashtakoota";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -67,6 +74,30 @@ export async function POST(request: Request) {
   // 3) RAG node: retrieve authoritative Vedic knowledge for this topic/chart.
   const vedicChunks = retrieveVedicContext({ focus, kundli });
 
+  // 2b) Panchang node: for tithi/muhurat questions, ground the answer in the
+  //     real daily panchang. Free offline computation always; the lazy
+  //     drikPanchang API (env-gated) adds sunrise/sunset + rahu kalam, and is
+  //     only reached for timing-intent questions.
+  let panchangCtx = "";
+  if (topic === "panchang") {
+    try {
+      const panchang = await getPanchang(now);
+      panchangCtx = `\n\nTODAY'S PANCHANG (${panchang.date}): ${formatPanchang(panchang)}`;
+      const question = lastUser?.content ?? "";
+      if (drikPanchangConfigured() && isMuhuratIntent(question)) {
+        const dp = await fetchDrikPanchang({
+          instant: now,
+          tz: kundli.profile.timezone || "Asia/Kolkata",
+          lat: kundli.profile.lat,
+          lng: kundli.profile.lng,
+        }).catch(() => null);
+        if (dp) panchangCtx += `\nDAILY TIMINGS (drikPanchang): ${formatDrikPanchang(dp)}`;
+      }
+    } catch {
+      console.warn("[aryad] panchang computation failed");
+    }
+  }
+
   // Optional kundli-matching: score both charts and ground the answer in both.
   let matchCtx: { kundli: KundliResult; score: ReturnType<typeof ashtakoota> } | undefined;
   if (matchKundli && matchKundli.computed) {
@@ -91,7 +122,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const system = buildSystemPrompt(
+  const baseSystem = buildSystemPrompt(
     kundli,
     lang ?? "en",
     now,
@@ -100,6 +131,7 @@ export async function POST(request: Request) {
     vedicChunks,
     matchCtx
   );
+  const system = panchangCtx ? baseSystem + panchangCtx : baseSystem;
 
   // Keep prior timing windows visible even when history is truncated.
   // Prefer the FULL stored thread (cross-session memory) over just the

@@ -38,7 +38,7 @@ Verify with lint + build before any push. Browser tests use Playwright MCP again
 ## Key architecture
 
 - Chat-first funnel: landing → details form → chat. The chat (`src/components/arya-chat.tsx`) is the core: instant chart-at-a-glance, context-aware starter chips, one-tap teaser chip, signup gate, paywall, kundli matching.
-- `/api/chat` = 5-node pipeline: routing → transits → Vedic RAG → composed streaming → reflection. Crisis guard first. Optional `matchKundli` for compatibility.
+- `/api/chat` = 5-node pipeline: routing → transits → Vedic RAG → composed streaming → reflection. Crisis guard first. Optional `matchKundli` for compatibility. Panchang node: for tithi/muhurat questions (`panchang` routing topic), injects free offline panchang (`src/lib/panchang.ts`, sidereal tithi/nakshatra/yoga/karana, validated against drikPanchang reference) and — env-gated only — the lazy drikPanchang API (`src/lib/drikpanchang.ts`, `DRIKPANCHANG_API_KEY`, cached per date+place, 5s timeout, fallback to free calc) for timing-window intent.
 - `/api/kundli` computes a chart (Swiss Ephemeris). `match: true` skips profile persistence (partner chart).
 - Monetization (experiment): Q1 free → Google signup gate before Q2 → 5 free total (`FREE_LIMIT=5` in `arya-chat.tsx`) → paywall. Packs: `PACKS` = ₹10/10q, ₹20/30q (default), ₹30/50q. Repeat buyers (prior purchase in localStorage) also see `UNLIMITED_PACK` (p60): ₹60 for unlimited questions over 7 days (`UNLIMITED_DAYS`, `jyotish_unlimited_until_v1`). `asked_count` persisted in localStorage.
 - Orders: `orders` table records amount/pack/order_id/payment_id; `paid20_at` on profiles is legacy (name is misleading).

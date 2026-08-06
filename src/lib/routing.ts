@@ -17,6 +17,7 @@ export type Topic =
   | "money"
   | "health"
   | "education"
+  | "panchang"
   | "general";
 
 export interface ChartFocus {
@@ -27,6 +28,19 @@ export interface ChartFocus {
 }
 
 const KEYWORDS: { topic: Exclude<Topic, "general">; words: string[] }[] = [
+  {
+    topic: "panchang",
+    words: [
+      "tithi", "panchang", "muhurat", "muhurt", "muhurta",
+      "rahu kalam", "rahu kaal",
+      "shubh din", "shubh samay", "shubh muhurat", "shubh din",
+      "auspicious day", "auspicious time", "auspicious muhurat",
+      "aaj ka din", "aaj ka tithi", "aaj ka nakshatra",
+      "तिथि", "पंचांग", "मुहूर्त", "मुहुर्त", "राहु काल",
+      "शुभ दिन", "शुभ समय", "शुभ मुहूर्त", "आज का दिन", "आज का तिथि",
+      "शुभ दिवस",
+    ],
+  },
   {
     topic: "marriage",
     words: [
@@ -131,6 +145,14 @@ export function getChartFocus(topic: Topic): ChartFocus {
         planetIds: ["jupiter", "mercury", "moon"],
         guidance:
           "Focus on education and learning. Weigh the 4th, 5th and 9th houses, and Jupiter + Mercury (karakas for learning and intellect).",
+      };
+    case "panchang":
+      return {
+        topic,
+        houses: [1, 9],
+        planetIds: ["moon", "jupiter"],
+        guidance:
+          "Focus on the daily panchang and muhurat timing. Use the provided TITHI/PANCHANG data (day's tithi, nakshatra, yoga, karana, and rahu kalam if available) as the factual base. Advise on auspicious/inauspicious windows and suitable activities for the day. Never invent a tithi or muhurat that isn't in the given data; if data is missing, say so and give the general rule.",
       };
     default:
       return {
