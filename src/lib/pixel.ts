@@ -24,6 +24,16 @@ export function trackInitiateCheckout() {
   fbq()?.("track", "InitiateCheckout");
 }
 
+/** The Razorpay payment sheet actually opened. */
+export function trackCheckoutOpened() {
+  trackCustom("CheckoutOpened");
+}
+
+/** The checkout was started but never completed. */
+export function trackCheckoutAbandoned(reason: "dismissed" | "script_failed" | "failed") {
+  trackCustom("CheckoutAbandoned", { reason });
+}
+
 /** A real pack was paid — value in INR. `eventId` enables Conversions API dedup. */
 export function trackPurchase(amountInRupees: number, eventId?: string) {
   const params: Record<string, unknown> = {

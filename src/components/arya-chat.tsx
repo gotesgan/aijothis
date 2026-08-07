@@ -12,6 +12,8 @@ import { pickStarters } from "@/lib/starters";
 import {
   trackLead,
   trackInitiateCheckout,
+  trackCheckoutOpened,
+  trackCheckoutAbandoned,
   trackPurchase,
   trackSignup,
   trackFirstAnswer,
@@ -59,27 +61,32 @@ const UNLIMITED_PACK: QuestionPack = {
   unlimited: true,
 };
 
-/** Loads Razorpay checkout and opens the payment sheet. */
+/** Loads Razorpay checkout and opens the payment sheet.
+ *  Resolves `ok` (payment verified) and `opened` (sheet reached the user —
+ *  false means the script failed before the sheet could open). */
 function openRazorpay(opts: {
   orderId: string;
   keyId: string;
   amount: number;
   currency: string;
   description: string;
-}): Promise<boolean> {
+  prefillName?: string;
+}): Promise<{ ok: boolean; opened: boolean }> {
   return new Promise((resolve) => {
+    let opened = false;
+    const settle = (ok: boolean) => resolve({ ok, opened });
     const loadScript = () => {
       if ((window as unknown as { Razorpay?: unknown }).Razorpay) return init();
       const s = document.createElement("script");
       s.src = "https://checkout.razorpay.com/v1/checkout.js";
       s.async = true;
       s.onload = init;
-      s.onerror = () => resolve(false);
+      s.onerror = () => settle(false);
       document.head.appendChild(s);
     };
     const init = () => {
       const R = (window as unknown as { Razorpay?: new (o: unknown) => { open: () => void } }).Razorpay;
-      if (!R) return resolve(false);
+      if (!R) return settle(false);
       const rzp = new R({
         key: opts.keyId,
         amount: opts.amount,
@@ -87,6 +94,10 @@ function openRazorpay(opts: {
         name: "Jyotish",
         description: opts.description,
         order_id: opts.orderId,
+        prefill: opts.prefillName ? { name: opts.prefillName } : undefined,
+        remember_customer: true,
+        retry: { enabled: true },
+        modal: { ondismiss: () => settle(false), confirm_close: true },
         handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           try {
             const res = await fetch("/api/payment-verify", {
@@ -94,13 +105,14 @@ function openRazorpay(opts: {
               headers: { "Content-Type": "application/json", "x-device-id": getDeviceId() },
               body: JSON.stringify(response),
             });
-            resolve(res.ok);
+            settle(res.ok);
           } catch {
-            resolve(false);
+            settle(false);
           }
         },
-        modal: { ondismiss: () => resolve(false) },
       });
+      opened = true;
+      trackCheckoutOpened();
       rzp.open();
     };
     loadScript();
@@ -198,6 +210,12 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   });
   const [showSignup, setShowSignup] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [checkoutRetry, setCheckoutRetry] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<{
+    orderId: string;
+    packId: string;
+    amountPaise: number;
+  } | null>(null);
 
   // Kundli matching state.
   const [matchCard, setMatchCard] = useState<MatchPrefill | null>(null);
@@ -260,6 +278,51 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         // non-fatal — start fresh
       } finally {
         if (!cancelled) setHistoryLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Reconcile payments on return: if the DB says paid but this device's
+   *  localStorage is behind (e.g. webhook-only grant, cleared storage), grant
+   *  silently so a paying user is never left gated. Also surfaces any recent
+   *  abandoned checkout as a resume-payment banner. */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/orders", {
+          headers: { "x-device-id": getDeviceId() },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data) return;
+
+        if (data.paidQuestionsTotal > 0) {
+          setPaidQuestions((prev) => {
+            const next = Math.max(prev, data.paidQuestionsTotal);
+            if (next !== prev) localStorage.setItem(PAID_Q_KEY, String(next));
+            return next;
+          });
+        }
+        if (data.hasP60 && data.latestPaidAt) {
+          setUnlimitedUntil(() => {
+            const existing = localStorage.getItem(UNLIMITED_KEY);
+            if (existing && new Date(existing).getTime() > Date.now()) return existing;
+            const until = new Date(
+              new Date(data.latestPaidAt).getTime() + UNLIMITED_DAYS * 24 * 60 * 60 * 1000
+            ).toISOString();
+            localStorage.setItem(UNLIMITED_KEY, until);
+            return until;
+          });
+        }
+        if (data.pending) {
+          setPendingOrder(data.pending);
+        }
+      } catch {
+        // non-fatal — reconciliation is best-effort
       }
     })();
     return () => {
@@ -390,6 +453,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       // can keep buying as many times as they want. No dead-end.
       // Hold the question so it can auto-send right after the purchase.
       paywallPendingRef.current = text;
+      setCheckoutRetry(false);
       setShowPaywall(true);
       return;
     }
@@ -467,19 +531,40 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         else grantPack(selectedPack.questions, false);
         return;
       }
-      const ok = await openRazorpay({
+      const result = await openRazorpay({
         ...data,
         description: selectedPack.unlimited
           ? "7-day unlimited questions with Arya"
           : `${selectedPack.questions} questions with Arya`,
+        prefillName: kundli?.profile.name,
       });
-      if (ok) {
+      if (result.ok) {
+        setPendingOrder(null);
         if (selectedPack.unlimited) grantUnlimited(true, data.amount);
         else grantPack(selectedPack.questions, true, data.amount);
+      } else {
+        // Payment sheet was dismissed or never opened — never leave the user in
+        // a dead end. Reopen the paywall with a retry note; the held question
+        // stays pending so they can finish right away.
+        trackCheckoutAbandoned(result.opened ? "dismissed" : "script_failed");
+        setCheckoutRetry(true);
+        setShowPaywall(true);
       }
     } catch {
+      trackCheckoutAbandoned("failed");
+      setCheckoutRetry(true);
       setShowPaywall(true);
     }
+  }
+
+  /** Resume an abandoned checkout: reopen the paywall pre-selected to the
+   *  pack they had chosen, so a retry is one tap away. */
+  function resumePayment() {
+    if (pendingOrder) {
+      const match = [...PACKS, UNLIMITED_PACK].find((p) => p.id === pendingOrder.packId);
+      if (match) setSelectedPack(match);
+    }
+    setShowPaywall(true);
   }
 
   /** Repeat-buyer pass: unlimited questions until 7 days from now. */
@@ -494,6 +579,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     if (real) {
       trackPurchase((amountPaise ?? UNLIMITED_PACK.price * 100) / 100, newUuid());
     }
+    setPendingOrder(null);
     // Send the held question now that they've paid.
     const pending = paywallPendingRef.current;
     paywallPendingRef.current = null;
@@ -513,6 +599,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       // Value = the actual order amount paid, not a hardcoded figure.
       trackPurchase((amountPaise ?? selectedPack.price * 100) / 100, newUuid());
     }
+    setPendingOrder(null);
     // The user landed on the paywall with a question in hand — send it now that
     // they've paid, so they stay in the same spot instead of being dropped.
     const pending = paywallPendingRef.current;
@@ -834,6 +921,24 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         </button>
       </div>
 
+      {pendingOrder && (
+        <div className="pending-banner">
+          <span className="pending-banner__text">
+            {t("pendingBanner")} (₹{pendingOrder.amountPaise / 100})
+          </span>
+          <button className="pending-banner__pay" onClick={resumePayment}>
+            {t("pendingPay")}
+          </button>
+          <button
+            className="pending-banner__close"
+            onClick={() => setPendingOrder(null)}
+            aria-label="Close"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       <AppNav inline />
 
       {showSignup && (
@@ -866,6 +971,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           <div className="gate-modal__card">
             <h2 className="gate-modal__title">{t("paywallTitle")}</h2>
             <p className="gate-modal__sub">{t("paywallSub")}</p>
+            {checkoutRetry && <p className="gate-modal__retry">{t("checkoutRetry")}</p>}
 
             <div className="pack-list">
               {(paidQuestions > 0 ? [...PACKS, UNLIMITED_PACK] : PACKS).map((p) => (

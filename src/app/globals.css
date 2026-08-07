@@ -1483,6 +1483,45 @@ button {
   color: var(--ivory-muted);
   font-size: 0.9rem;
 }
+.gate-modal__retry {
+  color: var(--marigold);
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(255, 184, 77, 0.08);
+  border: 1px solid rgba(255, 184, 77, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+.pending-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px 0;
+  padding: 10px 12px;
+  background: var(--glow-marigold);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+}
+.pending-banner__text {
+  flex: 1;
+  font-size: 0.82rem;
+  color: var(--ivory);
+}
+.pending-banner__pay {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gold);
+  background: transparent;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.pending-banner__close {
+  color: var(--ivory-faint);
+  display: inline-flex;
+  padding: 2px;
+}
 .gate-modal__ghost {
   color: var(--ivory-faint);
   font-size: 0.85rem;
