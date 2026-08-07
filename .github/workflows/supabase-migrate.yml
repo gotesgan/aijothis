@@ -3,13 +3,12 @@ name: Supabase Migrations
 # Runs migrations on the production database whenever code lands on main,
 # BEFORE the Vercel deploy serves new code that depends on the new schema.
 #
-# - Uses --db-url (NOT `supabase link`) to dodge supabase/cli#6115
-#   (SchemaError on api-keys inserted_at in v2.112.0).
-# - Connects through the project-specific TRANSACTION POOLER
-#   (<ref>.pooler.supabase.com:5432). Newer Supabase projects use this
-#   per-project pooler host; the shared aws-0-<region> host returns
-#   "tenant/user not found" for them. The direct db.<ref>.supabase.co host
-#   is IPv6-only (unreachable from GitHub Actions runners).
+# Applies each migration file via the Supabase MANAGEMENT API query endpoint
+# (POST /v1/projects/<ref>/database/query) — no DB connection, no pooler, no
+# password, and it dodges supabase/cli#6115 (supabase link SchemaError).
+#
+# All migrations are idempotent (IF NOT EXISTS), so replaying already-applied
+# ones (0001/0003) is a safe no-op; 0004/0005 apply for real on first run.
 
 on:
   push:
@@ -22,25 +21,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Resolve connection string (debug)
+      - name: Apply migrations via Management API
         run: |
-          curl -s -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/connection-string" | \
-            sed -E 's/:[^:@\/]+@/:***@/g'
+          set -e
+          for f in supabase/migrations/*.sql; do
+            echo "::group::Applying $f"
+            python3 -c "
+import json, sys
+sql = open('$f').read()
+print(json.dumps({'query': sql}))
+" > /tmp/payload.json
+            curl -sS -X POST \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+              -d @/tmp/payload.json
+            echo
+            echo "::endgroup::"
+          done
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-
-      - name: Apply migrations
-        run: |
-          PW=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$SUPABASE_DB_PASSWORD")
-          supabase db push \
-            --db-url "postgresql://postgres.${SUPABASE_PROJECT_REF}:${PW}@${SUPABASE_PROJECT_REF}.pooler.supabase.com:5432/postgres"
-        env:
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
