@@ -5,9 +5,11 @@ name: Supabase Migrations
 #
 # - Uses --db-url (NOT `supabase link`) to dodge supabase/cli#6115
 #   (SchemaError on api-keys inserted_at in v2.112.0).
-# - Connects through the TRANSACTION POOLER (aws-0-<region>.pooler.supabase.com)
-#   because the direct host db.<ref>.supabase.co is IPv6-only and GitHub
-#   Actions runners have no IPv6. Region is fetched from the Management API.
+# - Connects through the project-specific TRANSACTION POOLER
+#   (<ref>.pooler.supabase.com:5432). Newer Supabase projects use this
+#   per-project pooler host; the shared aws-0-<region> host returns
+#   "tenant/user not found" for them. The direct db.<ref>.supabase.co host
+#   is IPv6-only (unreachable from GitHub Actions runners).
 
 on:
   push:
@@ -25,28 +27,11 @@ jobs:
         with:
           version: latest
 
-      - name: Resolve project region
-        id: region
-        run: |
-          RESP=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF")
-          CODE=$(echo "$RESP" | tail -1)
-          BODY=$(echo "$RESP" | head -n -1)
-          echo "api_http=$CODE"
-          echo "api_body=$BODY"
-          REGION=$(echo "$BODY" | python3 -c "import json,sys; print(json.load(sys.stdin).get('region',''))" 2>/dev/null || true)
-          [ -z "$REGION" ] && REGION="ap-south-1"
-          echo "region=$REGION" >> "$GITHUB_OUTPUT"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-
       - name: Apply migrations
         run: |
           PW=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$SUPABASE_DB_PASSWORD")
           supabase db push \
-            --db-url "postgresql://postgres.${SUPABASE_PROJECT_REF}:${PW}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
+            --db-url "postgresql://postgres.${SUPABASE_PROJECT_REF}:${PW}@${SUPABASE_PROJECT_REF}.pooler.supabase.com:5432/postgres"
         env:
-          REGION: ${{ steps.region.outputs.region }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
