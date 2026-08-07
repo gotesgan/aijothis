@@ -3,9 +3,11 @@ name: Supabase Migrations
 # Runs migrations on the production database whenever code lands on main,
 # BEFORE the Vercel deploy serves new code that depends on the new schema.
 #
-# Uses a direct --db-url (built from SUPABASE_PROJECT_REF + SUPABASE_DB_PASSWORD)
-# instead of `supabase link`, which currently hits an open CLI bug
-# (supabase/cli#6115: SchemaError on api-keys inserted_at in v2.112.0).
+# - Uses --db-url (NOT `supabase link`) to dodge supabase/cli#6115
+#   (SchemaError on api-keys inserted_at in v2.112.0).
+# - Connects through the TRANSACTION POOLER (aws-0-<region>.pooler.supabase.com)
+#   because the direct host db.<ref>.supabase.co is IPv6-only and GitHub
+#   Actions runners have no IPv6. Region is fetched from the Management API.
 
 on:
   push:
@@ -23,11 +25,24 @@ jobs:
         with:
           version: latest
 
+      - name: Resolve project region
+        id: region
+        run: |
+          REGION=$(curl -s -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin).get('region',''))" 2>/dev/null || true)
+          [ -z "$REGION" ] && REGION="ap-south-1"
+          echo "region=$REGION" >> "$GITHUB_OUTPUT"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
       - name: Apply migrations
         run: |
           PW=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$SUPABASE_DB_PASSWORD")
           supabase db push \
-            --db-url "postgresql://postgres.${SUPABASE_PROJECT_REF}:${PW}@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres"
+            --db-url "postgresql://postgres.${SUPABASE_PROJECT_REF}:${PW}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
         env:
+          REGION: ${{ steps.region.outputs.region }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
