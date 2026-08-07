@@ -54,7 +54,6 @@ Verify with lint + build before any push. Browser tests use Playwright MCP again
 - `src/lib/pixel.ts` — Meta Pixel events (Purchase = real-only, `event_id` for CAPI dedup)
 - `src/lib/supabase.ts` — client; non-production uses test project when `*_TEST` env vars set
 - `src/lib/starters.ts` — context-aware follow-up chips
-- `src/lib/turnstile.ts` + `src/lib/turnstile-client.ts` — Cloudflare Turnstile: canonical server-side siteverify (gates `/api/kundli` + `/api/signup` on `success === true`) + client token helpers. Widget embedded on details-form, birth-details-card, match-card, and the signup modal, all `data-action="turnstile-spin-v2"`. Sitekey = `NEXT_PUBLIC_TURNSTILE_SITEKEY`; secret = `TURNSTILE_SECRET` (open mode — skipped — when unset; MUST be set in prod).
 - `supabase/migrations/` — 0001_init, 0003_orders, 0004_memory (auto-applied on push to main by GitHub Action). `supabase/deferred-migrations/0002_auth_rls.sql` — held back until real auth lands (see its README).
 
 ## Supabase

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { getDeviceId } from "@/lib/storage";
-import { TURNSTILE_SITEKEY, getTurnstileToken, resetTurnstile } from "@/lib/turnstile-client";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
 import type { KundliResult } from "@/lib/types";
 import { ArrowRight, Loader2 } from "lucide-react";
@@ -56,14 +55,10 @@ export function BirthDetailsCard({
           lng: selected.lng,
           timezone: selected.timezone,
           lang: locale,
-          cfTurnstileResponse: getTurnstileToken(),
         }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        resetTurnstile();
-        throw new Error(data.message ?? "Failed");
-      }
+      if (!res.ok) throw new Error(data.message ?? "Failed");
       onComplete(data.kundli as KundliResult);
     } catch (err) {
       setError((err as Error).message ?? "Something went wrong.");
@@ -137,15 +132,6 @@ export function BirthDetailsCard({
       />
 
       {error && <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>}
-
-      {TURNSTILE_SITEKEY && (
-        <div
-          className="cf-turnstile"
-          data-sitekey={TURNSTILE_SITEKEY}
-          data-action="turnstile-spin-v2"
-          data-theme="dark"
-        />
-      )}
 
       <button type="submit" className="btn btn--gold" disabled={!canSubmit}>
         {submitting ? (

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";import { useTranslations, useLocale 
 import { Link, useRouter } from "@/i18n/navigation";
 import { saveKundli, getDeviceId } from "@/lib/storage";
 import { trackLead, trackQuestionChip } from "@/lib/pixel";
-import { TURNSTILE_SITEKEY, getTurnstileToken, resetTurnstile } from "@/lib/turnstile-client";
 import type { KundliResult } from "@/lib/types";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
 import { ArrowRight, Loader2 } from "lucide-react";
@@ -53,13 +52,11 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
           lng: selected.lng,
           timezone: selected.timezone,
           lang: locale,
-          cfTurnstileResponse: getTurnstileToken(),
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        resetTurnstile();
         setError(data.message ?? "Something went wrong. Please try again.");
         setSubmitting(false);
         return;
@@ -128,15 +125,6 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
 
       {error && (
         <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>
-      )}
-
-      {TURNSTILE_SITEKEY && (
-        <div
-          className="cf-turnstile"
-          data-sitekey={TURNSTILE_SITEKEY}
-          data-action="turnstile-spin-v2"
-          data-theme="dark"
-        />
       )}
 
       <button

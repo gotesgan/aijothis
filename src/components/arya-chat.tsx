@@ -9,7 +9,6 @@ import { getDeviceId, getOrCreateChatId, newUuid, saveKundli, setChatId } from "
 import { detectMatchRequest } from "@/lib/match";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import { pickStarters } from "@/lib/starters";
-import { TURNSTILE_SITEKEY, getTurnstileToken } from "@/lib/turnstile-client";
 import {
   trackLead,
   trackInitiateCheckout,
@@ -507,7 +506,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           "Content-Type": "application/json",
           "x-device-id": getDeviceId(),
         },
-        body: JSON.stringify({ credential, cfTurnstileResponse: getTurnstileToken() }),
+        body: JSON.stringify({ credential }),
       });
     } catch {
       // non-fatal
@@ -957,14 +956,6 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             <button className="btn btn--gold" onClick={signUp}>
               {t("continueGoogle")}
             </button>
-            {TURNSTILE_SITEKEY && (
-              <div
-                className="cf-turnstile"
-                data-sitekey={TURNSTILE_SITEKEY}
-                data-action="turnstile-spin-v2"
-                data-theme="dark"
-              />
-            )}
             <p className="gate-modal__legal">
               {t("agree")}{" "}
               <Link href="/legal/privacy">{t("agreePrivacy")}</Link>
