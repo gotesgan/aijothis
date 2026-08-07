@@ -2126,3 +2126,17 @@ html {
   display: inline-block;
   margin-top: 10px;
 }
+.sitemap__list {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  padding: 0;
+}
+.sitemap__list li a {
+  color: var(--marigold);
+  text-decoration: underline;
+  font-size: 0.95rem;
+}
+.sitemap__list li a:hover {
+  color: var(--ivory);
+}
