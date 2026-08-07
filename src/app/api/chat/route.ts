@@ -197,9 +197,14 @@ export async function POST(request: Request) {
       // 4) Compose node: stream Arya's draft answer.
       //    `live` streams tokens to the client; retries buffer silently so a
       //    failed attempt can't leave a half-written/empty bubble behind.
-      const attempt = async (live: boolean) => {
+      //    `reasoningEffort` overrides the default — the final retry runs with
+      //    thinking OFF so a heavy-reasoning request can never burn its whole
+      //    budget and return an empty answer (observed: completion=4096
+      //    reasoning=4096 → draft too short).
+      const attempt = async (live: boolean, reasoningEffort?: string) => {
         await streamChatCompletion({
           messages: llmMessages,
+          reasoningEffort,
           onToken: (token) => {
             draft += token;
             if (live) controller.enqueue(encoder.encode(token));
@@ -230,6 +235,20 @@ export async function POST(request: Request) {
           await attempt(false);
         } catch (err) {
           console.warn("[aryad] retry failed:", (err as Error).message);
+          draft = "";
+        }
+      }
+
+      // Final safety net: still empty → retry once more with reasoning OFF.
+      // A non-thinking call always emits content, so a user never gets the
+      // tangle fallback just because the model over-reasoned.
+      if (draft.trim().length < MIN_DRAFT) {
+        console.warn("[aryad] draft still short — final non-thinking retry");
+        draft = "";
+        try {
+          await attempt(false, "none");
+        } catch (err) {
+          console.warn("[aryad] final retry failed:", (err as Error).message);
           draft = "";
         }
       }

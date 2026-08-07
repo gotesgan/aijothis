@@ -28,7 +28,7 @@ export async function streamChatCompletion(params: {
   const baseUrl = process.env.LLM_BASE_URL ?? "https://api.groq.com/openai/v1";
   const apiKey = process.env.LLM_API_KEY ?? "";
   const model = process.env.LLM_MODEL ?? "llama-3.3-70b-versatile";
-  const maxTokens = Number(process.env.LLM_MAX_TOKENS ?? 4096);
+  const maxTokens = Number(process.env.LLM_MAX_TOKENS ?? 8192);
   const effort = reasoningEffort ?? process.env.LLM_REASONING_EFFORT;
 
   if (!apiKey) {
@@ -128,7 +128,7 @@ export async function chatCompletion(params: {
   const baseUrl = process.env.LLM_BASE_URL ?? "https://api.groq.com/openai/v1";
   const apiKey = process.env.LLM_API_KEY ?? "";
   const model = process.env.LLM_MODEL ?? "llama-3.3-70b-versatile";
-  const maxTokens = params.maxTokens ?? Number(process.env.LLM_MAX_TOKENS ?? 4096);
+  const maxTokens = params.maxTokens ?? Number(process.env.LLM_MAX_TOKENS ?? 8192);
   const effort = params.reasoningEffort ?? process.env.LLM_REASONING_EFFORT;
 
   if (!apiKey) return { text: "" };
