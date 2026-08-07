@@ -33,6 +33,8 @@ export async function updateChatSummary(params: {
         },
       ],
       maxTokens: 250,
+      // Compression task — no hidden reasoning needed.
+      reasoningEffort: "none",
     });
 
     const s = text.trim();
