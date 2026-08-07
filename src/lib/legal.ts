@@ -15,7 +15,7 @@ export interface LegalDoc {
 export const PRIVACY: Record<LegalLocale, LegalDoc> = {
   en: {
     title: "Privacy Policy",
-    lastUpdated: "Last updated: 6 Aug 2026",
+    lastUpdated: "Last updated: 7 Aug 2026",
     intro:
       "Jyotish respects your privacy. This policy explains what we collect, why we collect it, and how we protect it.",
     sections: [
@@ -30,7 +30,7 @@ export const PRIVACY: Record<LegalLocale, LegalDoc> = {
   },
   hi: {
     title: "गोपनीयता नीति",
-    lastUpdated: "अंतिम अद्यतन: 6 अगस्त 2026",
+    lastUpdated: "अंतिम अद्यतन: 7 अगस्त 2026",
     intro:
       "ज्योतिष आपकी गोपनीयता का सम्मान करता है। यह नीति बताती है कि हम क्या एकत्र करते हैं, क्यों, और उसे कैसे सुरक्षित रखते हैं।",
     sections: [
@@ -45,7 +45,7 @@ export const PRIVACY: Record<LegalLocale, LegalDoc> = {
   },
   mr: {
     title: "गोपनीयता धोरण",
-    lastUpdated: "शेवटचे अपडेट: ६ ऑगस्ट २०२६",
+    lastUpdated: "शेवटचे अपडेट: ७ ऑगस्ट २०२६",
     intro:
       "ज्योतिष तुमच्या गोपनीयतेचा आदर करतो. हे धोरण सांगते की आम्ही काय गोळा करतो, का, आणि ते कसे सुरक्षित ठेवतो.",
     sections: [
@@ -63,7 +63,7 @@ export const PRIVACY: Record<LegalLocale, LegalDoc> = {
 export const TERMS: Record<LegalLocale, LegalDoc> = {
   en: {
     title: "Terms & Conditions",
-    lastUpdated: "Last updated: 6 Aug 2026",
+    lastUpdated: "Last updated: 7 Aug 2026",
     intro:
       "By using Jyotish you agree to these terms. Please read them carefully — especially the parts about AI-generated content and that Arya is not a human astrologer.",
     sections: [
@@ -77,12 +77,13 @@ export const TERMS: Record<LegalLocale, LegalDoc> = {
       { heading: "No guarantees", body: "Astrology is interpretive, not factual. We do not guarantee the accuracy of any reading, prediction, or time window, and we make no promise about future events. Predictions are suggestions, not certainties." },
       { heading: "Acknowledgment", body: "By using Jyotish you acknowledge that you understand: (a) Arya is an AI, not a human; (b) all content is AI-generated and may be wrong; (c) the service is for entertainment and reference; (d) it is not professional advice; and (e) you will not rely on it for critical life decisions." },
       { heading: "Liability", body: "To the maximum extent permitted by law, Jyotish is not liable for any decisions, actions, or outcomes based on readings or AI-generated content. Our total liability is limited to the amount you paid for the service." },
+      { heading: "How Arya talks (tone & what to expect)", body: "Arya is designed to talk warmly, conversationally and personally — like a trusted friend or elder, not a formal report. Because the service is for entertainment, comfort and self-reflection, she may be encouraging, expressive and direct about emotional topics (love, marriage, family, feelings). This tone is deliberate and is part of the service. By using Jyotish you accept that Arya's conversational style — including engaging warmly on personal topics — is part of what you are signing up for, and you take responsibility for what you choose to share and how you act on anything said. You can end a chat or stop using the service at any time. None of it is professional advice, and every reading is an AI-generated interpretation, not fact (see the sections above)." },
       { heading: "Changes & contact", body: "We may update these terms. Continued use after changes means acceptance. Questions: support@aijothis.com." },
     ],
   },
   hi: {
     title: "नियम व शर्तें",
-    lastUpdated: "अंतिम अद्यतन: 6 अगस्त 2026",
+    lastUpdated: "अंतिम अद्यतन: 7 अगस्त 2026",
     intro: "ज्योतिष का उपयोग करने से आप इन नियमों से सहमत होते हैं। कृपया ध्यान से पढ़ें — विशेषकर AI-जनित सामग्री और यह कि आर्य कोई इंसानी ज्योतिषी नहीं है।",
     sections: [
       { heading: "सेवा", body: "ज्योतिष एक AI वैदिक ज्योतिष ऐप है। यह आपकी जन्म जानकारी से आपकी कुंडली बनाता है और आर्य (एक AI ज्योतिषी) के माध्यम से व्यक्तिगत वाचन और चैट उत्तर देता है। आर्य एक आर्टिफिशियल इंटेलिजेंस (कंप्यूटर प्रोग्राम) है, इंसान नहीं। सेवा मनोरंजन, आत्म-चिंतन और व्यक्तिगत जानकारी के लिए है।" },
@@ -95,12 +96,13 @@ export const TERMS: Record<LegalLocale, LegalDoc> = {
       { heading: "कोई गारंटी नहीं", body: "ज्योतिष व्याख्यात्मक है, तथ्यात्मक नहीं। हम किसी वाचन, भविष्यवाणी या समय-सीमा की सटीकता की गारंटी नहीं देते और भविष्य की घटनाओं का कोई वादा नहीं करते। भविष्यवाणियाँ सुझाव हैं, निश्चितताएँ नहीं।" },
       { heading: "स्वीकृति", body: "ज्योतिष उपयोग करने से आप स्वीकार करते हैं कि आप समझते हैं: (क) आर्य एक AI है, इंसान नहीं; (ख) सभी सामग्री AI-जनित है और गलत हो सकती है; (ग) सेवा मनोरंजन और संदर्भ के लिए है; (घ) यह पेशेवर सलाह नहीं है; और (ङ) आप इस पर महत्वपूर्ण जीवन निर्णय नहीं लेंगे।" },
       { heading: "दायित्व", body: "कानून द्वारा अनुमत अधिकतम सीमा तक, वाचन या AI सामग्री के आधार पर लिए गए किसी भी निर्णय, कार्य या परिणाम के लिए ज्योतिष जिम्मेदार नहीं है। हमारा कुल दायित्व आपके द्वारा भुगतान की गई राशि तक सीमित है।" },
+      { heading: "आर्य कैसे बात करती हैं (टोन और क्या उम्मीद करें)", body: "आर्य को गर्मजोशी, बातचीत और व्यक्तिगत तरीके से बात करने के लिए डिज़ाइन किया गया है — भरोसेमंद दोस्त या बड़े जैसा, औपचारिक रिपोर्ट नहीं। क्योंकि सेवा मनोरंजन, आराम और आत्म-चिंतन के लिए है, वह भावनात्मक विषयों (प्रेम, शादी, परिवार, भावनाएँ) पर उत्साहवर्धक, अभिव्यंजक और स्पष्ट हो सकती है। यह लहजा जानबूझकर है और सेवा का हिस्सा है। ज्योतिष उपयोग करने से आप स्वीकार करते हैं कि आर्य की बातचीत की शैली — व्यक्तिगत विषयों पर गर्मजोशी से बात करना — वही है जिसके लिए आपने साइन अप किया है, और आप यह ज़िम्मेदारी लेते हैं कि आप क्या साझा करते हैं और बातों पर कैसे कार्य करते हैं। आप किसी भी समय चैट समाप्त कर सकते हैं या सेवा बंद कर सकते हैं। यह पेशेवर सलाह नहीं है, और हर वाचन AI-जनित व्याख्या है, तथ्य नहीं (ऊपर के अनुभाग देखें)।" },
       { heading: "बदलाव व संपर्क", body: "हम इन नियमों को अपडेट कर सकते हैं। बदलाव के बाद उपयोग का मतलब स्वीकृति है। सवाल: support@aijothis.com।" },
     ],
   },
   mr: {
     title: "अटी व शर्ती",
-    lastUpdated: "शेवटचे अपडेट: ६ ऑगस्ट २०२६",
+    lastUpdated: "शेवटचे अपडेट: ७ ऑगस्ट २०२६",
     intro: "ज्योतिष वापरल्याने तुम्ही या अटींना सहमत होता. कृपया काळजीपूर्वक वाचा — विशेषतः AI-निर्मित सामग्री आणि आर्य माणूस नाही याबद्दल.",
     sections: [
       { heading: "सेवा", body: "ज्योतिष हे AI वैदिक ज्योतिष ॲप आहे. ते तुमच्या जन्म माहितीवरून तुमची कुंडली बनवते आणि आर्य (AI ज्योतिषी) मार्फत वैयक्तिक वाचन आणि चॅट उत्तरे देते. आर्य हा आर्टिफिशियल इंटेलिजन्स (संगणक प्रोग्राम) आहे, माणूस नाही. सेवा मनोरंजन, स्व-चिंतन आणि वैयक्तिक माहितीसाठी आहे." },
@@ -113,6 +115,7 @@ export const TERMS: Record<LegalLocale, LegalDoc> = {
       { heading: "हमी नाही", body: "ज्योतिष व्याख्यात्मक आहे, वस्तुस्थिती नाही. आम्ही कोणत्याही वाचन, भविष्यवाणी किंवा कालावधीच्या अचूकतेची हमी देत नाही आणि भविष्यातील घटनांचे वचन देत नाही. भविष्यवाण्या सूचना आहेत, निश्चितता नाही." },
       { heading: "स्वीकृती", body: "ज्योतिष वापरल्याने तुम्ही कबूल करता की तुम्हाला समजते: (अ) आर्य हा AI आहे, माणूस नाही; (ब) सर्व सामग्री AI-निर्मित आहे आणि चुकीची असू शकते; (क) सेवा मनोरंजन आणि संदर्भासाठी आहे; (ड) ती व्यावसायिक सल्ला नाही; आणि (इ) तुम्ही त्यावर महत्त्वाचे जीवन निर्णय घेणार नाही." },
       { heading: "जबाबदारी", body: "कायद्याने परवानगी असलेल्या कमाल मर्यादेपर्यंत, वाचन किंवा AI सामग्रीवर आधारित कोणत्याही निर्णय, कृती किंवा परिणामासाठी ज्योतिष जबाबदार नाही. आमची एकूण जबाबदारी तुम्ही भरलेल्या रकमेपर्यंत मर्यादित." },
+      { heading: "आर्य कशी बोलते (टोन आणि काय अपेक्षा करावी)", body: "आर्य उबदार, संवादात्मक आणि वैयक्तिक पद्धतीने बोलण्यासाठी डिझाइन केली आहे — विश्वासू मित्र किंवा मोठ्या व्यक्तीसारखी, औपचारिक अहवाल नाही. कारण सेवा मनोरंजन, दिलासा आणि स्व-चिंतनासाठी आहे, ती भावनिक विषयांवर (प्रेम, लग्न, कुटुंब, भावना) प्रोत्साहक, व्यक्त होणारी आणि थेट असू शकते. हा टोन जाणूनबुजून आहे आणि सेवेचा भाग आहे. ज्योतिष वापरल्याने तुम्ही मान्य करता की आर्यची संभाषणशैली — वैयक्तिक विषयांवर उबदार बोलणे — तुम्ही निवडलेला अनुभव आहे, आणि काय सामायिक करता व त्यावर कसे कृती करता याची जबाबदारी तुमची आहे. तुम्ही कधीही चॅट संपवू शकता किंवा सेवा थांबवू शकता. हे व्यावसायिक सल्ला नाही, आणि प्रत्येक वाचन AI-निर्मित व्याख्या आहे, वस्तुस्थिती नाही (वरील विभाग पहा)." },
       { heading: "बदल व संपर्क", body: "आम्ही या अटी अपडेट करू शकतो. बदलानंतर वापर म्हणजे स्वीकृती. प्रश्न: support@aijothis.com." },
     ],
   },
