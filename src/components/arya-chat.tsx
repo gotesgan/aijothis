@@ -119,11 +119,12 @@ function openRazorpay(opts: {
   });
 }
 
-/** Loads Google Identity Services and runs the sign-in prompt. */
-function runGoogleIdentity(clientId: string): Promise<boolean> {
+/** Loads Google Identity Services and runs the sign-in prompt.
+ *  Resolves the Google credential JWT, or null if unavailable/timed out. */
+function runGoogleIdentity(clientId: string): Promise<string | null> {
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (ok: boolean) => {
+    const finish = (credential: string | null) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
@@ -135,12 +136,12 @@ function runGoogleIdentity(clientId: string): Promise<boolean> {
       } catch {
         // ignore
       }
-      resolve(ok);
+      resolve(credential);
     };
 
     // Never let the signup hang — if Google Identity doesn't respond in time,
-    // resolve false so the caller can fall back gracefully.
-    const timeout = setTimeout(() => finish(false), 12000);
+    // resolve null so the caller can fall back gracefully.
+    const timeout = setTimeout(() => finish(null), 12000);
 
     const done = () => {
       const g = (window as unknown as {
@@ -156,10 +157,10 @@ function runGoogleIdentity(clientId: string): Promise<boolean> {
           };
         };
       }).google;
-      if (!g?.accounts?.id) return finish(false);
+      if (!g?.accounts?.id) return finish(null);
       g.accounts.id.initialize({
         client_id: clientId,
-        callback: (resp) => finish(!!resp?.credential),
+        callback: (resp) => finish(resp?.credential ?? null),
       });
       g.accounts.id.prompt();
     };
@@ -485,9 +486,10 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   /** Google signup — real OAuth when a Client ID is configured, else simulated. */
   async function signUp() {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    let credential: string | null = null;
     if (clientId) {
-      const ok = await runGoogleIdentity(clientId);
-      if (!ok) {
+      credential = await runGoogleIdentity(clientId);
+      if (!credential) {
         // Google Identity failed or timed out — don't dead-end the user.
         // Fall back to a graceful signup so the chat can continue.
         console.warn("[aryad] google identity unavailable; simulated signup");
@@ -500,7 +502,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     try {
       await fetch("/api/signup", {
         method: "POST",
-        headers: { "x-device-id": getDeviceId() },
+        headers: {
+          "Content-Type": "application/json",
+          "x-device-id": getDeviceId(),
+        },
+        body: JSON.stringify({ credential }),
       });
     } catch {
       // non-fatal
