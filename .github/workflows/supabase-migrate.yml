@@ -28,9 +28,13 @@ jobs:
       - name: Resolve project region
         id: region
         run: |
-          REGION=$(curl -s -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF" \
-            | python3 -c "import json,sys; print(json.load(sys.stdin).get('region',''))" 2>/dev/null || true)
+          RESP=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF")
+          CODE=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | head -n -1)
+          echo "api_http=$CODE"
+          echo "api_body=$BODY"
+          REGION=$(echo "$BODY" | python3 -c "import json,sys; print(json.load(sys.stdin).get('region',''))" 2>/dev/null || true)
           [ -z "$REGION" ] && REGION="ap-south-1"
           echo "region=$REGION" >> "$GITHUB_OUTPUT"
         env:
