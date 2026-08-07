@@ -69,6 +69,8 @@ export async function guardInput(
         },
       ],
       maxTokens: 30,
+      // Guards are classifiers — no hidden reasoning needed.
+      reasoningEffort: "none",
     });
     const match = text.match(/\{"action"\s*:\s*"(crisis|soften|pass)"/);
     const action = (match?.[1] as GuardAction | undefined) ?? "pass";
@@ -139,7 +141,9 @@ ${draft}`;
         { role: "system", content: "You are a precise, conservative review guard." },
         { role: "user", content: prompt },
       ],
-      maxTokens: 2048,
+      maxTokens: 1024,
+      // Guards are reviewers — non-thinking keeps this call cheap.
+      reasoningEffort: "none",
       signal: params.signal,
     });
 
