@@ -8,6 +8,33 @@ export const dynamic = "force-dynamic";
 const PENDING_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * Marks a checkout order as `failed` after a payment attempt failed or was
+ * dismissed client-side. Mirrors Razorpay's `attempted` status so a dropped
+ * attempt is no longer surfaced as a stale "pending resume" candidate. This
+ * is the client-side counterpart to the payment.failed webhook (works even
+ * when the webhook isn't configured).
+ */
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  const orderId = typeof body?.orderId === "string" ? body.orderId : null;
+  if (!orderId) {
+    return NextResponse.json({ error: "missing_order" }, { status: 400 });
+  }
+  const admin = getSupabaseAdmin();
+  if (admin) {
+    try {
+      await admin
+        .from("orders")
+        .update({ status: "failed" })
+        .eq("order_id", orderId);
+    } catch (err) {
+      console.warn("[orders] mark failed error:", (err as Error).message);
+    }
+  }
+  return NextResponse.json({ ok: true });
+}
+
+/**
  * Checkout reconciliation for a device.
  *
  * Returns what the DB knows about this device's payments so the client can:
@@ -47,9 +74,20 @@ export async function GET(request: Request) {
     const latestPaid = paid[0] ?? null;
 
     const now = Date.now();
-    const pending = orders.find(
-      (o) => o.status === "created" && now - new Date(o.created_at).getTime() < PENDING_WINDOW_MS
-    );
+    // Surface the most recent created order as a resume candidate — but only
+    // if no payment succeeded after it (a `created` that predates a `paid`
+    // is a stale failed/dropped attempt, not something to nag about).
+    let pending = null;
+    for (const o of orders) {
+      if (o.status !== "created") continue;
+      if (now - new Date(o.created_at).getTime() >= PENDING_WINDOW_MS) continue;
+      const newerPaid = paid.some(
+        (p) => new Date(p.created_at).getTime() > new Date(o.created_at).getTime()
+      );
+      if (newerPaid) continue;
+      pending = o;
+      break;
+    }
 
     return NextResponse.json({
       paidQuestionsTotal,

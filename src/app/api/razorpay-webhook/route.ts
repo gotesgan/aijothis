@@ -18,6 +18,29 @@ export async function POST(request: Request) {
   }
 
   const event = JSON.parse(rawBody);
+
+  // A failed payment attempt — mark the order `failed` so it is no longer
+  // shown as a stale "pending resume" candidate. Mirrors Razorpay's
+  // `attempted` status (our orders CHECK constraint allows created/paid/
+  // simulated/failed).
+  if (event?.event === "payment.failed") {
+    const orderId = event?.payload?.payment?.entity?.order_id as string | undefined;
+    if (orderId) {
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        try {
+          await admin
+            .from("orders")
+            .update({ status: "failed" })
+            .eq("order_id", orderId);
+        } catch (err) {
+          console.warn("[supabase] failed-payment webhook skipped:", (err as Error).message);
+        }
+      }
+    }
+    return NextResponse.json({ received: true });
+  }
+
   if (event?.event !== "payment.captured") {
     return NextResponse.json({ received: true, ignored: true });
   }

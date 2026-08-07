@@ -547,10 +547,18 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         if (selectedPack.unlimited) grantUnlimited(true, data.amount);
         else grantPack(selectedPack.questions, true, data.amount);
       } else {
-        // Payment sheet was dismissed or never opened — never leave the user in
+        // Payment sheet was dismissed or failed — never leave the user in
         // a dead end. Reopen the paywall with a retry note; the held question
-        // stays pending so they can finish right away.
+        // stays pending so they can finish right away. Mark the order
+        // `attempted` so it isn't surfaced as a stale resume candidate.
         trackCheckoutAbandoned(result.opened ? "dismissed" : "script_failed");
+        if (data.orderId) {
+          void fetch("/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-device-id": getDeviceId() },
+            body: JSON.stringify({ orderId: data.orderId }),
+          }).catch(() => {});
+        }
         setCheckoutRetry(true);
         setShowPaywall(true);
       }
