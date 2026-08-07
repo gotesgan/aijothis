@@ -3,7 +3,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Header } from "@/components/header";
 import { NavagrahaMandala } from "@/components/navagraha-mandala";
 import { AppNav } from "@/components/app-nav";
+import { JsonLd } from "@/components/json-ld";
 import { Link } from "@/i18n/navigation";
+import { SITE_URL } from "@/lib/site";
 import { Sun, ChevronRight } from "lucide-react";
 
 export default async function HomePage({
@@ -18,6 +20,23 @@ export default async function HomePage({
   const tt = await getTranslations("Today");
   const lt = await getTranslations("Footer");
 
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Jyotish",
+    url: SITE_URL,
+    description:
+      "AI Vedic astrology chat — get your Kundli and personal answers on love, marriage, career, money and health.",
+    inLanguage: [locale],
+  };
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Jyotish",
+    url: SITE_URL,
+    logo: `${SITE_URL}/icon.png`,
+  };
+
   const steps = [
     { title: t("how1Title"), desc: t("how1Desc") },
     { title: t("how2Title"), desc: t("how2Desc") },
@@ -26,6 +45,8 @@ export default async function HomePage({
 
   return (
     <div className="screen">
+      <JsonLd data={websiteJsonLd} />
+      <JsonLd data={orgJsonLd} />
       <Header />
 
       <section className="hero">
@@ -132,6 +153,8 @@ export default async function HomePage({
         <Link href="/legal/privacy" className="legal-links__item">{lt("privacy")}</Link>
         <span className="legal-links__dot">·</span>
         <Link href="/legal/terms" className="legal-links__item">{lt("terms")}</Link>
+        <span className="legal-links__dot">·</span>
+        <Link href="/blog" className="legal-links__item">Blog</Link>
         <span className="legal-links__dot">·</span>
         <span className="legal-links__item faint">{t("stats2Value")} users</span>
       </footer>

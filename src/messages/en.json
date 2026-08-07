@@ -210,5 +210,10 @@
     "clear": "Clear match",
     "matchChip": "Check kundli matching",
     "unknownTime": "Don't know their time? We'll use 12:00 PM — Moon sign stays reliable."
+  },
+  "Blog": {
+    "title": "Vedic Astrology Guides & Blog",
+    "subtitle": "Practical, plain-language guides to Kundli, marriage timing, Kundli matching, Muhurat and the 27 Nakshatras — written for real people, not astrologers.",
+    "cta": "Ready for your own personal reading?"
   }
 }

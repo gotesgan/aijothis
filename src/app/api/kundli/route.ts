@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { computeKundli, getUtcOffsetMinutes } from "@/lib/kundli";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { verifyTurnstile, clientIp } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,15 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+
+  // Turnstile gate — allow only verified humans through.
+  const ok = await verifyTurnstile(
+    body?.cfTurnstileResponse as string | undefined,
+    clientIp(request)
+  );
+  if (!ok) {
+    return NextResponse.json({ error: "turnstile_failed" }, { status: 403 });
   }
 
   const { name, date, time, place, lat, lng, timezone, lang, mobile, match } = body;
