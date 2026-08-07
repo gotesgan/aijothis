@@ -2140,3 +2140,11 @@ html {
 .sitemap__list li a:hover {
   color: var(--ivory);
 }
+.gsi-signup-button {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 4px;
+}
+.gsi-signup-button iframe {
+  max-width: 100%;
+}

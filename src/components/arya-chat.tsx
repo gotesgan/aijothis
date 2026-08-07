@@ -119,60 +119,54 @@ function openRazorpay(opts: {
   });
 }
 
-/** Loads Google Identity Services and runs the sign-in prompt.
- *  Resolves the Google credential JWT, or null if unavailable/timed out. */
-function runGoogleIdentity(clientId: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (credential: string | null) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      try {
-        const g = (window as unknown as {
-          google?: { accounts?: { id?: { cancel: () => void } } };
-        }).google;
-        g?.accounts?.id?.cancel();
-      } catch {
-        // ignore
-      }
-      resolve(credential);
-    };
-
-    // Never let the signup hang — if Google Identity doesn't respond in time,
-    // resolve null so the caller can fall back gracefully.
-    const timeout = setTimeout(() => finish(null), 12000);
-
-    const done = () => {
-      const g = (window as unknown as {
-        google?: {
-          accounts?: {
-            id?: {
-              initialize: (o: {
-                client_id: string;
-                callback: (r: { credential?: string }) => void;
-              }) => void;
-              prompt: () => void;
-            };
+/** Loads Google Identity Services and renders the Google Sign-In button.
+ *  The `initialize` callback captures the credential — there is NO timeout
+ *  race, so a user who takes time in the Google popup still gets saved. */
+function mountGoogleButton(opts: {
+  containerId: string;
+  clientId: string;
+  onCredential: (credential: string) => void;
+}): void {
+  const { containerId, clientId, onCredential } = opts;
+  const done = () => {
+    const g = (window as unknown as {
+      google?: {
+        accounts?: {
+          id?: {
+            initialize: (o: {
+              client_id: string;
+              callback: (r: { credential?: string }) => void;
+            }) => void;
+            renderButton: (
+              el: HTMLElement,
+              options: Record<string, unknown>
+            ) => void;
           };
         };
-      }).google;
-      if (!g?.accounts?.id) return finish(null);
-      g.accounts.id.initialize({
-        client_id: clientId,
-        callback: (resp) => finish(resp?.credential ?? null),
-      });
-      g.accounts.id.prompt();
-    };
-
-    if (document.getElementById("gsi-client")) return done();
-    const s = document.createElement("script");
-    s.id = "gsi-client";
-    s.src = "https://accounts.google.com/gsi/client";
-    s.async = true;
-    s.onload = done;
-    document.head.appendChild(s);
-  });
+      };
+    }).google;
+    const el = document.getElementById(containerId);
+    if (!g?.accounts?.id || !el) return;
+    g.accounts.id.initialize({
+      client_id: clientId,
+      callback: (resp) => {
+        if (resp?.credential) onCredential(resp.credential);
+      },
+    });
+    g.accounts.id.renderButton(el, {
+      theme: "outline",
+      size: "large",
+      width: 280,
+      text: "continue_with",
+    });
+  };
+  if (document.getElementById("gsi-client")) return done();
+  const s = document.createElement("script");
+  s.id = "gsi-client";
+  s.src = "https://accounts.google.com/gsi/client";
+  s.async = true;
+  s.onload = done;
+  document.head.appendChild(s);
 }
 
 export function AryaChat({ initialQ }: { initialQ?: string }) {
@@ -483,18 +477,9 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     await sendText(content);
   }
 
-  /** Google signup — real OAuth when a Client ID is configured, else simulated. */
-  async function signUp() {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    let credential: string | null = null;
-    if (clientId) {
-      credential = await runGoogleIdentity(clientId);
-      if (!credential) {
-        // Google Identity failed or timed out — don't dead-end the user.
-        // Fall back to a graceful signup so the chat can continue.
-        console.warn("[aryad] google identity unavailable; simulated signup");
-      }
-    }
+  /** Real Google signup — the credential arrives from the rendered button's
+   *  callback and is saved on the profile (email/name/sub). */
+  async function completeGoogleSignup(credential: string) {
     setSignedUp(true);
     localStorage.setItem(SIGNED_UP_KEY, "1");
     setShowSignup(false);
@@ -512,6 +497,18 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       // non-fatal
     }
   }
+
+  // Mount the real Google Sign-In button whenever the gate opens.
+  useEffect(() => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (showSignup && clientId) {
+      mountGoogleButton({
+        containerId: "gsi-signup-button",
+        clientId,
+        onCredential: (cred) => void completeGoogleSignup(cred),
+      });
+    }
+  }, [showSignup]);
 
   /** Buy the selected pack — real Razorpay checkout when keys are set. */
   async function buyPack() {
@@ -953,9 +950,10 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             <span className="gate-modal__g">G</span>
             <h2 className="gate-modal__title">{t("signupTitle")}</h2>
             <p className="gate-modal__sub">{t("signupSub")}</p>
-            <button className="btn btn--gold" onClick={signUp}>
-              {t("continueGoogle")}
-            </button>
+            <div
+              id="gsi-signup-button"
+              className="gsi-signup-button"
+            />
             <p className="gate-modal__legal">
               {t("agree")}{" "}
               <Link href="/legal/privacy">{t("agreePrivacy")}</Link>
