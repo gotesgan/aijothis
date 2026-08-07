@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   }
 
   const credential = typeof body?.credential === "string" ? body.credential : null;
+  const lang = ["en", "hi", "mr"].includes(body?.lang) ? body.lang : "en";
 
   let googleUser: { sub: string; email: string; name: string } | null = null;
   if (credential) {
@@ -33,27 +34,38 @@ export async function POST(request: Request) {
 
   const admin = getSupabaseAdmin();
   if (admin) {
-    // signed_up_at always succeeds (existing column).
-    const { error } = await admin
-      .from("profiles")
-      .update({ signed_up_at: new Date().toISOString() })
-      .eq("device_id", deviceId);
-    if (error) {
-      console.warn("[supabase] signup record failed:", error.message);
+    const signedUpAt = new Date().toISOString();
+
+    // Try to update the existing device profile. If none exists (deleted,
+    // never created, chart cached only in localStorage), upsert instead so
+    // the Google identity is never silently dropped.
+    const fields: Record<string, unknown> = {
+      signed_up_at: signedUpAt,
+    };
+    if (googleUser) {
+      fields.google_sub = googleUser.sub;
+      fields.email = googleUser.email;
+      fields.google_name = googleUser.name;
     }
 
-    // Google identity — graceful if the 0005 columns aren't applied yet.
-    if (googleUser) {
-      const { error: gErr } = await admin
-        .from("profiles")
-        .update({
-          google_sub: googleUser.sub,
-          email: googleUser.email,
-          google_name: googleUser.name,
-        })
-        .eq("device_id", deviceId);
-      if (gErr) {
-        console.warn("[supabase] google identity save skipped:", gErr.message);
+    const { data: updated, error } = await admin
+      .from("profiles")
+      .update(fields)
+      .eq("device_id", deviceId)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.warn("[supabase] signup update failed:", error.message);
+    }
+
+    if (!updated) {
+      const { error: insertErr } = await admin.from("profiles").insert({
+        device_id: deviceId,
+        lang,
+        ...fields,
+      });
+      if (insertErr) {
+        console.warn("[supabase] signup insert failed:", insertErr.message);
       }
     }
   }

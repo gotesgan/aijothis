@@ -491,7 +491,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           "Content-Type": "application/json",
           "x-device-id": getDeviceId(),
         },
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify({ credential, lang: locale }),
       });
     } catch {
       // non-fatal
@@ -508,6 +508,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         onCredential: (cred) => void completeGoogleSignup(cred),
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSignup]);
 
   /** Buy the selected pack — real Razorpay checkout when keys are set. */
