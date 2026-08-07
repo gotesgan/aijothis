@@ -65,7 +65,7 @@ Verify with lint + build before any push. Browser tests use Playwright MCP again
 
 ## Tracking
 
-- **Meta Pixel (ID 1909120949758851):** PageView (SPA), Lead, Signup, FirstAnswer, QuestionChip, PaywallShown, PackSelected, InitiateCheckout (Pay click), Purchase (real-only, value = actual order amount, INR, event_id), PaywallDismissed.
+- **Meta Pixel (ID 1909120949758851):** PageView (SPA), Lead, Signup, FirstAnswer, QuestionChip, PaywallShown, PackSelected, InitiateCheckout (Pay click), CheckoutOpened, CheckoutAbandoned (dismissed/script_failed/failed), Purchase (real-only, value = actual order amount, INR, event_id), PaywallDismissed. Checkout recovery: `GET /api/orders` reconciles paid grants on return (webhook-only/cleared storage) + surfaces a resume-payment banner for recent abandoned checkouts.
 - **Clarity (project xxn1pixdrd):** session replays/heatmaps; birth fields excluded (`data-exclude`).
 - Note: no Conversions API yet.
 
