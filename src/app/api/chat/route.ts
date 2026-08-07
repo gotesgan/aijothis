@@ -4,7 +4,7 @@ import { computeTransits } from "@/lib/transit";
 import { classifyTopic, getChartFocus } from "@/lib/routing";
 import { retrieveVedicContext } from "@/lib/rag";
 import { detectCrisis, crisisReply } from "@/lib/safety";
-import { guardInput, guardOutput, needsGuard } from "@/lib/guard";
+import { guardInput, guardOutput, needsGuard, PSYCH_DIRECTIVE } from "@/lib/guard";
 import { getPanchang, formatPanchang } from "@/lib/panchang";
 import {
   drikPanchangConfigured,
@@ -29,6 +29,9 @@ const HISTORY_WINDOW = 30;
 
 /** Minimum answer length before we consider a stream a silent failure. */
 const MIN_DRAFT = 20;
+
+/** Sentinel stored in chats.title while psych-mode is active for a thread. */
+const PSYCH_TITLE = "__psych__";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -148,17 +151,24 @@ export async function POST(request: Request) {
     });
   }
 
+  // Psych-mode: once a user shows the third-party-fixation pattern, the
+  // psychologist framing PERSISTS for the whole thread — not just the single
+  // flagged message — so the de-escalation is consistent and cumulative.
+  const storedHistory = await loadStoredHistory(deviceId, chatId).catch(() => null);
+  const historyForContext =
+    storedHistory && storedHistory.messages.length > 0
+      ? storedHistory.messages
+      : messages;
+  const psychMode = guard.action === "soften" || (storedHistory?.psychMode ?? false);
+
   const system =
     (panchangCtx ? baseSystem + panchangCtx : baseSystem) +
-    (guard.action === "soften" && guard.note ? `\n\n${guard.note}` : "");
+    (psychMode ? `\n\n${PSYCH_DIRECTIVE}` : "");
 
-  // Keep prior timing windows visible even when history is truncated.
-  // Prefer the FULL stored thread (cross-session memory) over just the
-  // messages the client sent in this request.
-  const storedHistory = await loadStoredHistory(deviceId, chatId).catch(() => null);
-  const historyForContext = storedHistory && storedHistory.length > 0
-    ? storedHistory
-    : messages;
+  // Remember the pattern so the framing stays on for later messages.
+  // (Applied after persistExchange creates the chat row, inside the stream.)
+  const shouldMarkPsych = guard.action === "soften" && !(storedHistory?.psychMode ?? false);
+
   const priorWindows = extractTimingStatements(historyForContext);
   const memory = await loadMemory(deviceId).catch(() => null);
   let systemWithHistory =
@@ -265,6 +275,12 @@ export async function POST(request: Request) {
         assistantMessage: final,
       });
 
+      // Persist psych-mode now that the chat row exists, so the psychologist
+      // framing stays on for the rest of the thread.
+      if (shouldMarkPsych) {
+        await markPsychMode(deviceId, chatId).catch(() => {});
+      }
+
       // 7) Memory node: refresh the situational summary on long threads
       // (rare — every ~10 exchanges, threads ≥ 20 messages).
       await maybeRefreshSummary(deviceId, lang ?? "en").catch(() => null);
@@ -361,7 +377,7 @@ async function maybeRefreshSummary(deviceId: string, lang: string): Promise<void
 async function loadStoredHistory(
   deviceId: string,
   chatId?: string
-): Promise<{ role: string; content: string }[] | null> {
+): Promise<{ messages: { role: string; content: string }[]; psychMode: boolean } | null> {
   const admin = getSupabaseAdmin();
   if (!admin || deviceId === "-") return null;
   try {
@@ -373,17 +389,42 @@ async function loadStoredHistory(
     if (!profile) return null;
 
     const cid = chatId ?? newUuid();
-    const { data } = await admin
-      .from("messages")
-      .select("role,content")
-      .eq("chat_id", cid)
-      .order("created_at", { ascending: true })
-      .limit(120);
+    const [{ data: chatRow }, { data }] = await Promise.all([
+      admin
+        .from("chats")
+        .select("title")
+        .eq("id", cid)
+        .maybeSingle()
+        .then(
+          (r) => r,
+          () => ({ data: null })
+        ),
+      admin
+        .from("messages")
+        .select("role,content")
+        .eq("chat_id", cid)
+        .order("created_at", { ascending: true })
+        .limit(120),
+    ]);
     if (!data || data.length === 0) return null;
-    return data.filter((m) => m.role === "user" || m.role === "assistant");
+    return {
+      messages: data.filter((m) => m.role === "user" || m.role === "assistant"),
+      psychMode: (chatRow as { title?: string } | null)?.title === PSYCH_TITLE,
+    };
   } catch (err) {
     console.warn("[supabase] history load skipped:", (err as Error).message);
     return null;
+  }
+}
+
+/** Marks a thread as psych-mode so the framing persists across messages. */
+async function markPsychMode(deviceId: string, chatId?: string): Promise<void> {
+  const admin = getSupabaseAdmin();
+  if (!admin || deviceId === "-" || !chatId) return;
+  try {
+    await admin.from("chats").update({ title: PSYCH_TITLE }).eq("id", chatId);
+  } catch (err) {
+    console.warn("[supabase] psych mode mark skipped:", (err as Error).message);
   }
 }
 

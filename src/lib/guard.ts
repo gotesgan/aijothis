@@ -44,8 +44,9 @@ export interface GuardInputResult {
   note?: string;
 }
 
-const SOFTEN_NOTE =
-  "GUARD DIRECTIVE: This user is intensely focused on what OTHER people think, feel, say or plan (suspicion, jealousy, spying, blackmail, black magic by others, everyone-talking-about-me). Answer with warmth, but: never confirm suspicions as fact; never invent what a real person thinks or says; frame any reading around what the USER can control (their peace, their real relationships, their wellbeing); if they keep repeating the same fixation, gently broaden to their own life. Suggest professional support (a counsellor) if the fear or suspicion is intense or repeated.";
+/** Directive appended to the system prompt when psych-mode is active. */
+export const PSYCH_DIRECTIVE =
+  "GUARD DIRECTIVE: This user is intensely focused on what OTHER people think, feel, say or plan (suspicion, jealousy, spying, blackmail, black magic by others, everyone-talking-about-me). Read their chart as a mirror of THEIR OWN psychology, not as facts about other people: every placement they ask about describes how the USER experiences the situation — their lens, their fears, their sensitivity. Answer with warmth and chart-grounded insight, always framing it as \"your chart shows this situation feels X to YOU — that is your lens, and it may not be his/their reality.\" Never state what another real person actually thinks, feels, says or does as a fact. When they ask about the other person directly (their thoughts, mood, routine, intentions), gently turn it back: \"your chart tells us how this affects YOU, not what he does.\" Keep it warm, never cold or dismissive. If the same fixation keeps repeating, softly broaden to what the user controls — their peace, their real relationships, their wellbeing — and suggest a counsellor if the fear or suspicion is intense or repeated.";
 
 const GUARD_INPUT_SYSTEM =
   "You are a safety guard for a Vedic astrology chat app. Classify the user's message. Return ONLY a JSON object with one key, \"action\", whose value is one of: \"crisis\", \"soften\", \"pass\".\n" +
@@ -74,7 +75,7 @@ export async function guardInput(
     });
     const match = text.match(/\{"action"\s*:\s*"(crisis|soften|pass)"/);
     const action = (match?.[1] as GuardAction | undefined) ?? "pass";
-    return action === "soften" ? { action, note: SOFTEN_NOTE } : { action };
+    return action === "soften" ? { action, note: PSYCH_DIRECTIVE } : { action };
   } catch {
     return { action: "pass" };
   }
@@ -125,9 +126,10 @@ Return ONLY a JSON object, no markdown:
 RULES:
 1. FACT-CHECK: verify every house/planet/sign/Dasha/transit claim against the CHART FACTS. Fix any claim that is wrong or unsupported.
 2. NEVER state a Mahadasha end-date (e.g. "until 2044") as if it were a prediction window or an outcome horizon. Rewrite those so the end-date is not presented as a forecast.
-3. NEVER invent what a real, named person thinks, feels, says or plans — no fabricated quotes ("she told him...", "he secretly thinks...", "Freda said you are..."). Rewrite such claims as hedged possibilities from the chart: "the chart suggests he may be...", never a definite fact about another person's mind.
-4. Do NOT confirm or amplify paranoid interpretations (blackmail, spying, black magic, conspiracies, "everyone is talking about me"). Rewrite to acknowledge the worry warmly, then re-anchor to what the USER controls — their own peace, their real relationships, their wellbeing.
-5. If the user's same fixation is repeated, gently broaden the answer to the user's own life instead of feeding the fixation.
+3. PSYCHOLOGY MIRROR: NEVER state what a real, named person thinks, feels, says or does as a fact — no fabricated quotes ("she told him...", "he secretly thinks...", "Freda said you are..."). Read such questions as the USER's own psychology reflected in their chart. Rewrite as: "your chart shows this situation feels X to you — that is your lens, and it may not be his/their reality." This is the core rule.
+4. Do NOT confirm or amplify paranoid interpretations (blackmail, spying, black magic, conspiracies, "everyone is talking about me") as real. Rewrite to acknowledge the worry warmly as the user's own fear/sensitivity, then re-anchor to what the USER controls — their own peace, their real relationships, their wellbeing.
+5. If the user asks about another person's actions, thoughts, mood or routine, gently turn it back: "your chart tells us how this affects YOU, not what he does." Warm and redirecting, never a flat refusal.
+6. If the user's same fixation is repeated, softly broaden the answer to the user's own life instead of feeding the fixation.
 
 CHART FACTS:
 ${chartFacts}
