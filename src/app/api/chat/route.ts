@@ -3,8 +3,8 @@ import { buildSystemPrompt, extractTimingStatements } from "@/lib/prompt";
 import { computeTransits } from "@/lib/transit";
 import { classifyTopic, getChartFocus } from "@/lib/routing";
 import { retrieveVedicContext } from "@/lib/rag";
-import { needsReflection, reflectOnAnswer } from "@/lib/reflection";
 import { detectCrisis, crisisReply } from "@/lib/safety";
+import { guardInput, guardOutput, needsGuard } from "@/lib/guard";
 import { getPanchang, formatPanchang } from "@/lib/panchang";
 import {
   drikPanchangConfigured,
@@ -59,6 +59,13 @@ export async function POST(request: Request) {
   const encoder = new TextEncoder();
   const now = new Date();
   const deviceId = request.headers.get("x-device-id") ?? "-";
+
+  // Guard agent (input): runs concurrently with the prep below. Catches
+  // paraphrased crisis (crisis → hard reply) and third-party fixation /
+  // paranoia (soften → a directive is injected into the system prompt).
+  const guardPromise = guardInput(latestUser?.content ?? "", lang ?? "en").catch(
+    () => ({ action: "pass" as const, note: undefined })
+  );
 
   // 1) Topic routing node: classify the latest question → focus factors.
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -131,7 +138,19 @@ export async function POST(request: Request) {
     vedicChunks,
     matchCtx
   );
-  const system = panchangCtx ? baseSystem + panchangCtx : baseSystem;
+
+  // Guard agent (input) — resolved: crisis short-circuits before compose.
+  const guard = await guardPromise;
+  if (guard.action === "crisis") {
+    const reply = crisisReply(lang ?? "en");
+    return new Response(reply, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  const system =
+    (panchangCtx ? baseSystem + panchangCtx : baseSystem) +
+    (guard.action === "soften" && guard.note ? `\n\n${guard.note}` : "");
 
   // Keep prior timing windows visible even when history is truncated.
   // Prefer the FULL stored thread (cross-session memory) over just the
@@ -210,12 +229,14 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(draft));
       }
 
-      // 5) Reflection node: fact-check the draft against the real chart.
+      // 5) Guard agent (output): fact-check the draft against the real chart,
+      //    fix dasha-end year bleed, fabricated third-party claims and
+      //    paranoid amplification — one pass, replacing the old reflection.
       let final = draft;
-      const reflectionOn =
+      const guardOn =
         (process.env.LLM_REFLECTION ?? "on").toLowerCase() !== "off";
-      if (reflectionOn && needsReflection(draft)) {
-        const result = await reflectOnAnswer({
+      if (guardOn && needsGuard(draft)) {
+        const result = await guardOutput({
           draft,
           kundli,
           focus,
@@ -225,12 +246,12 @@ export async function POST(request: Request) {
         if (result.corrected && result.text) {
           final = result.text;
           console.log(
-            `[aryad] device=${deviceId} reflection=corrected (${draft.length}->${result.text.length} chars)`
+            `[aryad] device=${deviceId} guardOutput=corrected (${draft.length}->${result.text.length} chars)`
           );
           controller.enqueue(encoder.encode(REFINE_MARKER));
           controller.enqueue(encoder.encode(result.text));
         } else {
-          console.log(`[aryad] device=${deviceId} reflection=clean`);
+          console.log(`[aryad] device=${deviceId} guardOutput=clean`);
         }
       }
 
