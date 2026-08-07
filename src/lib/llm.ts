@@ -20,14 +20,16 @@ export async function streamChatCompletion(params: {
   onToken: (token: string) => void;
   onUsage?: (usage: LlmUsage) => void;
   signal?: AbortSignal;
+  /** Per-call override for DeepSeek reasoning_effort (low/medium/high/none). */
+  reasoningEffort?: string;
 }): Promise<void> {
-  const { messages, onToken, onUsage, signal } = params;
+  const { messages, onToken, onUsage, signal, reasoningEffort } = params;
 
   const baseUrl = process.env.LLM_BASE_URL ?? "https://api.groq.com/openai/v1";
   const apiKey = process.env.LLM_API_KEY ?? "";
   const model = process.env.LLM_MODEL ?? "llama-3.3-70b-versatile";
   const maxTokens = Number(process.env.LLM_MAX_TOKENS ?? 4096);
-  const reasoningEffort = process.env.LLM_REASONING_EFFORT;
+  const effort = reasoningEffort ?? process.env.LLM_REASONING_EFFORT;
 
   if (!apiKey) {
     // Friendly fallback so the app never hard-fails during local testing
@@ -45,10 +47,10 @@ export async function streamChatCompletion(params: {
     temperature: 0.7,
     max_tokens: maxTokens,
   };
-  if (reasoningEffort) {
-    // DeepSeek v4 flash: "low" cuts hidden reasoning tokens (~40%) —
-    // the single biggest cost lever for reasoning models.
-    body.reasoning_effort = reasoningEffort;
+  if (effort) {
+    // DeepSeek v4 flash: "low" cuts hidden reasoning (~40%); "none" disables
+    // thinking entirely (~97% fewer output tokens). Guards use "none".
+    body.reasoning_effort = effort;
   }
   try {
     // Ask providers to include a final usage chunk so we can log cost.
@@ -115,17 +117,19 @@ export async function streamChatCompletion(params: {
   }
 }
 
-/** Non-streaming completion — used by the reflection node. */
+/** Non-streaming completion — used by the reflection node and guard agents. */
 export async function chatCompletion(params: {
   messages: LlmMessage[];
   maxTokens?: number;
   signal?: AbortSignal;
+  /** Per-call override for DeepSeek reasoning_effort. Guards pass "none". */
+  reasoningEffort?: string;
 }): Promise<{ text: string; usage?: LlmUsage }> {
   const baseUrl = process.env.LLM_BASE_URL ?? "https://api.groq.com/openai/v1";
   const apiKey = process.env.LLM_API_KEY ?? "";
   const model = process.env.LLM_MODEL ?? "llama-3.3-70b-versatile";
   const maxTokens = params.maxTokens ?? Number(process.env.LLM_MAX_TOKENS ?? 4096);
-  const reasoningEffort = process.env.LLM_REASONING_EFFORT;
+  const effort = params.reasoningEffort ?? process.env.LLM_REASONING_EFFORT;
 
   if (!apiKey) return { text: "" };
 
@@ -135,7 +139,7 @@ export async function chatCompletion(params: {
     stream: false,
     max_tokens: maxTokens,
   };
-  if (reasoningEffort) body.reasoning_effort = reasoningEffort;
+  if (effort) body.reasoning_effort = effort;
 
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
