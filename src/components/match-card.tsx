@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { getDeviceId } from "@/lib/storage";
+import { TURNSTILE_SITEKEY, getTurnstileToken, resetTurnstile } from "@/lib/turnstile-client";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
 import type { KundliResult } from "@/lib/types";
 import { Heart, Loader2 } from "lucide-react";
@@ -64,10 +65,14 @@ export function MatchCard({
           timezone: selected.timezone,
           lang: locale,
           match: true,
+          cfTurnstileResponse: getTurnstileToken(),
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Failed");
+      if (!res.ok) {
+        resetTurnstile();
+        throw new Error(data.message ?? "Failed");
+      }
       onComplete(data.kundli as KundliResult);
     } catch (err) {
       setError((err as Error).message ?? "Something went wrong.");
@@ -131,6 +136,15 @@ export function MatchCard({
       />
 
       {error && <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>}
+
+      {TURNSTILE_SITEKEY && (
+        <div
+          className="cf-turnstile"
+          data-sitekey={TURNSTILE_SITEKEY}
+          data-action="turnstile-spin-v2"
+          data-theme="dark"
+        />
+      )}
 
       <div className="match-card__actions">
         <button

@@ -2005,3 +2005,124 @@ html {
     animation: none;
   }
 }
+
+/* ─────────────── Blog / SEO content ─────────────── */
+.blog {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 18px 48px;
+}
+.blog__hero {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.blog__hero h1,
+.blog-post__header h1 {
+  font-family: var(--stack-display);
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ivory);
+  margin-bottom: 10px;
+}
+.blog__hero p {
+  color: var(--ivory-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.blog__list {
+  display: grid;
+  gap: 14px;
+}
+.blog__card {
+  background: var(--night-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+}
+.blog__card h2 {
+  font-size: 1.1rem;
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+.blog__card h2 a {
+  color: var(--ivory);
+}
+.blog__card h2 a:hover {
+  color: var(--marigold);
+}
+.blog__meta {
+  font-size: 0.75rem;
+  color: var(--ivory-faint);
+  margin-bottom: 8px;
+}
+.blog__excerpt {
+  font-size: 0.9rem;
+  color: var(--ivory-muted);
+  line-height: 1.6;
+}
+.blog__cta {
+  margin-top: 28px;
+  text-align: center;
+  color: var(--ivory-muted);
+}
+.blog__cta a {
+  color: var(--marigold);
+  font-weight: 600;
+}
+.blog-post {
+  line-height: 1.75;
+  color: var(--ivory);
+}
+.blog-post__header {
+  margin-bottom: 22px;
+}
+.blog-post__kicker {
+  font-size: 0.8rem;
+  margin-bottom: 10px;
+}
+.blog-post__kicker a {
+  color: var(--marigold);
+}
+.blog-post__lede {
+  font-size: 1.05rem;
+  color: var(--ivory-muted);
+  margin-top: 8px;
+}
+.blog-post section {
+  margin-bottom: 24px;
+}
+.blog-post h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ivory);
+  margin-bottom: 10px;
+}
+.blog-post h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--marigold);
+  margin: 16px 0 6px;
+}
+.blog-post p {
+  margin-bottom: 12px;
+}
+.blog-post__faq {
+  border-top: 1px solid var(--line-strong);
+  padding-top: 20px;
+}
+.blog-post__cta {
+  margin-top: 28px;
+  background: var(--night-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  text-align: center;
+}
+.blog-post__cta h2 {
+  font-size: 1.1rem;
+}
+.blog-post__cta .btn {
+  display: inline-block;
+  margin-top: 10px;
+}

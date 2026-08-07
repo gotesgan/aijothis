@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { verifyTurnstile, clientIp } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,15 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!deviceId) {
     return NextResponse.json({ error: "missing_device" }, { status: 400 });
+  }
+
+  // Turnstile gate — allow only verified humans through.
+  const ok = await verifyTurnstile(
+    body?.cfTurnstileResponse as string | undefined,
+    clientIp(request)
+  );
+  if (!ok) {
+    return NextResponse.json({ error: "turnstile_failed" }, { status: 403 });
   }
 
   const credential = typeof body?.credential === "string" ? body.credential : null;

@@ -7,6 +7,7 @@ import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 import { PixelTracker } from "@/components/pixel-tracker";
 import { routing } from "@/i18n/routing";
+import { SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
 import "../globals.css";
 
@@ -43,11 +44,39 @@ export async function generateMetadata({
         : locale === "hi"
           ? "आर्य से बात करें — आपका AI वैदिक ज्योतिषी। मुफ्त कुंडली सेकंदों में।"
           : "आर्यशी बोला — तुमचा AI वैदिक ज्योतिषी. मोफत कुंडली सेकंदात.",
+    metadataBase: new URL(SITE_URL),
+    alternates: {
+      canonical: `/${locale}`,
+      languages: {
+        "x-default": "/en",
+        en: "/en",
+        hi: "/hi",
+        mr: "/mr",
+      },
+    },
     openGraph: {
       title: "Jyotish",
       siteName: "Jyotish",
       description:
         "Jyotish is an AI Vedic astrology app. Share your birth details and chat with Arya for personal answers on love, marriage, career, money and health — grounded in your real Kundli.",
+      url: `${SITE_URL}/${locale}`,
+      locale: locale === "en" ? "en_IN" : locale === "hi" ? "hi_IN" : "mr_IN",
+    },
+    twitter: {
+      card: "summary",
+      title: "Jyotish",
+      description:
+        "AI Vedic astrology — chat with Arya for personal answers grounded in your real Kundli.",
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
     },
   };
 
@@ -96,6 +125,11 @@ t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
 y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 })(window, document, "clarity", "script", "xxn1pixdrd");`}
         </Script>
+        <script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+          async
+          defer
+        />
         <noscript>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
