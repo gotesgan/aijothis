@@ -54,14 +54,15 @@ Verify with lint + build before any push. Browser tests use Playwright MCP again
 - `src/lib/pixel.ts` — Meta Pixel events (Purchase = real-only, `event_id` for CAPI dedup)
 - `src/lib/supabase.ts` — client; non-production uses test project when `*_TEST` env vars set
 - `src/lib/starters.ts` — context-aware follow-up chips
-- `supabase/migrations/` — 0001_init, 0002_auth_rls (staged), 0003_orders
+- `supabase/migrations/` — 0001_init, 0003_orders, 0004_memory (auto-applied on push to main by GitHub Action). `supabase/deferred-migrations/0002_auth_rls.sql` — held back until real auth lands (see its README).
 
 ## Supabase
 
-- **Migrations:** files are Supabase CLI format. CLI not installed locally; migrations applied manually in the dashboard SQL editor (user's established workflow). Plan: set up CLI + Vercel migration step (pending).
+- **Migrations:** Supabase CLI installed (`brew install supabase/tap/supabase`). `.github/workflows/supabase-migrate.yml` runs `supabase db push` on every push to main (before Vercel serves new code). Migrations are idempotent (`IF NOT EXISTS`) so the first automated run replays already-applied 0001/0003 harmlessly and applies 0004 for real.
+- **Secrets needed in GitHub** (repo → Settings → Secrets & variables → Actions): `SUPABASE_ACCESS_TOKEN` (Supabase dashboard → Account → Access Tokens), `SUPABASE_PROJECT_REF` = `pzezariotjvlsrjhbtnk`, `SUPABASE_DB_PASSWORD` (project DB password). Local link: `supabase login` then `supabase link --project-ref pzezariotjvlsrjhbtnk`.
+
 - **Test branch:** create a second Supabase project, run migrations, set `NEXT_PUBLIC_SUPABASE_URL_TEST`, `NEXT_PUBLIC_SUPABASE_ANON_KEY_TEST`, `SUPABASE_SERVICE_ROLE_KEY_TEST`. Code automatically uses it in non-production. (Not yet created — pending.)
-- RLS enabled but zero policies on all tables (0002 staged). Fine while single-device; revisit before real auth.
-- **Current prod data:** ~35 real profiles, 33 chats. Paid: Pratiksha ₹30, Gourav ₹10. No test residue (cleaned).
+- RLS enabled but zero policies on all tables (`0002` deferred until real auth). Fine while single-device; revisit before real auth.
 
 ## Tracking
 
@@ -75,7 +76,7 @@ Verify with lint + build before any push. Browser tests use Playwright MCP again
 - Razorpay webhook secret set; confirm webhook active in dashboard.
 - No re-engagement loop (zero returning users) — daily reading reminder + resume-last-chat are open ideas.
 - Revisit restoring prior chat threads on return (no resume UX yet).
-- Set up Supabase CLI + Vercel migration step (user deferred — "tomorrow").
+- Add GitHub secrets so the migration workflow runs: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` (first push to main will also apply migration 0004 for real).
 - Create the test Supabase project for a clean test DB.
 
 ## Findings so far (see PROJECT-REPORT.md)
