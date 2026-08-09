@@ -74,7 +74,7 @@ Verify with lint + build before any push. Browser tests use Playwright MCP again
 
 - Google OAuth consent screen not published + `hiarya.in` origin not added to OAuth origins (login degrades gracefully via timeout).
 - Razorpay webhook secret set; confirm webhook active in dashboard.
-- No re-engagement loop (zero returning users) — daily reading reminder + resume-last-chat are open ideas.
+- No re-engagement loop — daily reading reminder + resume-last-chat are open ideas (early cross-day repeat signal exists: 4 of 6 repeat buyers purchased on separate days, one on 3 consecutive days).
 - Revisit restoring prior chat threads on return (no resume UX yet).
 - Add GitHub secrets so the migration workflow runs: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` (first push to main will also apply migration 0004 for real).
 - Create the test Supabase project for a clean test DB.
@@ -83,7 +83,7 @@ Verify with lint + build before any push. Browser tests use Playwright MCP again
 
 - **#1 funnel leak = Q1 → Q2** (every user asks one question then drops). One-tap teaser chip shipped to attack it.
 - **Conversion is crisis-driven** — both payers had a relationship crisis; paid within ~10 min.
-- **Zero returning users** — no retention mechanism.
+- **Early cross-day retention exists** — 4 of 6 repeat buyers purchased on separate days (one on 3 consecutive days); no explicit retention loop built yet, but the pull is real.
 - Hindi/Marathi users engage deeper than English.
 
 ## Privacy
