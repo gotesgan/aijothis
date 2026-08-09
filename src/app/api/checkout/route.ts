@@ -24,6 +24,35 @@ export async function POST(request: Request) {
   // Real payment path.
   if (razorpayConfigured()) {
     try {
+      // Idempotency: if there's already a recent `created` order for this
+      // device + pack (a sheet that was dismissed or failed to open, attempts:0),
+      // REUSE it instead of creating a duplicate. Rapid Pay clicks were
+      // spawning many ₹10/₹20 orders with no payment attempt.
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        const existing = await admin
+          .from("orders")
+          .select("order_id, amount_paise, currency")
+          .eq("device_id", deviceId)
+          .eq("pack_id", packId)
+          .eq("status", "created")
+          .gte("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existing?.data?.order_id) {
+          const reused = existing.data;
+          return NextResponse.json({
+            orderId: reused.order_id,
+            amount: reused.amount_paise,
+            currency: reused.currency,
+            keyId: KEY_ID,
+            simulated: false,
+            reused: true,
+          });
+        }
+      }
+
       const order = await createRazorpayOrder(deviceId, amountPaise);
       await recordOrder({
         deviceId,

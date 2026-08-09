@@ -232,6 +232,10 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const oldestMsgIdRef = useRef<string | null>(null);
   const paywallPendingRef = useRef<string | null>(null);
+  // Guards the checkout from duplicate orders: a ref blocks re-entry while a
+  // sheet is opening/attempting, and the state disables the Pay button.
+  const checkoutBusyRef = useRef(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const initialSentRef = useRef(false);
@@ -513,6 +517,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
 
   /** Buy the selected pack — real Razorpay checkout when keys are set. */
   async function buyPack() {
+    // Lock against duplicate orders: a second tap while a sheet is opening or
+    // attempting must not create another order (Razorpay attempts:0 spam).
+    if (checkoutBusyRef.current) return;
+    checkoutBusyRef.current = true;
+    setCheckoutBusy(true);
     setShowPaywall(false);
     trackInitiateCheckout();
     try {
@@ -552,7 +561,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         // stays pending so they can finish right away. Mark the order
         // `attempted` so it isn't surfaced as a stale resume candidate.
         trackCheckoutAbandoned(result.opened ? "dismissed" : "script_failed");
-        if (data.orderId) {
+        // Mark failed ONLY when the sheet actually opened and was dismissed —
+        // that order had a real (missed) chance. If the sheet never opened
+        // (script_failed), leave it `created` so the next Pay click REUSES the
+        // same order instead of spawning a duplicate (idempotency).
+        if (result.opened && data.orderId) {
           void fetch("/api/orders", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-device-id": getDeviceId() },
@@ -566,6 +579,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       trackCheckoutAbandoned("failed");
       setCheckoutRetry(true);
       setShowPaywall(true);
+    } finally {
+      // Release the checkout lock in every path — a dismiss or failure must
+      // leave the Pay button re-enabled so the user can retry.
+      checkoutBusyRef.current = false;
+      setCheckoutBusy(false);
     }
   }
 
@@ -1010,8 +1028,13 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
               ))}
             </div>
 
-            <button className="btn btn--gold" onClick={buyPack}>
-              {t("payBtn")} ₹{selectedPack.price}
+            <button
+              className="btn btn--gold"
+              onClick={buyPack}
+              disabled={checkoutBusy}
+              style={checkoutBusy ? { opacity: 0.6, pointerEvents: "none" } : undefined}
+            >
+              {checkoutBusy ? t("paying") : `${t("payBtn")} ₹${selectedPack.price}`}
             </button>
             <button
               className="gate-modal__ghost"
