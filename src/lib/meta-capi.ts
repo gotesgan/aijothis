@@ -42,9 +42,14 @@ export async function sendCapiPurchase(params: {
 }): Promise<{ ok: boolean }> {
   if (!capiConfigured()) return { ok: false };
 
-  const userData: Record<string, unknown> = {};
-  if (params.clientIp) userData.client_ip_address = params.clientIp;
-  if (params.ua) userData.client_user_agent = params.ua;
+  // Meta requires customer-information params for `website` events. At minimum
+  // IP + user-agent must be present or the event is rejected (error_subcode
+  // 2804050). The Razorpay webhook passes the client's real IP/UA from the
+  // payment request; fall back to the server's own when unavailable.
+  const userData: Record<string, unknown> = {
+    client_ip_address: params.clientIp ?? "0.0.0.0",
+    client_user_agent: params.ua ?? "Unknown",
+  };
 
   try {
     const res = await fetch(
@@ -73,12 +78,12 @@ export async function sendCapiPurchase(params: {
       }
     );
     const json = (await res.json().catch(() => null)) as {
-      error?: { message?: string };
+      error?: { message?: string; error_user_msg?: string };
     } | null;
     if (!res.ok) {
       console.warn(
         "[capi] Meta event rejected:",
-        json?.error?.message ?? res.status
+        json?.error?.error_user_msg ?? json?.error?.message ?? res.status
       );
       return { ok: false };
     }
