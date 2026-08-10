@@ -553,8 +553,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       });
       if (result.ok) {
         setPendingOrder(null);
-        if (selectedPack.unlimited) grantUnlimited(true, data.amount);
-        else grantPack(selectedPack.questions, true, data.amount);
+        if (selectedPack.unlimited) grantUnlimited(true, data.amount, data.orderId);
+        else grantPack(selectedPack.questions, true, data.amount, data.orderId);
       } else {
         // Payment sheet was dismissed or failed — never leave the user in
         // a dead end. Reopen the paywall with a retry note; the held question
@@ -598,7 +598,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   }
 
   /** Repeat-buyer pass: unlimited questions until 7 days from now. */
-  function grantUnlimited(real = true, amountPaise?: number) {
+  function grantUnlimited(real = true, amountPaise?: number, eventId?: string) {
     setUnlimitedUntil(() => {
       const until = new Date(
         Date.now() + UNLIMITED_DAYS * 24 * 60 * 60 * 1000
@@ -607,7 +607,9 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       return until;
     });
     if (real) {
-      trackPurchase((amountPaise ?? UNLIMITED_PACK.price * 100) / 100, newUuid());
+      // event_id = the Razorpay order id, so the browser Pixel and the
+      // server-side CAPI event dedupe into ONE conversion in Meta.
+      trackPurchase((amountPaise ?? UNLIMITED_PACK.price * 100) / 100, eventId ?? newUuid());
     }
     setPendingOrder(null);
     // Send the held question now that they've paid.
@@ -618,7 +620,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     }
   }
 
-  function grantPack(questions: number, real = true, amountPaise?: number) {
+  function grantPack(questions: number, real = true, amountPaise?: number, eventId?: string) {
     // Cumulative — repeat purchases add to the balance, never reset it.
     setPaidQuestions((prev) => {
       const next = prev + questions;
@@ -627,7 +629,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     });
     if (real) {
       // Value = the actual order amount paid, not a hardcoded figure.
-      trackPurchase((amountPaise ?? selectedPack.price * 100) / 100, newUuid());
+      // event_id = Razorpay order id → dedupes with CAPI in Meta.
+      trackPurchase((amountPaise ?? selectedPack.price * 100) / 100, eventId ?? newUuid());
     }
     setPendingOrder(null);
     // The user landed on the paywall with a question in hand — send it now that

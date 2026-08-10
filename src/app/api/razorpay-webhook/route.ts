@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyWebhookSignature, getOrderReceipt } from "@/lib/razorpay";
+import { sendCapiPurchase } from "@/lib/meta-capi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,7 +48,20 @@ export async function POST(request: Request) {
 
   const orderId = event?.payload?.payment?.entity?.order_id as string | undefined;
   const paymentId = event?.payload?.payment?.entity?.id as string | undefined;
+  const amountPaise = event?.payload?.payment?.entity?.amount as number | undefined;
   const deviceId = orderId ? await getOrderReceipt(orderId) : null;
+
+  // Meta Conversions API: report the real, verified payment server-side.
+  // `event_id` = the order id, the SAME id the browser Pixel sends, so Meta
+  // dedupes browser + server into one conversion (no double-counting).
+  if (orderId && typeof amountPaise === "number") {
+    await sendCapiPurchase({
+      value: amountPaise / 100,
+      eventId: orderId,
+      clientIp: request.headers.get("x-forwarded-for") ?? undefined,
+      ua: request.headers.get("user-agent") ?? undefined,
+    });
+  }
 
   if (deviceId) {
     const admin = getSupabaseAdmin();
