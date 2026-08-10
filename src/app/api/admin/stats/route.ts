@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifySessionToken } from "@/lib/admin-auth";
+import { getPaywallVariant } from "@/lib/experiment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -209,6 +210,19 @@ export async function GET(request: Request) {
       if (days.size > 1) crossDayPayers += 1;
     }
 
+    // ── Sachet A/B test ─────────────────────────────────────
+    // Variant is a pure function of device_id, so we can classify every payer
+    // retroactively (no tracking needed) and compare the two arms.
+    const exp = { sachet: { payers: 0, orders: 0, revenue: 0 }, control: { payers: 0, orders: 0, revenue: 0 } };
+    for (const [dev, times] of perDevice.entries()) {
+      const arm = getPaywallVariant(dev);
+      exp[arm].payers += 1;
+      exp[arm].orders += times.length;
+    }
+    for (const o of paid) {
+      exp[getPaywallVariant(o.device_id)].revenue += Number(o.amount_paise || 0);
+    }
+
     const response = {
       generatedAt: new Date().toISOString(),
       revenue: {
@@ -250,6 +264,11 @@ export async function GET(request: Request) {
         repeatPayers,
         crossDayPayers,
         payers: payingUsers,
+      },
+      experiment: {
+        enabled: exp.sachet.payers + exp.control.payers > 0,
+        sachet: exp.sachet,
+        control: exp.control,
       },
     };
 
