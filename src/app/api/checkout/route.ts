@@ -147,10 +147,27 @@ async function recordOrder(params: {
       pack_questions: params.packQuestions || null,
       order_id: params.orderId ?? null,
       status: params.status,
-      client_ip: params.clientIp ?? null,
-      client_ua: params.clientUa ?? null,
       verified_at: params.status === "simulated" ? new Date().toISOString() : null,
     });
+
+    // Best-effort: enrich the order with the customer's IP/UA for CAPI match
+    // quality. Runs AFTER the base insert so order recording never breaks —
+    // if the migration (client_ip/client_ua columns) hasn't been applied yet,
+    // this fails quietly and the order is still recorded.
+    if (params.clientIp || params.clientUa) {
+      try {
+        await admin
+          .from("orders")
+          .update({
+            client_ip: params.clientIp ?? null,
+            client_ua: params.clientUa ?? null,
+          })
+          .eq("order_id", params.orderId)
+          .eq("status", params.status === "simulated" ? "simulated" : "created");
+      } catch (err) {
+        console.warn("[supabase] client-info enrichment skipped:", (err as Error).message);
+      }
+    }
   } catch (err) {
     console.warn("[supabase] order record skipped:", (err as Error).message);
   }
