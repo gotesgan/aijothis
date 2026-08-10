@@ -54,12 +54,27 @@ export async function POST(request: Request) {
   // Meta Conversions API: report the real, verified payment server-side.
   // `event_id` = the order id, the SAME id the browser Pixel sends, so Meta
   // dedupes browser + server into one conversion (no double-counting).
+  // IP/UA are read from the order row (captured from the customer's browser
+  // at checkout) — the webhook itself is server-to-server from Razorpay, so
+  // its own request headers carry Razorpay's IP, not the customer's.
   if (orderId && typeof amountPaise === "number") {
+    let clientIp: string | undefined;
+    let clientUa: string | undefined;
+    const admin = getSupabaseAdmin();
+    if (admin) {
+      const { data: order } = await admin
+        .from("orders")
+        .select("client_ip, client_ua")
+        .eq("order_id", orderId)
+        .maybeSingle();
+      clientIp = order?.client_ip ?? undefined;
+      clientUa = order?.client_ua ?? undefined;
+    }
     await sendCapiPurchase({
       value: amountPaise / 100,
       eventId: orderId,
-      clientIp: request.headers.get("x-forwarded-for") ?? undefined,
-      ua: request.headers.get("user-agent") ?? undefined,
+      clientIp,
+      ua: clientUa,
     });
   }
 

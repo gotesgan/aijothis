@@ -13,6 +13,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing_device" }, { status: 400 });
   }
 
+  // Customer's real IP + User-Agent, captured from THIS browser request.
+  // Stored on the order so the Razorpay webhook (which runs server-to-server
+  // from Razorpay, carrying their IP not the customer's) can send real
+  // matching data to the Meta Conversions API.
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    null;
+  const clientUa = request.headers.get("user-agent") ?? null;
+
   const amountPaise = Number(body?.amountPaise ?? 1500);
   if (!Number.isInteger(amountPaise) || amountPaise < 1000 || amountPaise > 6000) {
     return NextResponse.json({ error: "invalid_amount" }, { status: 400 });
@@ -62,6 +72,8 @@ export async function POST(request: Request) {
         packQuestions,
         orderId: order.id,
         status: "created",
+        clientIp,
+        clientUa,
       });
       return NextResponse.json({
         orderId: order.id,
@@ -95,6 +107,8 @@ export async function POST(request: Request) {
     packId,
     packQuestions,
     status: "simulated",
+    clientIp,
+    clientUa,
   });
   return NextResponse.json({ simulated: true, ok: true });
 }
@@ -109,6 +123,8 @@ async function recordOrder(params: {
   packQuestions: number;
   orderId?: string;
   status: "created" | "simulated" | "paid";
+  clientIp?: string | null;
+  clientUa?: string | null;
 }) {
   const admin = getSupabaseAdmin();
   if (!admin) return;
@@ -131,6 +147,8 @@ async function recordOrder(params: {
       pack_questions: params.packQuestions || null,
       order_id: params.orderId ?? null,
       status: params.status,
+      client_ip: params.clientIp ?? null,
+      client_ua: params.clientUa ?? null,
       verified_at: params.status === "simulated" ? new Date().toISOString() : null,
     });
   } catch (err) {
