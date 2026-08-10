@@ -53,6 +53,15 @@ const PACKS: QuestionPack[] = [
   { id: "p30", price: 30, questions: 50 },
 ];
 
+/** Sachet — ultra-low first-payment trial. Shown ONLY to users who have never
+ *  paid (₹5 = the FMCG "try it" sachet). Never shown to repeat buyers so it
+ *  can't cannibalize higher-value packs. */
+const SACHET_PACK: QuestionPack = {
+  id: "p5",
+  price: 5,
+  questions: 3,
+};
+
 /** Repeat-buyer only: ₹60 for unlimited questions over a week. */
 const UNLIMITED_PACK: QuestionPack = {
   id: "p60",
@@ -198,8 +207,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     const ts = new Date(raw).getTime();
     return Number.isFinite(ts) && ts > Date.now() ? raw : null;
   });
-  const [selectedPack, setSelectedPack] = useState<QuestionPack>(PACKS[1]);
-  const [askedCount, setAskedCount] = useState(() => {
+  const [selectedPack, setSelectedPack] = useState<QuestionPack>(PACKS[1]);  const [askedCount, setAskedCount] = useState(() => {
     if (typeof window === "undefined") return 0;
     return Number(localStorage.getItem(ASKED_KEY) ?? 0) || 0;
   });
@@ -453,7 +461,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       // Hold the question so it can auto-send right after the purchase.
       paywallPendingRef.current = text;
       setCheckoutRetry(false);
-      setShowPaywall(true);
+      openPaywall();
       return;
     }
 
@@ -591,9 +599,17 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
    *  pack they had chosen, so a retry is one tap away. */
   function resumePayment() {
     if (pendingOrder) {
-      const match = [...PACKS, UNLIMITED_PACK].find((p) => p.id === pendingOrder.packId);
+      const match = [...PACKS, UNLIMITED_PACK, SACHET_PACK].find((p) => p.id === pendingOrder.packId);
       if (match) setSelectedPack(match);
     }
+    setShowPaywall(true);
+  }
+
+  /** Open the paywall with the right default pack: the ₹5 sachet for users
+   *  who have never paid (lowers the first-payment barrier), otherwise the
+   *  standard p20. */
+  function openPaywall() {
+    if (paidQuestions === 0) setSelectedPack(SACHET_PACK);
     setShowPaywall(true);
   }
 
@@ -1008,7 +1024,10 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             {checkoutRetry && <p className="gate-modal__retry">{t("checkoutRetry")}</p>}
 
             <div className="pack-list">
-              {(paidQuestions > 0 ? [...PACKS, UNLIMITED_PACK] : PACKS).map((p) => (
+              {(paidQuestions > 0
+                ? [...PACKS, UNLIMITED_PACK]
+                : [SACHET_PACK, ...PACKS]
+              ).map((p) => (
                 <button
                   key={p.id}
                   className={`pack-option ${
@@ -1026,6 +1045,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
                   {p.unlimited && (
                     <span className="badge badge--unlimited">{t("packUnlimitedBadge")}</span>
                   )}
+                  {p.id === "p5" && <span className="badge badge--popular">Try ₹5</span>}
                   {p.popular && <span className="badge badge--popular">Best value</span>}
                 </button>
               ))}
