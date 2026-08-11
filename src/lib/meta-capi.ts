@@ -32,6 +32,9 @@ export function capiConfigured(): boolean {
  * @param params.eventTime Unix seconds (defaults to now).
  * @param params.clientIp  Optional client IP for better attribution.
  * @param params.ua        Optional client user agent for better attribution.
+ * @param params.eventSourceUrl The URL where the purchase happened. REQUIRED by
+ *                         Meta for website events (missing it → events blocked
+ *                         after a 60-day grace period for restricted categories).
  */
 export async function sendCapiPurchase(params: {
   value: number;
@@ -39,6 +42,7 @@ export async function sendCapiPurchase(params: {
   eventTime?: number;
   clientIp?: string;
   ua?: string;
+  eventSourceUrl?: string;
 }): Promise<{ ok: boolean }> {
   if (!capiConfigured()) return { ok: false };
 
@@ -67,6 +71,8 @@ export async function sendCapiPurchase(params: {
               ),
               event_id: params.eventId,
               action_source: "website",
+              event_source_url:
+                params.eventSourceUrl ?? "https://www.hiarya.in/en/chat",
               user_data: userData,
               custom_data: {
                 value: params.value,
