@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
@@ -306,18 +306,56 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   /** Reconcile payments on return: if the DB says paid but this device's
    *  localStorage is behind (e.g. webhook-only grant, cleared storage), grant
    *  silently so a paying user is never left gated. Also surfaces any recent
-   *  abandoned checkout as a resume-payment banner. */
+   *  abandoned checkout as a resume-payment banner.
+   *
+   *  Cross-device: after a Google signup the server resolves the person's
+   *  google_sub and returns their paid balance across ALL devices, so a
+   *  returning user on a new phone recovers their grants + repeat status. */
+  const reconcilePayments = useCallback(async () => {
+    try {
+      const res = await fetch("/api/orders", {
+        headers: { "x-device-id": getDeviceId() },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data) return;
+
+      if (data.paidQuestionsTotal > 0) {
+        setPaidQuestions((prev) => {
+          const next = Math.max(prev, data.paidQuestionsTotal);
+          if (next !== prev) localStorage.setItem(PAID_Q_KEY, String(next));
+          return next;
+        });
+      }
+      if (data.hasP60 && data.latestPaidAt) {
+        setUnlimitedUntil(() => {
+          const existing = localStorage.getItem(UNLIMITED_KEY);
+          if (existing && new Date(existing).getTime() > Date.now()) return existing;
+          const until = new Date(
+            new Date(data.latestPaidAt).getTime() + UNLIMITED_DAYS * 24 * 60 * 60 * 1000
+          ).toISOString();
+          localStorage.setItem(UNLIMITED_KEY, until);
+          return until;
+        });
+      }
+      if (data.pending) {
+        setPendingOrder(data.pending);
+      }
+    } catch {
+      // non-fatal — reconciliation is best-effort
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    async function run() {
       try {
         const res = await fetch("/api/orders", {
           headers: { "x-device-id": getDeviceId() },
         });
-        if (!res.ok) return;
+        if (cancelled || !res.ok) return;
         const data = await res.json();
-        if (cancelled || !data) return;
-
+        if (!data) return;
         if (data.paidQuestionsTotal > 0) {
           setPaidQuestions((prev) => {
             const next = Math.max(prev, data.paidQuestionsTotal);
@@ -336,13 +374,12 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             return until;
           });
         }
-        if (data.pending) {
-          setPendingOrder(data.pending);
-        }
+        if (data.pending) setPendingOrder(data.pending);
       } catch {
-        // non-fatal — reconciliation is best-effort
+        // non-fatal
       }
-    })();
+    }
+    void run();
     return () => {
       cancelled = true;
     };
@@ -516,6 +553,10 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         },
         body: JSON.stringify({ credential, lang: locale }),
       });
+      // Recover cross-device purchases: now that this device is linked to the
+      // user's Google identity, pull any paid balance from their other devices
+      // (returning buyer on a new phone stays ungated + keeps repeat status).
+      void reconcilePayments();
     } catch {
       // non-fatal
     }

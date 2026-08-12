@@ -54,12 +54,34 @@ export async function GET(request: Request) {
   }
 
   try {
+    // ── Cross-device identity resolution ─────────────────────────────
+    // A Google-signed-up user returning on a NEW device (cleared storage,
+    // new phone) must not look like a first-time customer. Resolve the
+    // person's stable identity (google_sub) and aggregate their paid orders
+    // across ALL their devices, so grants/repeat-status survive a device
+    // change. Falls back to this device alone when no google_sub exists.
+    let deviceIds = [deviceId];
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("google_sub")
+      .eq("device_id", deviceId)
+      .maybeSingle();
+    if (profile?.google_sub) {
+      const { data: linked } = await admin
+        .from("profiles")
+        .select("device_id")
+        .eq("google_sub", profile.google_sub);
+      if (linked?.length) {
+        deviceIds = [...new Set(linked.map((p) => p.device_id))];
+      }
+    }
+
     const { data: orders, error } = await admin
       .from("orders")
       .select("pack_id, pack_questions, amount_paise, status, verified_at, created_at, order_id")
-      .eq("device_id", deviceId)
+      .in("device_id", deviceIds)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(50);
     if (error || !orders) {
       console.warn("[orders] fetch failed:", error?.message);
       return NextResponse.json({ paidQuestionsTotal: 0, hasP60: false, latestPaidAt: null, pending: null });
