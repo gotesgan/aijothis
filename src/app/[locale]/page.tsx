@@ -233,6 +233,8 @@ export default async function HomePage({
         <Link href="/blog" className="legal-links__item">Blog</Link>
         <span className="legal-links__dot">·</span>
         <Link href="/sitemap" className="legal-links__item">Sitemap</Link>
+        <span className="legal-links__dot">·</span>
+        <span className="legal-links__item faint">{t("stats2Value")} users</span>
       </footer>
     </div>
   );
