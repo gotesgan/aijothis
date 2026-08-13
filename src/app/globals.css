@@ -838,6 +838,57 @@ button {
   color: var(--ivory-muted);
 }
 
+/* ─────────────── Landing SEO content + FAQ ─────────────── */
+.seo-content {
+  padding: 8px 0 20px;
+}
+.seo-content__p {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ivory-muted);
+  margin-bottom: 12px;
+}
+.faq {
+  padding: 4px 0 20px;
+}
+.faq__list {
+  display: grid;
+  gap: 10px;
+}
+.faq__item {
+  background: var(--night-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 16px;
+}
+.faq__q {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ivory);
+  padding: 14px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.faq__q::-webkit-details-marker {
+  display: none;
+}
+.faq__q::before {
+  content: "›";
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--gold);
+  transition: transform 0.15s ease;
+}
+.faq__item[open] .faq__q::before {
+  transform: rotate(90deg);
+}
+.faq__a {
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--ivory-muted);
+  padding: 0 0 14px;
+}
+
 /* ─────────────── Details form ─────────────── */
 .details-form {
   display: grid;

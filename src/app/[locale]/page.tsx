@@ -7,6 +7,39 @@ import { JsonLd } from "@/components/json-ld";
 import { Link } from "@/i18n/navigation";
 import { SITE_URL } from "@/lib/site";
 import { Sun, ChevronRight } from "lucide-react";
+import type { Metadata } from "next";
+
+const titles: Record<string, { title: string; description: string }> = {
+  en: {
+    title: "Jyotish — AI Vedic Astrologer | Free Kundli & Chat",
+    description:
+      "Get your free Vedic Kundli online — Lagna, Rashi, Nakshatra and Dasha. Chat with Arya, your AI astrologer, about marriage, career, love and money in Hindi, Marathi or English.",
+  },
+  hi: {
+    title: "Jyotish — AI वैदिक ज्योतिषी | मुफ्त कुंडली और चैट",
+    description:
+      "अपनी मुफ्त वैदिक कुंडली पाएँ — लग्न, राशि, नक्षत्र और दशा। शादी, करियर, प्रेम और धन के सवाल हिंदी, मराठी या अंग्रेज़ी में आर्य से पूछें।",
+  },
+  mr: {
+    title: "Jyotish — AI वैदिक ज्योतिषी | मोफत कुंडली आणि चॅट",
+    description:
+      "तुमची मोफत वैदिक कुंडली मिळवा — लग्न, राशी, नक्षत्र आणि दशा. लग्न, करिअर, प्रेम आणि पैशाचे प्रश्न हिंदी, मराठी किंवा इंग्रजीत आर्यला विचारा.",
+  },
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = titles[locale] ?? titles.en;
+  return {
+    title: t.title,
+    description: t.description,
+    alternates: { canonical: `/${locale}` },
+  };
+}
 
 export default async function HomePage({
   params,
@@ -37,6 +70,27 @@ export default async function HomePage({
     logo: `${SITE_URL}/icon.png`,
   };
 
+  // FAQPage structured data — targets "People also ask" (where is kundali,
+  // what is a kundli, nakshatra 27, etc.) which the GSC data shows are the
+  // real queries getting impressions but not clicks yet.
+  const faqItems = [
+    { q: t("faq1Q"), a: t("faq1A") },
+    { q: t("faq2Q"), a: t("faq2A") },
+    { q: t("faq3Q"), a: t("faq3A") },
+    { q: t("faq4Q"), a: t("faq4A") },
+    { q: t("faq5Q"), a: t("faq5A") },
+    { q: t("faq6Q"), a: t("faq6A") },
+  ];
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+
   const steps = [
     { title: t("how1Title"), desc: t("how1Desc") },
     { title: t("how2Title"), desc: t("how2Desc") },
@@ -47,6 +101,7 @@ export default async function HomePage({
     <div className="screen">
       <JsonLd data={websiteJsonLd} />
       <JsonLd data={orgJsonLd} />
+      <JsonLd data={faqJsonLd} />
       <Header />
 
       <section className="hero">
@@ -147,6 +202,27 @@ export default async function HomePage({
         </div>
       </section>
 
+      {/* SEO content — real substance for Google to rank (kundli, nakshatra,
+          vedic astrology, marriage timing long-tail queries). */}
+      <section className="seo-content">
+        <h2 className="section-title">{t("seoTitle")}</h2>
+        <p className="seo-content__p">{t("seoIntro")}</p>
+        <p className="seo-content__p">{t("seoBody1")}</p>
+        <p className="seo-content__p">{t("seoBody2")}</p>
+      </section>
+
+      <section className="faq">
+        <h2 className="section-title">{t("faqTitle")}</h2>
+        <div className="faq__list">
+          {faqItems.map((f) => (
+            <details className="faq__item" key={f.q}>
+              <summary className="faq__q">{f.q}</summary>
+              <p className="faq__a">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       <AppNav />
 
       <footer className="legal-links">
@@ -157,8 +233,6 @@ export default async function HomePage({
         <Link href="/blog" className="legal-links__item">Blog</Link>
         <span className="legal-links__dot">·</span>
         <Link href="/sitemap" className="legal-links__item">Sitemap</Link>
-        <span className="legal-links__dot">·</span>
-        <span className="legal-links__item faint">{t("stats2Value")} users</span>
       </footer>
     </div>
   );
