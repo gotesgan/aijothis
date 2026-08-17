@@ -6,7 +6,6 @@ import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
 import { getDeviceId, getOrCreateChatId, newUuid, saveKundli, setChatId } from "@/lib/storage";
-import { getPaywallVariant } from "@/lib/experiment";
 import { detectMatchRequest } from "@/lib/match";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import { pickStarters } from "@/lib/starters";
@@ -53,15 +52,6 @@ const PACKS: QuestionPack[] = [
   { id: "p20", price: 20, questions: 30, popular: true },
   { id: "p30", price: 30, questions: 50 },
 ];
-
-/** Sachet — ultra-low first-payment trial. Shown ONLY to users who have never
- *  paid (₹5 = the FMCG "try it" sachet). Never shown to repeat buyers so it
- *  can't cannibalize higher-value packs. */
-const SACHET_PACK: QuestionPack = {
-  id: "p5",
-  price: 5,
-  questions: 3,
-};
 
 /** Repeat-buyer only: ₹60 for unlimited questions over a week. */
 const UNLIMITED_PACK: QuestionPack = {
@@ -209,14 +199,6 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     return Number.isFinite(ts) && ts > Date.now() ? raw : null;
   });
   const [selectedPack, setSelectedPack] = useState<QuestionPack>(PACKS[1]);
-
-  // A/B variant: sachet arm sees the ₹5 trial pack on first payment, control
-  // arm sees the standard packs. Deterministic per device.
-  const paywallVariant = useMemo(
-    () => (typeof window === "undefined" ? "control" : getPaywallVariant(getDeviceId())),
-    []
-  );
-  const showSachet = paywallVariant === "sachet";
 
   const [askedCount, setAskedCount] = useState(() => {
     if (typeof window === "undefined") return 0;
@@ -651,16 +633,14 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
    *  pack they had chosen, so a retry is one tap away. */
   function resumePayment() {
     if (pendingOrder) {
-      const match = [...PACKS, UNLIMITED_PACK, SACHET_PACK].find((p) => p.id === pendingOrder.packId);
+      const match = [...PACKS, UNLIMITED_PACK].find((p) => p.id === pendingOrder.packId);
       if (match) setSelectedPack(match);
     }
     setShowPaywall(true);
   }
 
-  /** Open the paywall with the right default pack: the ₹5 sachet for users
-   *  in the sachet experiment arm who have never paid, otherwise standard p20. */
+  /** Open the paywall with the standard default pack (p20). */
   function openPaywall() {
-    if (paidQuestions === 0 && showSachet) setSelectedPack(SACHET_PACK);
     setShowPaywall(true);
   }
 
@@ -732,8 +712,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   }
 
   useEffect(() => {
-    if (showPaywall) trackPaywallShown(paywallVariant);
-  }, [showPaywall, paywallVariant]);
+    if (showPaywall) trackPaywallShown();
+  }, [showPaywall]);
 
   /** Fires once — the first user question that gets a real answer. */
   const firstAnswerFiredRef = useRef(false);
@@ -1075,13 +1055,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             {checkoutRetry && <p className="gate-modal__retry">{t("checkoutRetry")}</p>}
 
             <div className="pack-list">
-              {(
-                paidQuestions > 0
-                  ? [...PACKS, UNLIMITED_PACK]
-                  : showSachet
-                    ? [SACHET_PACK, ...PACKS]
-                    : PACKS
-              ).map((p) => (
+              {(paidQuestions > 0 ? [...PACKS, UNLIMITED_PACK] : PACKS).map((p) => (
                 <button
                   key={p.id}
                   className={`pack-option ${
@@ -1099,7 +1073,6 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
                   {p.unlimited && (
                     <span className="badge badge--unlimited">{t("packUnlimitedBadge")}</span>
                   )}
-                  {p.id === "p5" && <span className="badge badge--popular">Try ₹5</span>}
                   {p.popular && <span className="badge badge--popular">Best value</span>}
                 </button>
               ))}

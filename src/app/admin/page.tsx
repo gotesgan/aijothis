@@ -51,11 +51,6 @@ type Stats = {
     avgQuestionsPerAsker: number;
   };
   retention: { repeatPayers: number; crossDayPayers: number; payers: number };
-  experiment: {
-    enabled: boolean;
-    sachet: { payers: number; orders: number; revenue: number };
-    control: { payers: number; orders: number; revenue: number };
-  };
 };
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
@@ -471,12 +466,8 @@ export default function AdminPage() {
   }
 
   if (!stats) return null;
-  const { revenue, users, funnel, engagement, retention, experiment } = stats;
+  const { revenue, users, funnel, engagement, retention } = stats;
   const last7Orders = revenue.daily.reduce((s, d) => s + d.orders, 0);
-  const expTotal = experiment.sachet.payers + experiment.control.payers;
-  const expSachetShare = expTotal ? Math.round((experiment.sachet.payers / expTotal) * 100) : 0;
-  const expSachetAOV = experiment.sachet.payers ? experiment.sachet.revenue / experiment.sachet.payers : 0;
-  const expControlAOV = experiment.control.payers ? experiment.control.revenue / experiment.control.payers : 0;
 
   return (
     <div className="relative min-h-screen bg-[#0d0a16] text-[#f7f1e5]">
@@ -640,47 +631,6 @@ export default function AdminPage() {
             <Stat label="Failed" value={num(revenue.orderHealth.failed)} />
             <Stat label="Simulated (test)" value={num(revenue.orderHealth.simulated)} />
             <div className="mt-2 text-[10px] text-[#71688a]">Chat content is never shown here</div>
-          </Section>
-        </div>
-
-        {/* sachet A/B experiment */}
-        <div className="mt-4">
-          <Section title="₹5 Sachet A/B test" icon={<Layers className="h-3.5 w-3.5" />}>
-            {experiment.enabled ? (
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-                  <div className="text-[11px] uppercase tracking-wider text-[#71688a]">Sachet arm (₹5 shown)</div>
-                  <div className="mt-2 font-[var(--stack-display)] text-2xl font-medium text-[#ffb84d]">
-                    {num(experiment.sachet.payers)}
-                  </div>
-                  <div className="mt-1 text-[11px] text-[#71688a]">
-                    {experiment.sachet.orders} orders · {inr(experiment.sachet.revenue)} · avg {inr(expSachetAOV)}/payer
-                  </div>
-                </div>
-                <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-                  <div className="text-[11px] uppercase tracking-wider text-[#71688a]">Control arm</div>
-                  <div className="mt-2 font-[var(--stack-display)] text-2xl font-medium text-[#f7f1e5]">
-                    {num(experiment.control.payers)}
-                  </div>
-                  <div className="mt-1 text-[11px] text-[#71688a]">
-                    {experiment.control.orders} orders · {inr(experiment.control.revenue)} · avg {inr(expControlAOV)}/payer
-                  </div>
-                </div>
-                <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-                  <div className="text-[11px] uppercase tracking-wider text-[#71688a]">Read so far</div>
-                  <div className="mt-2 font-[var(--stack-display)] text-2xl font-medium text-[#f2c94c]">
-                    {expSachetShare}%
-                  </div>
-                  <div className="mt-1 text-[11px] text-[#71688a]">
-                    of payers are in the sachet arm · {num(expTotal)} payers total
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-[11px] text-[#71688a]">
-                No experiment data yet. Deploy the sachet tier and wait for first-time payers to hit the paywall.
-              </div>
-            )}
           </Section>
         </div>
       </div>
