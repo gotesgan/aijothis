@@ -70,7 +70,12 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, google: googleUser ? { email: googleUser.email } : null });
+  return NextResponse.json({
+    ok: true,
+    user: googleUser
+      ? { id: googleUser.sub, email: googleUser.email, name: googleUser.name }
+      : null,
+  });
 }
 
 /**

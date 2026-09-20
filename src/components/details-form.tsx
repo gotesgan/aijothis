@@ -7,6 +7,7 @@ import { trackLead, trackQuestionChip } from "@/lib/pixel";
 import type { KundliResult } from "@/lib/types";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
 import { ArrowRight, Loader2 } from "lucide-react";
+import posthog from "posthog-js";
 
 export function DetailsForm({ initialQ }: { initialQ?: string }) {
   const t = useTranslations("Details");
@@ -65,6 +66,9 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
       const kundli: KundliResult = data.kundli;
       saveKundli(kundli);
       trackLead();
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
+        posthog.capture("birth_chart_generated", { source: "details_form" });
+      }
       router.push(initialQ ? { pathname: "/chat", query: { q: initialQ } } : "/chat");
     } catch (err) {
       setError((err as Error).message ?? "Network error. Please try again.");

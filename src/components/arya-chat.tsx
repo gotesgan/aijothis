@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -29,6 +30,7 @@ import { BirthDetailsCard } from "@/components/birth-details-card";
 import { MatchCard, type MatchPrefill } from "@/components/match-card";
 import { AppNav } from "@/components/app-nav";
 import { Send, Gem, Heart, X } from "lucide-react";
+import posthog from "posthog-js";
 import {
   CURRENT_PACKS,
   LEGACY_PACKS,
@@ -38,11 +40,21 @@ import {
 } from "@/lib/pricing";
 
 const SIGNED_UP_KEY = "jyotish_signed_up_v1";
+const GOOGLE_SUB_KEY = "jyotish_google_sub_v1";
 const PAID_Q_KEY = "jyotish_paid_questions_v1";
 const ASKED_KEY = "jyotish_asked_count_v1";
 const MATCH_KEY = "jyotish_match_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
 const ALL_PACKS = [...CURRENT_PACKS, ...LEGACY_PACKS];
+
+function capturePostHog(
+  event: string,
+  properties?: Record<string, string | number | boolean>
+) {
+  if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
+    posthog.capture(event, properties);
+  }
+}
 
 /** Loads Razorpay checkout and opens the payment sheet.
  *  Resolves `ok` (payment verified) and `opened` (sheet reached the user —
@@ -96,6 +108,7 @@ function openRazorpay(opts: {
       });
       opened = true;
       trackCheckoutOpened();
+      capturePostHog("checkout_opened");
       rzp.open();
     };
     loadScript();
@@ -218,6 +231,26 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const initialSentRef = useRef(false);
+  const hasIdentifiedGoogleUserRef = useRef(false);
+
+  // A verified Google subject is the stable account ID. On later page loads the
+  // PostHog SDK restores the same identity without requiring another credential.
+  useEffect(() => {
+    if (
+      hasIdentifiedGoogleUserRef.current ||
+      !signedUp ||
+      !process.env.NEXT_PUBLIC_POSTHOG_KEY ||
+      !process.env.NEXT_PUBLIC_POSTHOG_HOST
+    ) {
+      return;
+    }
+
+    const googleSub = localStorage.getItem(GOOGLE_SUB_KEY);
+    if (!googleSub) return;
+
+    posthog.identify(googleSub);
+    hasIdentifiedGoogleUserRef.current = true;
+  }, [signedUp]);
 
   /** Increment + persist the asked-question counter so the gate survives refreshes. */
   function bumpAskedCount() {
@@ -412,6 +445,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     }
 
     setMessages([...display, { role: "assistant", content: acc }]);
+    capturePostHog("chat_response_received");
   }
 
   /** Send a question (used by input + chips + carried-from-landing question). */
@@ -459,6 +493,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
 
     const next: ChatMessage[] = [...messages, { role: "user", content: text }];
     setMessages([...next, { role: "assistant", content: "" }]);
+    capturePostHog("chat_question_submitted", { question_number: askedCount + 1 });
     bumpAskedCount();
     setStreaming(true);
     try {
@@ -489,7 +524,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     setShowSignup(false);
     trackSignup();
     try {
-      await fetch("/api/signup", {
+      const response = await fetch("/api/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -497,6 +532,21 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         },
         body: JSON.stringify({ credential, lang: locale }),
       });
+      const data = await response.json().catch(() => null);
+      const user = data?.user as
+        | { id: string; email: string; name: string }
+        | null
+        | undefined;
+
+      if (response.ok && user?.id) {
+        localStorage.setItem(GOOGLE_SUB_KEY, user.id);
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
+          posthog.identify(user.id, { email: user.email, name: user.name });
+          hasIdentifiedGoogleUserRef.current = true;
+        }
+        capturePostHog("signup_completed");
+      }
+
       // Recover cross-device purchases: now that this device is linked to the
       // user's Google identity, pull any paid balance from their other devices
       // (returning buyer on a new phone stays ungated + keeps repeat status).
@@ -528,6 +578,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     setCheckoutBusy(true);
     setShowPaywall(false);
     trackInitiateCheckout();
+    capturePostHog("checkout_started", {
+      pack_tier: selectedPack.tier,
+      question_credits: selectedPack.questions,
+      price: selectedPack.price,
+    });
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -612,6 +667,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       // Value = the actual order amount paid, not a hardcoded figure.
       // event_id = Razorpay order id → dedupes with CAPI in Meta.
       trackPurchase((amountPaise ?? selectedPack.price * 100) / 100, eventId ?? newUuid());
+      capturePostHog("payment_completed", {
+        pack_tier: selectedPack.tier,
+        question_credits: questions,
+        price: (amountPaise ?? selectedPack.price * 100) / 100,
+      });
     }
     setPendingOrder(null);
     // The user landed on the paywall with a question in hand — send it now that
@@ -630,6 +690,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     setRefined(false);
     const next: ChatMessage[] = [...messages, { role: "user", content }];
     setMessages([...next, { role: "assistant", content: "" }]);
+    capturePostHog("chat_question_submitted", { question_number: askedCount + 1 });
     bumpAskedCount();
     setStreaming(true);
     try {
@@ -661,10 +722,15 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   async function onDetailsComplete(newKundli: KundliResult) {
     saveKundli(newKundli);
     trackLead();
+    capturePostHog("chat_birth_chart_generated");
     const question = pendingQuestion;
     const display = messages;
     setNeedDetails(false);
     setPendingQuestion("");
+    capturePostHog("chat_question_submitted", {
+      question_number: askedCount + 1,
+      source: "birth_details",
+    });
     bumpAskedCount();
     setStreaming(true);
     try {
@@ -681,11 +747,16 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   async function onMatchComplete(partner: KundliResult) {
     setMatchKundli(partner);
     localStorage.setItem(MATCH_KEY, JSON.stringify(partner));
+    capturePostHog("match_chart_generated");
     const question = pendingMatch;
     const display = messages;
     setMatchCard(null);
     setMatchCardOpen(false);
     setPendingMatch("");
+    capturePostHog("chat_question_submitted", {
+      question_number: askedCount + 1,
+      source: "match_details",
+    });
     bumpAskedCount();
     setStreaming(true);
     try {
@@ -998,6 +1069,11 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
                   onClick={() => {
                     setSelectedPack(p);
                     trackPackSelected(p.price);
+                    capturePostHog("question_pack_selected", {
+                      pack_tier: p.tier,
+                      question_credits: p.questions,
+                      price: p.price,
+                    });
                   }}
                 >
                   <span className="pack-option__price">₹{p.price}</span>
