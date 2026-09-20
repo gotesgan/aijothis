@@ -19,7 +19,7 @@ export interface QuestionPack {
 export const CURRENT_PACKS: readonly QuestionPack[] = [
   { id: "current-starter", tier: "starter", price: 99, questions: 20 },
   { id: "current-standard", tier: "standard", price: 149, questions: 50, popular: true },
-  { id: "current-deep", tier: "deep", price: 299, questions: 150 },
+  { id: "current-deep", tier: "deep", price: 299, questions: 100 },
 ];
 
 /** Existing users keep their original question quantities at +₹50 per pack. */
