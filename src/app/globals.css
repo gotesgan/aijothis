@@ -459,7 +459,7 @@ button {
 
 /* ─────────────── Navagraha mandala ─────────────── */
 .mandala {
-  width: min(280px, 72vw);
+  width: min(164px, 42vw);
   margin: 0 auto;
   filter: drop-shadow(0 18px 50px var(--glow-marigold));
 }
@@ -520,7 +520,7 @@ button {
 /* ─────────────── Landing hero ─────────────── */
 .hero {
   text-align: center;
-  padding: 34px 0 8px;
+  padding: 12px 0 8px;
 }
 .hero__brand {
   font-family: var(--stack-display);
@@ -528,9 +528,11 @@ button {
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--gold);
+  display: none;
   margin: 0 0 2px;
 }
 .hero__brand-tag {
+  display: none;
   color: var(--ivory-faint);
   font-size: 0.85rem;
   letter-spacing: 0.08em;
@@ -539,11 +541,11 @@ button {
 }
 .hero__title {
   font-family: var(--stack-display);
-  font-size: clamp(2.1rem, 8.5vw, 2.9rem);
+  font-size: clamp(2rem, 8vw, 2.65rem);
   line-height: 1.08;
   font-weight: 600;
   letter-spacing: -0.02em;
-  margin: 4px 0 16px;
+  margin: 8px 0 12px;
 }
 .hero__title em {
   font-style: italic;
@@ -555,9 +557,9 @@ button {
 }
 .hero__sub {
   color: var(--ivory-muted);
-  font-size: 1.02rem;
+  font-size: 1rem;
   max-width: 34ch;
-  margin: 0 auto 26px;
+  margin: 0 auto 18px;
 }
 .hero__cta {
   display: grid;
@@ -579,7 +581,7 @@ button {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  margin: 0 auto 18px;
+  margin: 20px auto 18px;
   max-width: 340px;
   text-align: left;
 }
@@ -627,10 +629,30 @@ button {
 /* crawlable app-purpose statement (also used for OAuth branding review) */
 .hero__purpose {
   max-width: 480px;
-  margin: 18px auto 0;
+  margin: 20px auto 0;
   font-size: 0.82rem;
   line-height: 1.6;
   color: var(--ivory-faint);
+}
+
+@media (min-width: 640px) {
+  .mandala {
+    width: min(238px, 40vw);
+  }
+  .hero {
+    padding-top: 28px;
+  }
+  .hero__brand,
+  .hero__brand-tag {
+    display: block;
+  }
+  .hero__title {
+    font-size: clamp(2.35rem, 5vw, 3.2rem);
+    margin-top: 6px;
+  }
+  .hero__sub {
+    margin-bottom: 24px;
+  }
 }
 .starter-chips {
   display: flex;

@@ -106,25 +106,16 @@ export default async function HomePage({
 
       <section className="hero">
         <NavagrahaMandala />
-        <h1 className="hero__brand">{t("brand")}</h1>
+        <p className="hero__brand">{t("brand")}</p>
         <p className="hero__brand-tag">{t("brandTag")}</p>
         <span className="eyebrow">
           <span className="eyebrow__om">ॐ</span>
           {t("eyebrow")}
         </span>
-        <h2 className="hero__title">
+        <h1 className="hero__title">
           {t("title")} <em>{t("titleHighlight")}</em>
-        </h2>
+        </h1>
         <p className="hero__sub">{t("subtitle")}</p>
-        <p className="hero__purpose">{t("purpose")}</p>
-
-        {/* sample Arya chat bubble — sets expectation it's a chat */}
-        <div className="chat-preview">
-          <span className="chat-preview__avatar">
-            <Image src="/arays.png" alt="AI" fill sizes="40px" className="avatar-img" />
-          </span>
-          <div className="msg msg--ai">{t("sampleBubble")}</div>
-        </div>
 
         <div className="hero__cta">
           <Link href="/details" className="btn btn--gold btn--lg">
@@ -147,6 +138,18 @@ export default async function HomePage({
               {q}
             </Link>
           ))}
+        </div>
+
+        {/* Supporting detail follows the action: on mobile, asking Arya stays
+            visible without scrolling past explanatory copy or the preview. */}
+        <p className="hero__purpose">{t("purpose")}</p>
+
+        {/* sample Arya chat bubble — sets expectation it's a chat */}
+        <div className="chat-preview">
+          <span className="chat-preview__avatar">
+            <Image src="/arays.png" alt="AI" fill sizes="40px" className="avatar-img" />
+          </span>
+          <div className="msg msg--ai">{t("sampleBubble")}</div>
         </div>
       </section>
 
