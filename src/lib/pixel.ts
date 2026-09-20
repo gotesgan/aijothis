@@ -86,10 +86,9 @@ export function trackFirstAnswer() {
   track("FirstAnswer");
 }
 
-/** Free limit reached and the pack offer was shown. `variant` tags the
- *  sachet A/B test arm so Clarity/Meta can segment paywall behavior. */
-export function trackPaywallShown(variant?: "sachet" | "control") {
-  track("PaywallShown", variant ? { variant } : undefined);
+/** Free limit reached and the pack offer was shown. */
+export function trackPaywallShown() {
+  track("PaywallShown");
 }
 
 /** A pack tier was selected in the paywall. */

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { createRazorpayOrder, razorpayConfigured, KEY_ID } from "@/lib/razorpay";
+import { packForTier } from "@/lib/pricing";
+import { resolvePricingForDevice } from "@/lib/pricing-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,13 +25,15 @@ export async function POST(request: Request) {
     null;
   const clientUa = request.headers.get("user-agent") ?? null;
 
-  const amountPaise = Number(body?.amountPaise ?? 1500);
-  if (!Number.isInteger(amountPaise) || amountPaise < 500 || amountPaise > 6000) {
-    return NextResponse.json({ error: "invalid_amount" }, { status: 400 });
-  }
+  const { cohort } = await resolvePricingForDevice(deviceId);
+  const pack = packForTier(cohort, String(body?.packTier ?? ""));
+  if (!pack) return NextResponse.json({ error: "invalid_pack" }, { status: 400 });
 
-  const packId = String(body?.packId ?? "");
-  const packQuestions = Number(body?.packQuestions ?? 0);
+  // Prices and question credits are server-owned. Never trust a value supplied
+  // by the browser at checkout.
+  const amountPaise = pack.price * 100;
+  const packId = pack.id;
+  const packQuestions = pack.questions;
 
   // Real payment path.
   if (razorpayConfigured()) {
@@ -57,6 +61,7 @@ export async function POST(request: Request) {
             amount: reused.amount_paise,
             currency: reused.currency,
             keyId: KEY_ID,
+            pack,
             simulated: false,
             reused: true,
           });
@@ -80,6 +85,7 @@ export async function POST(request: Request) {
         amount: order.amount,
         currency: order.currency,
         keyId: KEY_ID,
+        pack,
         simulated: false,
       });
     } catch (err) {
@@ -110,7 +116,7 @@ export async function POST(request: Request) {
     clientIp,
     clientUa,
   });
-  return NextResponse.json({ simulated: true, ok: true });
+  return NextResponse.json({ simulated: true, ok: true, pack });
 }
 
 /** Inserts an order row. Non-fatal — existing flow keeps working even if the

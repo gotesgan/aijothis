@@ -6,7 +6,6 @@ import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
 import { getDeviceId, getOrCreateChatId, newUuid, saveKundli, setChatId } from "@/lib/storage";
-import { getPaywallVariant } from "@/lib/experiment";
 import { detectMatchRequest } from "@/lib/match";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import { pickStarters } from "@/lib/starters";
@@ -30,46 +29,20 @@ import { BirthDetailsCard } from "@/components/birth-details-card";
 import { MatchCard, type MatchPrefill } from "@/components/match-card";
 import { AppNav } from "@/components/app-nav";
 import { Send, Gem, Heart, X } from "lucide-react";
+import {
+  CURRENT_PACKS,
+  LEGACY_PACKS,
+  packsForCohort,
+  type PricingCohort,
+  type QuestionPack,
+} from "@/lib/pricing";
 
 const SIGNED_UP_KEY = "jyotish_signed_up_v1";
 const PAID_Q_KEY = "jyotish_paid_questions_v1";
 const ASKED_KEY = "jyotish_asked_count_v1";
 const MATCH_KEY = "jyotish_match_v1";
-const UNLIMITED_KEY = "jyotish_unlimited_until_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
-const UNLIMITED_DAYS = 7; // repeat-buyer pass: unlimited questions for a week
-
-interface QuestionPack {
-  id: string;
-  price: number;
-  questions: number;
-  popular?: boolean;
-  unlimited?: boolean;
-}
-
-/** Pack menu — ₹10 to ₹30, more value per rupee at higher tiers. */
-const PACKS: QuestionPack[] = [
-  { id: "p10", price: 10, questions: 10 },
-  { id: "p20", price: 20, questions: 30, popular: true },
-  { id: "p30", price: 30, questions: 50 },
-];
-
-/** Sachet — ultra-low first-payment trial. Shown ONLY to users who have never
- *  paid (₹5 = the FMCG "try it" sachet). Never shown to repeat buyers so it
- *  can't cannibalize higher-value packs. */
-const SACHET_PACK: QuestionPack = {
-  id: "p5",
-  price: 5,
-  questions: 3,
-};
-
-/** Repeat-buyer only: ₹60 for unlimited questions over a week. */
-const UNLIMITED_PACK: QuestionPack = {
-  id: "p60",
-  price: 60,
-  questions: 0,
-  unlimited: true,
-};
+const ALL_PACKS = [...CURRENT_PACKS, ...LEGACY_PACKS];
 
 /** Loads Razorpay checkout and opens the payment sheet.
  *  Resolves `ok` (payment verified) and `opened` (sheet reached the user —
@@ -201,22 +174,9 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     if (typeof window === "undefined") return 0;
     return Number(localStorage.getItem(PAID_Q_KEY) ?? 0) || 0;
   });
-  const [unlimitedUntil, setUnlimitedUntil] = useState(() => {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem(UNLIMITED_KEY);
-    if (!raw) return null;
-    const ts = new Date(raw).getTime();
-    return Number.isFinite(ts) && ts > Date.now() ? raw : null;
-  });
-  const [selectedPack, setSelectedPack] = useState<QuestionPack>(PACKS[1]);
-
-  // A/B variant: sachet arm sees the ₹5 trial pack on first payment, control
-  // arm sees the standard packs. Deterministic per device.
-  const paywallVariant = useMemo(
-    () => (typeof window === "undefined" ? "control" : getPaywallVariant(getDeviceId())),
-    []
-  );
-  const showSachet = paywallVariant === "sachet";
+  const [pricingCohort, setPricingCohort] = useState<PricingCohort>("current");
+  const [selectedPack, setSelectedPack] = useState<QuestionPack>(CURRENT_PACKS[1]);
+  const packs = packsForCohort(pricingCohort);
 
   const [askedCount, setAskedCount] = useState(() => {
     if (typeof window === "undefined") return 0;
@@ -268,9 +228,9 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     });
   }
 
-  /** Repeat-buyer pass is active while `unlimitedUntil` is in the future. */
-  function isUnlimited(): boolean {
-    return !!unlimitedUntil && new Date(unlimitedUntil).getTime() > Date.now();
+  function applyPricingCohort(cohort: PricingCohort) {
+    setPricingCohort(cohort);
+    setSelectedPack(packsForCohort(cohort)[1]);
   }
 
   /** Restore the user's last thread so returning users keep their history. */
@@ -327,16 +287,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           return next;
         });
       }
-      if (data.hasP60 && data.latestPaidAt) {
-        setUnlimitedUntil(() => {
-          const existing = localStorage.getItem(UNLIMITED_KEY);
-          if (existing && new Date(existing).getTime() > Date.now()) return existing;
-          const until = new Date(
-            new Date(data.latestPaidAt).getTime() + UNLIMITED_DAYS * 24 * 60 * 60 * 1000
-          ).toISOString();
-          localStorage.setItem(UNLIMITED_KEY, until);
-          return until;
-        });
+      if (data.pricingCohort === "legacy" || data.pricingCohort === "current") {
+        applyPricingCohort(data.pricingCohort);
       }
       if (data.pending) {
         setPendingOrder(data.pending);
@@ -363,16 +315,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             return next;
           });
         }
-        if (data.hasP60 && data.latestPaidAt) {
-          setUnlimitedUntil(() => {
-            const existing = localStorage.getItem(UNLIMITED_KEY);
-            if (existing && new Date(existing).getTime() > Date.now()) return existing;
-            const until = new Date(
-              new Date(data.latestPaidAt).getTime() + UNLIMITED_DAYS * 24 * 60 * 60 * 1000
-            ).toISOString();
-            localStorage.setItem(UNLIMITED_KEY, until);
-            return until;
-          });
+        if (data.pricingCohort === "legacy" || data.pricingCohort === "current") {
+          applyPricingCohort(data.pricingCohort);
         }
         if (data.pending) setPendingOrder(data.pending);
       } catch {
@@ -503,7 +447,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       return;
     }
     const limit = FREE_LIMIT + paidQuestions;
-    if (!isUnlimited() && askedCount >= limit) {
+    if (askedCount >= limit) {
       // Out of questions (free or bought) → always offer the packs so the user
       // can keep buying as many times as they want. No dead-end.
       // Hold the question so it can auto-send right after the purchase.
@@ -589,9 +533,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         method: "POST",
         headers: { "x-device-id": getDeviceId() },
         body: JSON.stringify({
-          amountPaise: selectedPack.price * 100,
-          packId: selectedPack.id,
-          packQuestions: selectedPack.questions,
+          packTier: selectedPack.tier,
         }),
       });
       const data = await res.json();
@@ -600,21 +542,17 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       if (data.simulated) {
         // Experiment path: grant immediately, but do NOT fire a Purchase event —
         // no real money changed hands, so it would pollute Meta's data.
-        if (selectedPack.unlimited) grantUnlimited(false);
-        else grantPack(selectedPack.questions, false);
+        grantPack(data.pack?.questions ?? selectedPack.questions, false);
         return;
       }
       const result = await openRazorpay({
         ...data,
-        description: selectedPack.unlimited
-          ? "7-day unlimited questions with Arya"
-          : `${selectedPack.questions} questions with Arya`,
+        description: `${data.pack?.questions ?? selectedPack.questions} questions with Arya`,
         prefillName: kundli?.profile.name,
       });
       if (result.ok) {
         setPendingOrder(null);
-        if (selectedPack.unlimited) grantUnlimited(true, data.amount, data.orderId);
-        else grantPack(selectedPack.questions, true, data.amount, data.orderId);
+        grantPack(data.pack?.questions ?? selectedPack.questions, true, data.amount, data.orderId);
       } else {
         // Payment sheet was dismissed or failed — never leave the user in
         // a dead end. Reopen the paywall with a retry note; the held question
@@ -651,40 +589,16 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
    *  pack they had chosen, so a retry is one tap away. */
   function resumePayment() {
     if (pendingOrder) {
-      const match = [...PACKS, UNLIMITED_PACK, SACHET_PACK].find((p) => p.id === pendingOrder.packId);
+      const match = ALL_PACKS.find((p) => p.id === pendingOrder.packId);
       if (match) setSelectedPack(match);
     }
     setShowPaywall(true);
   }
 
-  /** Open the paywall with the right default pack: the ₹5 sachet for users
-   *  in the sachet experiment arm who have never paid, otherwise standard p20. */
+  /** Open the paywall with the cohort's standard pack selected. */
   function openPaywall() {
-    if (paidQuestions === 0 && showSachet) setSelectedPack(SACHET_PACK);
+    setSelectedPack(packs[1]);
     setShowPaywall(true);
-  }
-
-  /** Repeat-buyer pass: unlimited questions until 7 days from now. */
-  function grantUnlimited(real = true, amountPaise?: number, eventId?: string) {
-    setUnlimitedUntil(() => {
-      const until = new Date(
-        Date.now() + UNLIMITED_DAYS * 24 * 60 * 60 * 1000
-      ).toISOString();
-      localStorage.setItem(UNLIMITED_KEY, until);
-      return until;
-    });
-    if (real) {
-      // event_id = the Razorpay order id, so the browser Pixel and the
-      // server-side CAPI event dedupe into ONE conversion in Meta.
-      trackPurchase((amountPaise ?? UNLIMITED_PACK.price * 100) / 100, eventId ?? newUuid());
-    }
-    setPendingOrder(null);
-    // Send the held question now that they've paid.
-    const pending = paywallPendingRef.current;
-    paywallPendingRef.current = null;
-    if (pending) {
-      void sendTextAfterPaywall(pending);
-    }
   }
 
   function grantPack(questions: number, real = true, amountPaise?: number, eventId?: string) {
@@ -732,8 +646,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   }
 
   useEffect(() => {
-    if (showPaywall) trackPaywallShown(paywallVariant);
-  }, [showPaywall, paywallVariant]);
+    if (showPaywall) trackPaywallShown();
+  }, [showPaywall]);
 
   /** Fires once — the first user question that gets a real answer. */
   const firstAnswerFiredRef = useRef(false);
@@ -1075,13 +989,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
             {checkoutRetry && <p className="gate-modal__retry">{t("checkoutRetry")}</p>}
 
             <div className="pack-list">
-              {(
-                paidQuestions > 0
-                  ? [...PACKS, UNLIMITED_PACK]
-                  : showSachet
-                    ? [SACHET_PACK, ...PACKS]
-                    : PACKS
-              ).map((p) => (
+              {packs.map((p) => (
                 <button
                   key={p.id}
                   className={`pack-option ${
@@ -1094,12 +1002,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
                 >
                   <span className="pack-option__price">₹{p.price}</span>
                   <span className="pack-option__q">
-                    {p.unlimited ? t("packUnlimitedQ") : `${p.questions} ${t("packQ")}`}
+                    {`${p.questions} ${t("packQ")}`}
                   </span>
-                  {p.unlimited && (
-                    <span className="badge badge--unlimited">{t("packUnlimitedBadge")}</span>
-                  )}
-                  {p.id === "p5" && <span className="badge badge--popular">Try ₹5</span>}
                   {p.popular && <span className="badge badge--popular">Best value</span>}
                 </button>
               ))}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { resolvePricingForDevice } from "@/lib/pricing-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
 
   const admin = getSupabaseAdmin();
   if (!admin) {
-    return NextResponse.json({ paidQuestionsTotal: 0, hasP60: false, latestPaidAt: null, pending: null });
+    return NextResponse.json({ paidQuestionsTotal: 0, pricingCohort: "current", pending: null });
   }
 
   try {
@@ -60,21 +61,7 @@ export async function GET(request: Request) {
     // person's stable identity (google_sub) and aggregate their paid orders
     // across ALL their devices, so grants/repeat-status survive a device
     // change. Falls back to this device alone when no google_sub exists.
-    let deviceIds = [deviceId];
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("google_sub")
-      .eq("device_id", deviceId)
-      .maybeSingle();
-    if (profile?.google_sub) {
-      const { data: linked } = await admin
-        .from("profiles")
-        .select("device_id")
-        .eq("google_sub", profile.google_sub);
-      if (linked?.length) {
-        deviceIds = [...new Set(linked.map((p) => p.device_id))];
-      }
-    }
+    const { cohort: pricingCohort, deviceIds } = await resolvePricingForDevice(deviceId);
 
     const { data: orders, error } = await admin
       .from("orders")
@@ -84,7 +71,7 @@ export async function GET(request: Request) {
       .limit(50);
     if (error || !orders) {
       console.warn("[orders] fetch failed:", error?.message);
-      return NextResponse.json({ paidQuestionsTotal: 0, hasP60: false, latestPaidAt: null, pending: null });
+      return NextResponse.json({ paidQuestionsTotal: 0, pricingCohort, pending: null });
     }
 
     const paid = orders.filter((o) => o.status === "paid");
@@ -92,9 +79,6 @@ export async function GET(request: Request) {
       (sum, o) => sum + (Number(o.pack_questions) || 0),
       0
     );
-    const hasP60 = paid.some((o) => o.pack_id === "p60");
-    const latestPaid = paid[0] ?? null;
-
     const now = Date.now();
     // Surface the most recent created order as a resume candidate — but only
     // if no payment succeeded after it (a `created` that predates a `paid`
@@ -113,8 +97,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       paidQuestionsTotal,
-      hasP60,
-      latestPaidAt: latestPaid?.verified_at ?? null,
+      pricingCohort,
       pending: pending
         ? {
             orderId: pending.order_id,
@@ -125,6 +108,6 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.warn("[orders] reconcile failed:", (err as Error).message);
-    return NextResponse.json({ paidQuestionsTotal: 0, hasP60: false, latestPaidAt: null, pending: null });
+    return NextResponse.json({ paidQuestionsTotal: 0, pricingCohort: "current", pending: null });
   }
 }
