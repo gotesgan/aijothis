@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyWebhookSignature, getOrderReceipt } from "@/lib/razorpay";
 import { sendCapiPurchase } from "@/lib/meta-capi";
 import { fromMinorUnits, isCurrency } from "@/lib/money";
+import { consentFromCookie, CONSENT_COOKIE } from "@/lib/consent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,15 +102,39 @@ export async function POST(request: Request) {
   // Meta Conversions API: report the real, verified payment server-side.
   // `event_id` = the order id, the SAME id the browser Pixel sends, so Meta
   // dedupes browser + server into one conversion (no double-counting).
+  //
+  // Gated on marketing consent read from the visitor's cookie. CAPI runs
+  // server-to-server where there is no browser to ask, and it carries the
+  // customer's IP and user agent to Meta — so without this check a visitor who
+  // actively declined advertising would still be reported to Meta at purchase,
+  // which is exactly the consent they refused to give.
+  //
+  // Revenue recording is unaffected: this only decides whether Meta is told.
   if (orderId && typeof capturedMinor === "number") {
-    const currency = isCurrency(orderCurrency) ? orderCurrency : "INR";
-    await sendCapiPurchase({
-      value: fromMinorUnits(capturedMinor, currency),
-      currency,
-      eventId: orderId,
-      clientIp,
-      ua: clientUa,
-    });
+    const consent = consentFromCookie(
+      request.headers.get("cookie") ?? ""
+        .split(";")
+        .map((p) => p.trim())
+        .find((p) => p.startsWith(`${CONSENT_COOKIE}=`))
+        ?.slice(CONSENT_COOKIE.length + 1)
+    );
+
+    if (!consent) {
+      console.warn(
+        `[razorpay] no marketing consent on record for ${orderId} — skipping Meta CAPI`
+      );
+    } else if (!consent.marketing) {
+      console.log(`[razorpay] marketing consent refused for ${orderId} — skipping Meta CAPI`);
+    } else {
+      const currency = isCurrency(orderCurrency) ? orderCurrency : "INR";
+      await sendCapiPurchase({
+        value: fromMinorUnits(capturedMinor, currency),
+        currency,
+        eventId: orderId,
+        clientIp,
+        ua: clientUa,
+      });
+    }
   }
 
   if (deviceId) {

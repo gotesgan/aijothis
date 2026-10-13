@@ -48,6 +48,13 @@ interface HubSpotWindow extends Window {
 export function hubspotBootstrap(): string {
   return `(function(w,d){
 if(!w._hsq)w._hsq=[];
+// Suppress HubSpot's Conversations chat widget. This product has its own AI
+// astrologer, and the widget mounts an invisible iframe at
+// z-index 2147483647 over the message composer — verified with
+// elementFromPoint: the input and Send button were unclickable wherever it
+// landed. loadImmediately:false stops it mounting eagerly; the CSS in
+// globals.css is the backstop if it appears anyway.
+if(!w.hsConversationsSettings)w.hsConversationsSettings={loadImmediately:false};
 var s=d.createElement('script');
 s.id='hs-script-loader';s.async=1;s.defer=1;
 s.src=${JSON.stringify(HUBSPOT_SRC)};

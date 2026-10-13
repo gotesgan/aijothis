@@ -2245,3 +2245,236 @@ html {
   min-width: 240px;
   width: 100%;
 }
+
+/* ── HubSpot Conversations widget: suppressed ─────────────
+   HubSpot's tracking script mounts its chat widget as an invisible iframe
+   fixed at z-index 2147483647 — the maximum integer — on top of the page.
+   On /en/chat it covered the message composer, and elementFromPoint confirmed
+   the input and Send button were completely unclickable.
+
+   Arya IS the chat product here, so a second chatbot overlapping it is wrong
+   on every page, not just the chat and details screens. Analytics
+   (loadImmediately:false in the HubSpot bootstrap) is unaffected; this only
+   removes the widget.
+
+   Kept as a CSS backstop because `loadImmediately:false` is a HubSpot-side
+   default that can change when their script updates. */
+#hubspot-messages-iframe-container,
+#hs-chat-iframe-container,
+#hubspot-messages-iframe,
+.hs-Chat,
+.hs-Chat__,
+#hubspot-messages-container,
+.leadin .hs-Chat__wrapper {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* ── Cookie consent ──────────────────────────────────────────────
+   Mobile-first. The sheet sits flush to the bottom edge so the actions land
+   in the thumb zone, stays clear of the iOS home indicator, and scrolls
+   internally when the expanded panel is taller than the viewport. Non-blocking
+   on purpose: the site keeps working while the question is unanswered.
+*/
+.consent {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  padding: 0 10px calc(10px + env(safe-area-inset-bottom)) 10px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.consent__sheet {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(180deg, rgba(24, 18, 46, 0.99), rgba(17, 12, 35, 0.99));
+  border: 1px solid rgba(255, 184, 77, 0.22);
+  border-radius: 18px;
+  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.55);
+  padding: 16px 16px 14px;
+  display: grid;
+  gap: 10px;
+  animation: consent-rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.consent__title {
+  font-family: var(--stack-display);
+  font-size: 1.02rem;
+  line-height: 1.3;
+  color: var(--ivory);
+  margin: 0;
+}
+.consent__body {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ivory-muted);
+  margin: 0;
+}
+.consent__link {
+  color: var(--marigold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+/* Full-width stacked actions: thumb-reachable, and a 44px-min tap target. */
+.consent__actions {
+  display: grid;
+  gap: 8px;
+}
+.consent__accept,
+.consent__reject {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.consent__reject {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ivory);
+}
+.consent__customise {
+  justify-self: center;
+  background: none;
+  border: 0;
+  color: var(--ivory-faint);
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 6px 8px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.consent__rows {
+  display: grid;
+  gap: 2px;
+}
+.consent__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.consent__row:last-child {
+  border-bottom: 0;
+}
+.consent__rowtext {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.consent__rowlabel {
+  font-size: 0.85rem;
+  color: var(--ivory);
+}
+.consent__rowdesc {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--ivory-faint);
+}
+/* Necessary can't be switched off; the label states that rather than
+   showing a disabled control that looks broken. */
+.consent__locked {
+  flex: none;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ivory-faint);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+.consent__switch {
+  flex: none;
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+  min-height: 28px;
+}
+.consent__switch--on {
+  background: var(--marigold);
+  border-color: var(--marigold);
+}
+.consent__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.consent__switch--on .consent__knob {
+  transform: translateX(20px);
+}
+.footer__linkbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@keyframes consent-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consent__sheet {
+    animation: none;
+  }
+  .consent__knob,
+  .consent__switch {
+    transition: none;
+  }
+}
+
+/* Roomier two-up actions once there's horizontal space to spare. */
+@media (min-width: 520px) {
+  .consent__sheet {
+    padding: 20px 22px 18px;
+  }
+  .consent__actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  .consent__customise {
+    justify-self: start;
+  }
+}
+/* Footer control that re-opens cookie preferences. Matches the link styling
+   of the legal links beside it so it doesn't read as a separate control. */
+.legal-links .footer__linkbtn {
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  min-height: 32px;
+  padding: 2px 0;
+}

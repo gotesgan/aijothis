@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Header } from "@/components/header";
 import { NavagrahaMandala } from "@/components/navagraha-mandala";
 import { AppNav } from "@/components/app-nav";
+import { ConsentSettingsLink } from "@/components/consent-banner";
 import { JsonLd } from "@/components/json-ld";
 import { Link } from "@/i18n/navigation";
 import { SITE_URL } from "@/lib/site";
@@ -238,6 +239,9 @@ export default async function HomePage({
         <Link href="/sitemap" className="legal-links__item">Sitemap</Link>
         <span className="legal-links__dot">·</span>
         <span className="legal-links__item faint">{t("stats2Value")} users</span>
+        <span className="legal-links__dot">·</span>
+        {/* Withdrawal has to be as easy as granting. */}
+        <ConsentSettingsLink />
       </footer>
     </div>
   );

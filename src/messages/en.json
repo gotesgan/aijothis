@@ -231,5 +231,24 @@
     "title": "Vedic Astrology Guides & Blog",
     "subtitle": "Practical, plain-language guides to Kundli, marriage timing, Kundli matching, Muhurat and the 27 Nakshatras — written for real people, not astrologers.",
     "cta": "Ready for your own personal reading?"
+  },
+  "Consent": {
+    "title": "Cookies & tracking",
+    "body": "We use cookies to run the chat and, with your permission, to understand how it is used. You can accept everything, decline everything, or choose.",
+    "privacyLink": "Privacy Policy",
+    "acceptAll": "Accept all",
+    "rejectAll": "Reject non-essential",
+    "customise": "Choose what to allow",
+    "customTitle": "Choose what to allow",
+    "necessary": "Necessary",
+    "necessaryDesc": "Needed for the chat, sign-in and payment. Always on.",
+    "analytics": "Analytics",
+    "analyticsDesc": "HubSpot and Microsoft Clarity, to see how the site is used.",
+    "marketing": "Advertising",
+    "marketingDesc": "Meta Pixel, to measure ads and show relevant ones.",
+    "alwaysOn": "Always on",
+    "save": "Save choices",
+    "cancel": "Cancel",
+    "settings": "Cookie settings"
   }
 }
