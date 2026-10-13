@@ -3,7 +3,6 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyWebhookSignature, getOrderReceipt } from "@/lib/razorpay";
 import { sendCapiPurchase } from "@/lib/meta-capi";
 import { fromMinorUnits, isCurrency } from "@/lib/money";
-import { consentFromCookie, CONSENT_COOKIE } from "@/lib/consent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,20 +58,46 @@ export async function POST(request: Request) {
   // its own headers carry Razorpay's IP.
   let expectedMinor: number | null = null;
   let orderCurrency: string | null = null;
+  let marketingConsent = false;
+  // False when the marketing_consent column is not applied yet, so we know we
+  // cannot tell whether consent was granted and must not silently drop events.
+  let consentKnown = false;
   let clientIp: string | undefined;
   let clientUa: string | undefined;
   if (orderId) {
     const admin = getSupabaseAdmin();
     if (admin) {
-      const { data: order } = await admin
+      // Two-step so a missing migration column degrades instead of breaking
+      // attribution. Postgres rejects a SELECT naming a column that does not
+      // exist, which would otherwise return no row and lose the amount check,
+      // the client IP/UA and the consent signal all at once.
+      let order: Record<string, unknown> | null = null;
+      const withConsent = await admin
         .from("orders")
-        .select("client_ip, client_ua, amount_paise, currency")
+        .select("client_ip, client_ua, amount_paise, currency, marketing_consent")
         .eq("order_id", orderId)
         .maybeSingle();
+      if (!withConsent.error) {
+        consentKnown = true;
+        order = withConsent.data as Record<string, unknown> | null;
+      } else {
+        console.warn(
+          "[razorpay] orders.marketing_consent not available — apply migration 0010; " +
+            "reporting to Meta as before"
+        );
+        const fallback = await admin
+          .from("orders")
+          .select("client_ip, client_ua, amount_paise, currency")
+          .eq("order_id", orderId)
+          .maybeSingle();
+        order = fallback.data as Record<string, unknown> | null;
+      }
+
       expectedMinor = order?.amount_paise == null ? null : Number(order.amount_paise);
-      orderCurrency = order?.currency ?? null;
-      clientIp = order?.client_ip ?? undefined;
-      clientUa = order?.client_ua ?? undefined;
+      marketingConsent = order?.marketing_consent === true;
+      orderCurrency = (order?.currency as string | undefined) ?? null;
+      clientIp = (order?.client_ip as string | undefined) ?? undefined;
+      clientUa = (order?.client_ua as string | undefined) ?? undefined;
       if (order && expectedMinor === null) {
         console.error(`[razorpay] order ${orderId} has no readable amount — not fulfilling`);
       }
@@ -103,28 +128,18 @@ export async function POST(request: Request) {
   // `event_id` = the order id, the SAME id the browser Pixel sends, so Meta
   // dedupes browser + server into one conversion (no double-counting).
   //
-  // Gated on marketing consent read from the visitor's cookie. CAPI runs
-  // server-to-server where there is no browser to ask, and it carries the
-  // customer's IP and user agent to Meta — so without this check a visitor who
-  // actively declined advertising would still be reported to Meta at purchase,
-  // which is exactly the consent they refused to give.
+  // Gated on the marketing consent captured at checkout and stored on the order.
+  // It CANNOT be read from a cookie here: this request is a server-to-server
+  // POST from Razorpay, so it carries Razorpay's cookies and never the
+  // visitor's. Reading the cookie in the webhook found nothing every time and
+  // silently skipped CAPI for every purchase.
   //
-  // Revenue recording is unaffected: this only decides whether Meta is told.
+  // Revenue recording is unaffected — this only decides whether Meta is told.
   if (orderId && typeof capturedMinor === "number") {
-    const consent = consentFromCookie(
-      request.headers.get("cookie") ?? ""
-        .split(";")
-        .map((p) => p.trim())
-        .find((p) => p.startsWith(`${CONSENT_COOKIE}=`))
-        ?.slice(CONSENT_COOKIE.length + 1)
-    );
-
-    if (!consent) {
-      console.warn(
-        `[razorpay] no marketing consent on record for ${orderId} — skipping Meta CAPI`
+    if (consentKnown && !marketingConsent) {
+      console.log(
+        `[razorpay] marketing consent not granted for ${orderId} — skipping Meta CAPI`
       );
-    } else if (!consent.marketing) {
-      console.log(`[razorpay] marketing consent refused for ${orderId} — skipping Meta CAPI`);
     } else {
       const currency = isCurrency(orderCurrency) ? orderCurrency : "INR";
       await sendCapiPurchase({

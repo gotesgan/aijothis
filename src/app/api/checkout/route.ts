@@ -6,6 +6,7 @@ import { resolvePricingForDevice } from "@/lib/pricing-server";
 import { REGION_CURRENCY } from "@/lib/geo";
 import { resolveRegionFromRequest } from "@/lib/region-server";
 import { toMinorUnits } from "@/lib/money";
+import { consentFromCookie, CONSENT_COOKIE } from "@/lib/consent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +42,20 @@ export async function POST(request: Request) {
   // Prices and question credits are server-owned. Never trust a value supplied
   // by the browser at checkout.
   const amountMinor = toMinorUnits(pack.price, pack.currency);
+
+  // Marketing consent is captured HERE, not in the webhook: this request comes
+  // from the visitor's browser so their consent cookie is attached, whereas the
+  // Razorpay webhook is a server-to-server POST carrying none of it. Stored on
+  // the order so the webhook can read it back.
+  const marketingConsent =
+    consentFromCookie(
+      request.headers
+        .get("cookie")
+        ?.split(";")
+        .map((p) => p.trim())
+        .find((p) => p.startsWith(`${CONSENT_COOKIE}=`))
+        ?.slice(CONSENT_COOKIE.length + 1)
+    )?.marketing === true;
   const packId = pack.id;
   const packQuestions = pack.questions;
 
@@ -100,6 +115,7 @@ export async function POST(request: Request) {
         packQuestions,
         orderId: order.id,
         status: "created",
+        marketingConsent,
         clientIp,
         clientUa,
       });
@@ -137,6 +153,7 @@ export async function POST(request: Request) {
     packId,
     packQuestions,
     status: "simulated",
+    marketingConsent,
     clientIp,
     clientUa,
   });
@@ -154,6 +171,7 @@ async function recordOrder(params: {
   packQuestions: number;
   orderId?: string;
   status: "created" | "simulated" | "paid";
+  marketingConsent?: boolean;
   clientIp?: string | null;
   clientUa?: string | null;
 }) {
@@ -169,7 +187,12 @@ async function recordOrder(params: {
       .maybeSingle();
     if (profile?.id) profileId = profile.id;
 
-    await admin.from("orders").insert({
+    // Two-step so an unapplied migration degrades instead of destroying the
+    // order row. recordOrder swallows errors, so a plain INSERT naming a column
+    // that does not exist yet fails SILENTLY — no order recorded means the
+    // webhook finds nothing, matches nothing, and a paying customer is never
+    // granted their questions.
+    const row = {
       device_id: params.deviceId,
       profile_id: profileId,
       // The column predates multi-currency and is still named `amount_paise`,
@@ -181,7 +204,20 @@ async function recordOrder(params: {
       order_id: params.orderId ?? null,
       status: params.status,
       verified_at: params.status === "simulated" ? new Date().toISOString() : null,
-    });
+    };
+    const withConsent = await admin
+      .from("orders")
+      .insert({ ...row, marketing_consent: params.marketingConsent ?? false });
+    if (withConsent.error) {
+      console.warn(
+        "[supabase] orders.marketing_consent not available — apply migration 0010; " +
+          "recording order without the consent flag"
+      );
+      const fallback = await admin.from("orders").insert(row);
+      if (fallback.error) {
+        console.warn("[supabase] order record skipped:", fallback.error.message);
+      }
+    }
 
     // Best-effort: enrich the order with the customer's IP/UA for CAPI match
     // quality. Runs AFTER the base insert so order recording never breaks —
