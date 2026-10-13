@@ -1,5 +1,7 @@
 import { createHmac } from "node:crypto";
 
+import type { Currency } from "@/lib/money";
+
 const KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -37,10 +39,22 @@ export async function getOrderReceipt(orderId: string): Promise<string | null> {
   }
 }
 
-/** Creates a one-time order (amount in paise). Receipt encodes the device id. */
+/**
+ * Creates a one-time order. Receipt encodes the device id.
+ *
+ * `amountMinor` is in the currency's own minor unit — paise for INR, cents for
+ * USD and EUR (all exponent 2). Callers must run the major-unit price through
+ * `toMinorUnits` in @/lib/money first; never assume paise.
+ *
+ * Razorpay supports USD and EUR on the same account and the same checkout
+ * integration, so foreign pricing needs no second payment provider. Note the
+ * fee difference when comparing against Stripe: international cards are 3% +
+ * GST versus Stripe's 2.9% + $0.30, so Stripe only wins on larger tickets.
+ */
 export async function createRazorpayOrder(
   deviceId: string,
-  amountPaise: number
+  amountMinor: number,
+  currency: Currency
 ): Promise<RazorpayOrder> {
   if (!KEY_ID || !KEY_SECRET) throw new Error("razorpay_not_configured");
   const res = await fetch("https://api.razorpay.com/v1/orders", {
@@ -51,14 +65,17 @@ export async function createRazorpayOrder(
         "Basic " + Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64"),
     },
     body: JSON.stringify({
-      amount: amountPaise,
-      currency: "INR",
+      amount: amountMinor,
+      currency,
       receipt: deviceId,
       payment_capture: 1,
     }),
   });
   if (!res.ok) {
-    throw new Error(`razorpay order failed (${res.status})`);
+    const detail = await res.text().catch(() => "");
+    throw new Error(
+      `razorpay order failed (${res.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`
+    );
   }
   return (await res.json()) as RazorpayOrder;
 }

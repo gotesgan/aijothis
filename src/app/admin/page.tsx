@@ -17,7 +17,8 @@ import {
   Layers,
   BarChart3,
 } from "lucide-react";
-import { CURRENT_PACKS, LEGACY_PACKS } from "@/lib/pricing";
+import { packsForCohort, type QuestionPack } from "@/lib/pricing";
+import { formatPrice } from "@/lib/money";
 
 type Stats = {
   generatedAt: string;
@@ -30,6 +31,13 @@ type Stats = {
     arrProxyInr: number;
     avgOrderValue: number;
     daysLive: number;
+    /** Revenue split by currency. The `*Inr` fields above are INR-orders only. */
+    byCurrency: {
+      currency: string;
+      orders: number;
+      revenue: number | null;
+      last30: number | null;
+    }[];
     daily: { date: string; revenueInr: number; orders: number }[];
     byPack: { packId: string; orders: number; revenueInr: number }[];
     orderHealth: { paid: number; created: number; failed: number; simulated: number; pending: number };
@@ -57,10 +65,30 @@ type Stats = {
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 const num = (n: number) => n.toLocaleString("en-IN");
 
-/** Pack id → "₹price · questions", derived from the live pricing menu. */
+/**
+ * Pack id → "$9.99 · 50", derived from the live pricing menu.
+ * Built across every menu because pack ids are cohort- AND currency-scoped.
+ *
+ * Note this CANNOT label pre-change ids (`p5`, `p20`, `legacy-standard`, …) —
+ * they predate currency scoping and exist only as historical `orders` rows, so
+ * `packLabel` falls back to `retired · <id>` for them rather than pretending
+ * to know a price they never had.
+ */
 const PACK_LABELS: Record<string, string> = Object.fromEntries(
-  [...CURRENT_PACKS, ...LEGACY_PACKS].map((p) => [p.id, `₹${p.price} · ${p.questions}`])
+  (
+    [
+      ...packsForCohort("current", "INR"),
+      ...packsForCohort("legacy", "INR"),
+      ...packsForCohort("current", "USD"),
+      ...packsForCohort("current", "EUR"),
+    ] as QuestionPack[]
+  ).map((p) => [p.id, `${formatPrice(p.price, p.currency)} · ${p.questions}`])
 );
+
+/** Human label for a pack id, tolerating ids from before currency scoping. */
+function packLabel(packId: string): string {
+  return PACK_LABELS[packId] ?? `retired · ${packId}`;
+}
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
@@ -206,7 +234,7 @@ function PackSplit({ byPack }: { byPack: Stats["revenue"]["byPack"] }) {
       {byPack.map((p) => (
         <div key={p.packId}>
           <div className="mb-1 flex items-center justify-between text-[11px]">
-            <span className="text-[#b4aac4]">{PACK_LABELS[p.packId] ?? p.packId}</span>
+            <span className="text-[#b4aac4]">{packLabel(p.packId)}</span>
             <span className="text-[#f7f1e5]">
               {inr(p.revenueInr)} <span className="text-[#71688a]">· {num(p.orders)} ord</span>
             </span>
@@ -217,6 +245,46 @@ function PackSplit({ byPack }: { byPack: Stats["revenue"]["byPack"] }) {
               style={{ width: `${(p.revenueInr / total) * 100}%` }}
             />
           </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Currency split ──────────────────────────────────── */
+
+/**
+ * Foreign revenue can never be added to the rupee line, so it gets its own
+ * row. `revenue` is null for an unrecognised currency rather than silently
+ * coerced — an unmapped code is a bug to see, not a total to trust.
+ */
+function CurrencySplit({ byCurrency }: { byCurrency: Stats["revenue"]["byCurrency"] }) {
+  const foreign = byCurrency.filter((c) => c.currency !== "INR");
+  if (foreign.length === 0) {
+    return (
+      <p className="text-[11px] text-[#71688a]">
+        No USD/EUR orders yet — all revenue is INR.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {foreign.map((c) => (
+        <div
+          key={c.currency}
+          className="flex items-center justify-between text-[11px]"
+        >
+          <span className="text-[#b4aac4]">
+            {c.currency} · last 30d
+          </span>
+          <span className="text-[#f7f1e5]">
+            {c.last30 === null
+              ? "unmapped currency"
+              : `${c.currency} ${c.last30.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}{" "}
+            <span className="text-[#71688a]">
+              · {num(c.orders)} ord all-time
+            </span>
+          </span>
         </div>
       ))}
     </div>
@@ -569,6 +637,11 @@ export default function AdminPage() {
           <div className="lg:col-span-2">
             <Section title="Revenue by pack" icon={<Layers className="h-3.5 w-3.5" />}>
               <PackSplit byPack={revenue.byPack} />
+            </Section>
+          </div>
+          <div className="lg:col-span-2">
+            <Section title="Revenue by currency" icon={<Activity className="h-3.5 w-3.5" />}>
+              <CurrencySplit byCurrency={revenue.byCurrency ?? []} />
             </Section>
           </div>
         </div>

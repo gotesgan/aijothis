@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { resolvePricingForDevice } from "@/lib/pricing-server";
+import { REGION_CURRENCY } from "@/lib/geo";
+import { resolveRegionFromRequest } from "@/lib/region-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,10 +51,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "missing_device" }, { status: 400 });
   }
 
+  // Same server-side rule the checkout uses, so the menu the client renders is
+  // the menu that will be charged in.
+  const region = resolveRegionFromRequest(request);
+  const currency = REGION_CURRENCY[region];
+  const base = {
+    paidQuestionsTotal: 0,
+    pricingCohort: "current" as const,
+    region,
+    currency,
+    pending: null as null,
+  };
+
   const admin = getSupabaseAdmin();
-  if (!admin) {
-    return NextResponse.json({ paidQuestionsTotal: 0, pricingCohort: "current", pending: null });
-  }
+  if (!admin) return NextResponse.json(base);
 
   try {
     // ── Cross-device identity resolution ─────────────────────────────
@@ -65,13 +77,13 @@ export async function GET(request: Request) {
 
     const { data: orders, error } = await admin
       .from("orders")
-      .select("pack_id, pack_questions, amount_paise, status, verified_at, created_at, order_id")
+      .select("pack_id, pack_questions, amount_paise, currency, status, verified_at, created_at, order_id")
       .in("device_id", deviceIds)
       .order("created_at", { ascending: false })
       .limit(50);
     if (error || !orders) {
       console.warn("[orders] fetch failed:", error?.message);
-      return NextResponse.json({ paidQuestionsTotal: 0, pricingCohort, pending: null });
+      return NextResponse.json({ ...base, pricingCohort });
     }
 
     const paid = orders.filter((o) => o.status === "paid");
@@ -98,16 +110,22 @@ export async function GET(request: Request) {
     return NextResponse.json({
       paidQuestionsTotal,
       pricingCohort,
+      region,
+      currency,
       pending: pending
         ? {
             orderId: pending.order_id,
             packId: pending.pack_id,
-            amountPaise: Number(pending.amount_paise) || 0,
+            amountMinor: Number(pending.amount_paise) || 0,
+            // The ORDER's currency, not the current region's. Someone who
+            // started a USD checkout and reopens the site from India must see
+            // the dollar amount they abandoned, not a reskinned rupee number.
+            currency: pending.currency ?? "INR",
           }
         : null,
     });
   } catch (err) {
     console.warn("[orders] reconcile failed:", (err as Error).message);
-    return NextResponse.json({ paidQuestionsTotal: 0, pricingCohort: "current", pending: null });
+    return NextResponse.json({ ...base });
   }
 }

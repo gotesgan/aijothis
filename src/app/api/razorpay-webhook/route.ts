@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyWebhookSignature, getOrderReceipt } from "@/lib/razorpay";
 import { sendCapiPurchase } from "@/lib/meta-capi";
+import { fromMinorUnits, isCurrency } from "@/lib/money";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,30 +49,63 @@ export async function POST(request: Request) {
 
   const orderId = event?.payload?.payment?.entity?.order_id as string | undefined;
   const paymentId = event?.payload?.payment?.entity?.id as string | undefined;
-  const amountPaise = event?.payload?.payment?.entity?.amount as number | undefined;
+  const capturedMinor = event?.payload?.payment?.entity?.amount as number | undefined;
   const deviceId = orderId ? await getOrderReceipt(orderId) : null;
 
-  // Meta Conversions API: report the real, verified payment server-side.
-  // `event_id` = the order id, the SAME id the browser Pixel sends, so Meta
-  // dedupes browser + server into one conversion (no double-counting).
-  // IP/UA are read from the order row (captured from the customer's browser
-  // at checkout) — the webhook itself is server-to-server from Razorpay, so
-  // its own request headers carry Razorpay's IP, not the customer's.
-  if (orderId && typeof amountPaise === "number") {
-    let clientIp: string | undefined;
-    let clientUa: string | undefined;
+  // The order row is the authority on what we agreed to charge and in which
+  // currency — never on what the webhook claims. It also holds the customer's
+  // browser IP/UA, because the webhook is server-to-server from Razorpay and
+  // its own headers carry Razorpay's IP.
+  let expectedMinor: number | null = null;
+  let orderCurrency: string | null = null;
+  let clientIp: string | undefined;
+  let clientUa: string | undefined;
+  if (orderId) {
     const admin = getSupabaseAdmin();
     if (admin) {
       const { data: order } = await admin
         .from("orders")
-        .select("client_ip, client_ua")
+        .select("client_ip, client_ua, amount_paise, currency")
         .eq("order_id", orderId)
         .maybeSingle();
+      expectedMinor = order?.amount_paise == null ? null : Number(order.amount_paise);
+      orderCurrency = order?.currency ?? null;
       clientIp = order?.client_ip ?? undefined;
       clientUa = order?.client_ua ?? undefined;
+      if (order && expectedMinor === null) {
+        console.error(`[razorpay] order ${orderId} has no readable amount — not fulfilling`);
+      }
     }
+  }
+
+  // Defence in depth: we only fulfil the amount we created the order for. A
+  // mismatch means something is off with the capture, so record nothing and let
+  // a human reconcile rather than granting credits on an unverified amount.
+  //
+  // `expectedMinor === null` means we have no row to compare against (Supabase
+  // unavailable, or the order insert was swallowed). That is NOT a mismatch —
+  // refusing there would leave real captured payments permanently unfulfilled
+  // because of a transient DB problem, with no retry to save us.
+  if (
+    expectedMinor !== null &&
+    Number.isFinite(expectedMinor) &&
+    typeof capturedMinor === "number" &&
+    expectedMinor !== capturedMinor
+  ) {
+    console.error(
+      `[razorpay] amount mismatch for ${orderId}: expected ${expectedMinor} ${orderCurrency}, captured ${capturedMinor} — not fulfilling`
+    );
+    return NextResponse.json({ received: true, rejected: "amount_mismatch" });
+  }
+
+  // Meta Conversions API: report the real, verified payment server-side.
+  // `event_id` = the order id, the SAME id the browser Pixel sends, so Meta
+  // dedupes browser + server into one conversion (no double-counting).
+  if (orderId && typeof capturedMinor === "number") {
+    const currency = isCurrency(orderCurrency) ? orderCurrency : "INR";
     await sendCapiPurchase({
-      value: amountPaise / 100,
+      value: fromMinorUnits(capturedMinor, currency),
+      currency,
       eventId: orderId,
       clientIp,
       ua: clientUa,

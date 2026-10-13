@@ -56,11 +56,18 @@ export function trackCheckoutAbandoned(reason: "dismissed" | "script_failed" | "
   track("CheckoutAbandoned", { reason });
 }
 
-/** A real pack was paid — value in INR. `eventId` enables Conversions API dedup. */
-export function trackPurchase(amountInRupees: number, eventId?: string) {
+/**
+ * A real pack was paid — `amount` in MAJOR units of `currency`.
+ *
+ * The `eventId` is the Razorpay order id, which the CAPI webhook reuses, so
+ * the browser and server events dedupe into one conversion. If the currency
+ * here ever disagrees with `sendCapiPurchase`, Meta stops deduplicating and
+ * every foreign purchase double-counts.
+ */
+export function trackPurchase(amount: number, currency: string, eventId?: string) {
   const params: Record<string, unknown> = {
-    value: amountInRupees,
-    currency: "INR",
+    value: amount,
+    currency,
   };
   if (eventId) params.event_id = eventId;
   fbq()?.("track", "Purchase", params);
@@ -92,8 +99,8 @@ export function trackPaywallShown() {
 }
 
 /** A pack tier was selected in the paywall. */
-export function trackPackSelected(amountInRupees: number) {
-  track("PackSelected", { value: amountInRupees, currency: "INR" });
+export function trackPackSelected(amount: number, currency: string) {
+  track("PackSelected", { value: amount, currency });
 }
 
 /** The paywall was closed without buying. */

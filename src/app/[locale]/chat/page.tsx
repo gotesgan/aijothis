@@ -1,5 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 import { AryaChat } from "@/components/arya-chat";
+import { resolveRegionFromServer } from "@/lib/region-server";
 import type { Metadata } from "next";
 
 const titles: Record<string, { title: string; description: string }> = {
@@ -41,5 +42,10 @@ export default async function ChatPage({
   const { q } = await searchParams;
   setRequestLocale(locale);
 
-  return <AryaChat initialQ={q} />;
+  // Resolved on the server so the first paint shows the visitor's own currency
+  // in the pack menu. The checkout route re-derives it independently — this is
+  // for display only and is never trusted for the amount charged.
+  const region = await resolveRegionFromServer();
+
+  return <AryaChat initialQ={q} initialRegion={region} />;
 }

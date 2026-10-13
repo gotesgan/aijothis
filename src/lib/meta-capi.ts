@@ -26,7 +26,11 @@ export function capiConfigured(): boolean {
 /**
  * Sends a Purchase event to the Conversions API.
  *
- * @param params.value     amount in INR (decimal, e.g. 20)
+ * @param params.value     amount in MAJOR units (e.g. 9.99), not minor units
+ * @param params.currency  ISO 4217 code the value is denominated in. MUST match
+ *                         what the browser Pixel sent for the same `eventId`,
+ *                         or Meta will treat the two as separate events instead
+ *                         of deduplicating them.
  * @param params.eventId   the SAME event_id the browser Pixel fired, so Meta
  *                         dedupes browser + server into one conversion.
  * @param params.eventTime Unix seconds (defaults to now).
@@ -38,6 +42,7 @@ export function capiConfigured(): boolean {
  */
 export async function sendCapiPurchase(params: {
   value: number;
+  currency: string;
   eventId: string;
   eventTime?: number;
   clientIp?: string;
@@ -76,7 +81,7 @@ export async function sendCapiPurchase(params: {
               user_data: userData,
               custom_data: {
                 value: params.value,
-                currency: "INR",
+                currency: params.currency,
               },
             },
           ],

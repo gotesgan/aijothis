@@ -32,12 +32,19 @@ import { AppNav } from "@/components/app-nav";
 import { Send, Gem, Heart, X } from "lucide-react";
 import posthog from "posthog-js";
 import {
-  CURRENT_PACKS,
-  LEGACY_PACKS,
+  findPackInMarket,
   packsForCohort,
   type PricingCohort,
   type QuestionPack,
 } from "@/lib/pricing";
+import {
+  formatPrice,
+  fromMinorUnits,
+  isCurrency,
+  toMinorUnits,
+  type Currency,
+} from "@/lib/money";
+import { REGION_CURRENCY, type Region } from "@/lib/geo";
 
 const SIGNED_UP_KEY = "jyotish_signed_up_v1";
 const GOOGLE_SUB_KEY = "jyotish_google_sub_v1";
@@ -45,7 +52,6 @@ const PAID_Q_KEY = "jyotish_paid_questions_v1";
 const ASKED_KEY = "jyotish_asked_count_v1";
 const MATCH_KEY = "jyotish_match_v1";
 const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
-const ALL_PACKS = [...CURRENT_PACKS, ...LEGACY_PACKS];
 
 function capturePostHog(
   event: string,
@@ -165,7 +171,13 @@ function mountGoogleButton(opts: {
   document.head.appendChild(s);
 }
 
-export function AryaChat({ initialQ }: { initialQ?: string }) {
+export function AryaChat({
+  initialQ,
+  initialRegion,
+}: {
+  initialQ?: string;
+  initialRegion?: Region;
+}) {
   const t = useTranslations("Chat");
   const tm = useTranslations("Match");
   const locale = useLocale() as Locale;
@@ -188,8 +200,14 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     return Number(localStorage.getItem(PAID_Q_KEY) ?? 0) || 0;
   });
   const [pricingCohort, setPricingCohort] = useState<PricingCohort>("current");
-  const [selectedPack, setSelectedPack] = useState<QuestionPack>(CURRENT_PACKS[1]);
-  const packs = packsForCohort(pricingCohort);
+  // Seeded from the server so the first paint already shows the right symbol —
+  // a paywall that renders "$9.99" and then flips to "₹149" reads as a bait and
+  // switch. /api/orders re-confirms it on mount.
+  const [currency, setCurrency] = useState<Currency>(
+    REGION_CURRENCY[initialRegion ?? "IN"]
+  );
+  const packs = packsForCohort(pricingCohort, currency);
+  const [selectedPack, setSelectedPack] = useState<QuestionPack>(packs[1]);
 
   const [askedCount, setAskedCount] = useState(() => {
     if (typeof window === "undefined") return 0;
@@ -201,7 +219,8 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   const [pendingOrder, setPendingOrder] = useState<{
     orderId: string;
     packId: string;
-    amountPaise: number;
+    amountMinor: number;
+    currency: Currency;
   } | null>(null);
 
   // Kundli matching state.
@@ -261,9 +280,16 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     });
   }
 
-  function applyPricingCohort(cohort: PricingCohort) {
+  /**
+   * Applies the server's authoritative cohort AND currency together. Both
+   * change which pack list is valid, so they must land in one state update —
+   * applying currency alone would leave `selectedPack` pointing at a pack from
+   * a menu that no longer exists.
+   */
+  function applyPricing(cohort: PricingCohort, nextCurrency: Currency) {
     setPricingCohort(cohort);
-    setSelectedPack(packsForCohort(cohort)[1]);
+    setCurrency(nextCurrency);
+    setSelectedPack(packsForCohort(cohort, nextCurrency)[1]);
   }
 
   /** Restore the user's last thread so returning users keep their history. */
@@ -321,10 +347,20 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
         });
       }
       if (data.pricingCohort === "legacy" || data.pricingCohort === "current") {
-        applyPricingCohort(data.pricingCohort);
+        applyPricing(
+          data.pricingCohort,
+          isCurrency(data.currency) ? data.currency : "INR"
+        );
       }
       if (data.pending) {
-        setPendingOrder(data.pending);
+        setPendingOrder({
+          orderId: data.pending.orderId,
+          packId: data.pending.packId,
+          amountMinor: Number(data.pending.amountMinor) || 0,
+          currency: isCurrency(data.pending.currency)
+            ? data.pending.currency
+            : "INR",
+        });
       }
     } catch {
       // non-fatal — reconciliation is best-effort
@@ -349,9 +385,21 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
           });
         }
         if (data.pricingCohort === "legacy" || data.pricingCohort === "current") {
-          applyPricingCohort(data.pricingCohort);
+          applyPricing(
+            data.pricingCohort,
+            isCurrency(data.currency) ? data.currency : "INR"
+          );
         }
-        if (data.pending) setPendingOrder(data.pending);
+        if (data.pending) {
+          setPendingOrder({
+            orderId: data.pending.orderId,
+            packId: data.pending.packId,
+            amountMinor: Number(data.pending.amountMinor) || 0,
+            currency: isCurrency(data.pending.currency)
+              ? data.pending.currency
+              : "INR",
+          });
+        }
       } catch {
         // non-fatal
       }
@@ -582,6 +630,7 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       pack_tier: selectedPack.tier,
       question_credits: selectedPack.questions,
       price: selectedPack.price,
+      currency: selectedPack.currency,
     });
     try {
       const res = await fetch("/api/checkout", {
@@ -607,7 +656,13 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       });
       if (result.ok) {
         setPendingOrder(null);
-        grantPack(data.pack?.questions ?? selectedPack.questions, true, data.amount, data.orderId);
+        grantPack(
+          data.pack?.questions ?? selectedPack.questions,
+          true,
+          data.amount,
+          data.currency ?? selectedPack.currency,
+          data.orderId
+        );
       } else {
         // Payment sheet was dismissed or failed — never leave the user in
         // a dead end. Reopen the paywall with a retry note; the held question
@@ -641,12 +696,19 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
   }
 
   /** Resume an abandoned checkout: reopen the paywall pre-selected to the
-   *  pack they had chosen, so a retry is one tap away. */
+   *  pack they had chosen, so a retry is one tap away.
+   *
+   *  Scoped to the CURRENT market on purpose. An abandoned order is not
+   *  resumable across markets — the id means nothing in this menu, so adopting
+   *  it would highlight no option while quoting a price the checkout would not
+   *  charge (EU order resumed from the US would say "Pay €10.99" and bill
+   *  $9.99). Pre-change ids like `p20` predate currency scoping and likewise
+   *  don't match; in both cases we fall back to this market's standard pack,
+   *  and the banner still shows the amount they actually abandoned. */
   function resumePayment() {
-    if (pendingOrder) {
-      const match = ALL_PACKS.find((p) => p.id === pendingOrder.packId);
-      if (match) setSelectedPack(match);
-    }
+    setSelectedPack(
+      findPackInMarket(pricingCohort, currency, pendingOrder?.packId) ?? packs[1]
+    );
     setShowPaywall(true);
   }
 
@@ -656,7 +718,13 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
     setShowPaywall(true);
   }
 
-  function grantPack(questions: number, real = true, amountPaise?: number, eventId?: string) {
+  function grantPack(
+    questions: number,
+    real = true,
+    amountMinor?: number,
+    currency?: string,
+    eventId?: string
+  ) {
     // Cumulative — repeat purchases add to the balance, never reset it.
     setPaidQuestions((prev) => {
       const next = prev + questions;
@@ -664,13 +732,25 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       return next;
     });
     if (real) {
-      // Value = the actual order amount paid, not a hardcoded figure.
+      // Value = the ACTUAL order amount paid, converted out of minor units with
+      // the order's own currency — never a hardcoded figure and never a blind
+      // /100, which would be wrong for any non-2-decimal currency.
+      //
+      // The checkout response is the only source of truth here. It is NOT
+      // derived from `selectedPack`: if those ever disagree (a resumed order
+      // from another market, a stale selection) the card was charged the
+      // SERVER's amount, and Meta must be told that same amount — reporting the
+      // pack's price instead would corrupt every revenue metric.
+      const paidCurrency = isCurrency(currency) ? currency : "INR";
+      const minor = amountMinor ?? toMinorUnits(selectedPack.price, paidCurrency);
+      const value = fromMinorUnits(minor, paidCurrency);
       // event_id = Razorpay order id → dedupes with CAPI in Meta.
-      trackPurchase((amountPaise ?? selectedPack.price * 100) / 100, eventId ?? newUuid());
+      trackPurchase(value, paidCurrency, eventId ?? newUuid());
       capturePostHog("payment_completed", {
         pack_tier: selectedPack.tier,
         question_credits: questions,
-        price: (amountPaise ?? selectedPack.price * 100) / 100,
+        price: value,
+        currency: paidCurrency,
       });
     }
     setPendingOrder(null);
@@ -1009,7 +1089,12 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
       {pendingOrder && (
         <div className="pending-banner">
           <span className="pending-banner__text">
-            {t("pendingBanner")} (₹{pendingOrder.amountPaise / 100})
+            {t("pendingBanner")} (
+              {formatPrice(
+                fromMinorUnits(pendingOrder.amountMinor, pendingOrder.currency),
+                pendingOrder.currency
+              )}
+            )
           </span>
           <button className="pending-banner__pay" onClick={resumePayment}>
             {t("pendingPay")}
@@ -1068,15 +1153,18 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
                   }`}
                   onClick={() => {
                     setSelectedPack(p);
-                    trackPackSelected(p.price);
+                    trackPackSelected(p.price, p.currency);
                     capturePostHog("question_pack_selected", {
                       pack_tier: p.tier,
                       question_credits: p.questions,
                       price: p.price,
+                      currency: p.currency,
                     });
                   }}
                 >
-                  <span className="pack-option__price">₹{p.price}</span>
+                  <span className="pack-option__price">
+                    {formatPrice(p.price, p.currency)}
+                  </span>
                   <span className="pack-option__q">
                     {`${p.questions} ${t("packQ")}`}
                   </span>
@@ -1091,7 +1179,12 @@ export function AryaChat({ initialQ }: { initialQ?: string }) {
               disabled={checkoutBusy}
               style={checkoutBusy ? { opacity: 0.6, pointerEvents: "none" } : undefined}
             >
-              {checkoutBusy ? t("paying") : `${t("payBtn")} ₹${selectedPack.price}`}
+              {checkoutBusy
+                ? t("paying")
+                : `${t("payBtn")} ${formatPrice(
+                    selectedPack.price,
+                    selectedPack.currency
+                  )}`}
             </button>
             <button
               className="gate-modal__ghost"
