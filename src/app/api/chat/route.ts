@@ -15,6 +15,7 @@ import {
 import { updateChatSummary } from "@/lib/summarize";
 import { ashtakoota } from "@/lib/ashtakoota";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { checkQuota, QUOTA_EXHAUSTED } from "@/lib/quota";
 import { newUuid } from "@/lib/storage";
 import type { ChatMessage, KundliResult } from "@/lib/types";
 
@@ -62,6 +63,24 @@ export async function POST(request: Request) {
   const encoder = new TextEncoder();
   const now = new Date();
   const deviceId = request.headers.get("x-device-id") ?? "-";
+
+  // Server-authoritative free-limit check. Placed AFTER the crisis guard so a
+  // person in distress always gets a reply regardless of quota, and BEFORE any
+  // LLM work so a blocked question costs nothing.
+  //
+  // This is defence in depth: the client gates too, but the client's copy is
+  // resettable by clearing localStorage. This one is not.
+  const quota = await checkQuota(deviceId);
+  if (!quota.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: "quota_exhausted",
+        used: quota.used,
+        allowance: quota.allowance,
+      }),
+      { status: QUOTA_EXHAUSTED, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   // Guard agent (input): runs concurrently with the prep below. Catches
   // paraphrased crisis (crisis → hard reply) and third-party fixation /

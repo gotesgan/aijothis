@@ -31,16 +31,19 @@ npm run dev        # local dev (localhost:3000)
 npm run lint       # eslint
 npm run build      # production build (must pass before pushing)
 npm run start      # run production build locally
+npm run test:invariants  # pricing/quota invariants against a running dev server
 ```
 
 Verify with lint + build before any push. Browser tests use Playwright MCP against `localhost:3000` (dev) or the live site.
+
+**`npm run test:invariants` asserts PROPERTIES, not current numbers** — that the amount charged equals the pack the UI displayed, that client-supplied price/currency is ignored, that a forged region cookie cannot downgrade the price, that a malformed cookie is a 200 not a 500, that a replayed payment signature cannot grant to another device, and that the server blocks the 6th free question. Run it after ANY pricing, checkout or quota change — it is what stops the display-vs-charge class of bug from coming back. Writes only `test-inv-*` rows and deletes them at the end.
 
 ## Key architecture
 
 - Chat-first funnel: landing → details form → chat. The chat (`src/components/arya-chat.tsx`) is the core: instant chart-at-a-glance, context-aware starter chips, one-tap teaser chip, signup gate, paywall, kundli matching.
 - `/api/chat` = 5-node pipeline: routing → transits → Vedic RAG → composed streaming → reflection. Crisis guard first. Optional `matchKundli` for compatibility. Panchang node: for tithi/muhurat questions (`panchang` routing topic), injects free offline panchang (`src/lib/panchang.ts`, sidereal tithi/nakshatra/yoga/karana, validated against drikPanchang reference) and — env-gated only — the lazy drikPanchang API (`src/lib/drikpanchang.ts`, `DRIKPANCHANG_API_KEY`, cached per date+place, 5s timeout, fallback to free calc) for timing-window intent.
 - `/api/kundli` computes a chart (Swiss Ephemeris). `match: true` skips profile persistence (partner chart).
-- Monetization (experiment): Q1 free → Google signup gate before Q2 → 5 free total (`FREE_LIMIT=5` in `arya-chat.tsx`) → paywall. Question packs are **cohort-based** (`src/lib/pricing.ts`, cutoff `PRICING_CUTOFF = 2026-09-20` IST): `current` = ₹99/20q, ₹149/50q (default), ₹299/100q; `legacy` = ₹60/10q, ₹70/30q, ₹80/50q, kept for devices whose profile predates the cutoff (resolved cross-device via `google_sub` in `src/lib/pricing-server.ts`). Legacy menu is INR-only — a legacy device seen from abroad is served the current menu in that currency. `asked_count` persisted in localStorage (`jyotish_asked_count_v1`).
+- Monetization (experiment): Q1 free → Google signup gate before Q2 → 5 free total → paywall. The **server is the authority** on the free limit (`src/lib/quota.ts`, `FREE_LIMIT=5`): it counts persisted `messages` for the person and credits from `paid` orders across all google-linked devices. The client mirrors the limit purely so the paywall can appear without a round-trip, and handles the server's `402 quota_exhausted` by rolling back its optimistic bubble and opening the paywall. **Fails open** on any DB error — the worse failure is locking a paying customer out — and `SERVER_QUOTA_ENABLED=0` disables it without a deploy. Question packs are **cohort-based** (`src/lib/pricing.ts`, cutoff `PRICING_CUTOFF = 2026-09-20` IST): `current` = ₹99/20q, ₹149/50q (default), ₹299/100q; `legacy` = ₹60/10q, ₹70/30q, ₹80/50q, kept for devices whose profile predates the cutoff (resolved cross-device via `google_sub` in `src/lib/pricing-server.ts`). Legacy menu is INR-only — a legacy device seen from abroad is served the current menu in that currency. `asked_count` persisted in localStorage (`jyotish_asked_count_v1`).
 - **Region pricing (INR / USD / EUR).** The price shown and the price charged are both derived server-side from one rule (`resolveRegion` in `src/lib/geo.ts`, pure so `src/proxy.ts` (edge) and `src/lib/region-server.ts` (Node) cannot drift):
   1. `PRICING_GEO_ENABLED=0` → kill switch, everyone is INR.
   2. `PRICING_REGION_OVERRIDE=IN|US|EU` → forced region, local testing.

@@ -29,9 +29,20 @@ export async function POST(request: Request) {
 
   const admin = getSupabaseAdmin();
   if (admin) {
-    // Record the actual payment on the order row (non-fatal).
+    // Every write below is scoped to THIS device and to orders still awaiting
+    // payment.
+    //
+    // The signature proves the order/payment pair is genuine, but it says
+    // nothing about WHO is presenting it. Without these scopes a buyer could
+    // replay their own valid `{order_id, payment_id, signature}` with an
+    // arbitrary `x-device-id` and mark somebody else's order paid — and, with
+    // no status guard, could do it repeatedly to an order already settled.
+    //
+    // `.eq("status","created")` also makes the whole route idempotent: a replay
+    // matches zero rows rather than rewriting a paid order.
+    let orderUpdated = false;
     try {
-      await admin
+      const { data: updated } = await admin
         .from("orders")
         .update({
           status: "paid",
@@ -39,16 +50,24 @@ export async function POST(request: Request) {
           signature: razorpay_signature,
           verified_at: new Date().toISOString(),
         })
-        .eq("order_id", razorpay_order_id);
+        .eq("order_id", razorpay_order_id)
+        .eq("device_id", deviceId)
+        .eq("status", "created")
+        .select("id");
+      orderUpdated = (updated?.length ?? 0) > 0;
     } catch (err) {
       console.warn("[supabase] order verify skipped:", (err as Error).message);
     }
 
-    const { error } = await admin
-      .from("profiles")
-      .update({ paid20_at: new Date().toISOString() })
-      .eq("device_id", deviceId);
-    if (error) console.warn("[supabase] verify grant failed:", error.message);
+    // Grant only what we actually just settled. A replay that matched no rows
+    // must not write the "has paid" marker onto a device it never paid for.
+    if (orderUpdated) {
+      const { error } = await admin
+        .from("profiles")
+        .update({ paid20_at: new Date().toISOString() })
+        .eq("device_id", deviceId);
+      if (error) console.warn("[supabase] verify grant failed:", error.message);
+    }
   }
 
   return NextResponse.json({ ok: true });

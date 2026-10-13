@@ -18,18 +18,25 @@ const PENDING_WINDOW_MS = 24 * 60 * 60 * 1000;
  * when the webhook isn't configured).
  */
 export async function POST(request: Request) {
+  const deviceId = request.headers.get("x-device-id");
   const body = await request.json().catch(() => null);
   const orderId = typeof body?.orderId === "string" ? body.orderId : null;
   if (!orderId) {
     return NextResponse.json({ error: "missing_order" }, { status: 400 });
   }
+  if (!deviceId) {
+    return NextResponse.json({ error: "missing_device" }, { status: 400 });
+  }
   const admin = getSupabaseAdmin();
   if (admin) {
     try {
+      // Scoped to this device: holding someone's order id must not let you
+      // flip their order to `failed` and suppress their resume-payment banner.
       await admin
         .from("orders")
         .update({ status: "failed" })
-        .eq("order_id", orderId);
+        .eq("order_id", orderId)
+        .eq("device_id", deviceId);
     } catch (err) {
       console.warn("[orders] mark failed error:", (err as Error).message);
     }

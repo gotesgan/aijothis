@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:invariants": "node --env-file=.env.local scripts/invariants.mjs"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",

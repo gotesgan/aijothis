@@ -51,7 +51,11 @@ const GOOGLE_SUB_KEY = "jyotish_google_sub_v1";
 const PAID_Q_KEY = "jyotish_paid_questions_v1";
 const ASKED_KEY = "jyotish_asked_count_v1";
 const MATCH_KEY = "jyotish_match_v1";
-const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall
+/** Must match QUOTA_EXHAUSTED in @/lib/quota. */
+const QUOTA_EXHAUSTED = 402;
+const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall.
+// Mirrors FREE_LIMIT in @/lib/quota purely so the paywall can appear without a
+// round-trip. The server's copy is the one that actually enforces the limit.
 
 function capturePostHog(
   event: string,
@@ -469,6 +473,25 @@ export function AryaChat({
         matchKundli: matchChart ?? undefined,
       }),
     });
+
+    // The server is the authority on the free limit. If it says the quota is
+    // spent, the local counter was wrong (cleared storage, a device switch) —
+    // open the paywall and hold the question so it auto-sends after purchase,
+    // rather than surfacing a raw HTTP error at the user.
+    if (res.status === QUOTA_EXHAUSTED) {
+      paywallPendingRef.current = display[display.length - 1]?.content ?? "";
+      // Roll back the optimistic user bubble. `sendTextAfterPaywall` re-adds it
+      // after purchase, and without this the question would appear twice.
+      setMessages(display.slice(0, -1));
+      setAskedCount((c) => {
+        const n = Math.max(0, c - 1);
+        localStorage.setItem(ASKED_KEY, String(n));
+        return n;
+      });
+      setCheckoutRetry(false);
+      openPaywall();
+      return;
+    }
 
     if (!res.ok || !res.body) throw new Error("Bad response");
 
