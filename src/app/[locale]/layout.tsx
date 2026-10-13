@@ -5,6 +5,7 @@ import { setRequestLocale } from "next-intl/server";
 import { Inter, Fraunces, Tiro_Devanagari_Marathi } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
+import { hubspotBootstrap } from "@/lib/hubspot";
 import { PixelTracker } from "@/components/pixel-tracker";
 import { routing } from "@/i18n/routing";
 import { SITE_URL } from "@/lib/site";
@@ -124,6 +125,9 @@ c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
 t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
 y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 })(window, document, "clarity", "script", "xxn1pixdrd");`}
+        </Script>
+        <Script id="hs-tracker" strategy="beforeInteractive">
+          {hubspotBootstrap()}
         </Script>
         <noscript>
           {/* eslint-disable-next-line @next/next/no-img-element */}
