@@ -1211,6 +1211,7 @@ button {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 .chat-header {
   display: flex;
@@ -1409,6 +1410,34 @@ button {
   position: sticky;
   bottom: 0;
   z-index: 15;
+}
+
+/* "Jump to latest" — appears only when the reader has scrolled up */
+.chat-jump {
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--marigold);
+  background: rgba(26, 20, 40, 0.92);
+  border: 1px solid rgba(255, 184, 77, 0.35);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  z-index: 16;
+  animation: screen-in 0.2s ease both;
+}
+.chat-jump:active {
+  transform: translateX(-50%) scale(0.94);
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-jump {
+    animation: none;
+  }
 }
 .chat-input {
   flex: 1;

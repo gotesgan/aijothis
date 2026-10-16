@@ -29,7 +29,7 @@ import { ChatMarkdown } from "@/components/chat-markdown";
 import { BirthDetailsCard } from "@/components/birth-details-card";
 import { MatchCard, type MatchPrefill } from "@/components/match-card";
 import { AppNav } from "@/components/app-nav";
-import { Send, Gem, Heart, X } from "lucide-react";
+import { Send, Gem, Heart, X, ArrowDown } from "lucide-react";
 import posthog from "posthog-js";
 import {
   findPackInMarket,
@@ -253,6 +253,13 @@ export function AryaChat({
   const [checkoutBusy, setCheckoutBusy] = useState(false);
 
   const bodyRef = useRef<HTMLDivElement>(null);
+  // Auto-scroll only while the user is parked at the bottom. If they scroll up
+  // to read, new tokens must not yank the view away from where they're looking.
+  const stickToBottomRef = useRef(true);
+  // Suppress scroll bookkeeping while a programmatic smooth scroll is in flight
+  // so the jump pill doesn't flicker on/off mid-animation.
+  const autoScrollUntilRef = useRef(0);
+  const [showJump, setShowJump] = useState(false);
   const initialSentRef = useRef(false);
   const hasIdentifiedGoogleUserRef = useRef(false);
 
@@ -455,11 +462,32 @@ export function AryaChat({
     }
   }
 
+  /** Jump to the latest message and re-arm auto-follow. */
+  function scrollToBottom(behavior: ScrollBehavior = "smooth") {
+    const el = bodyRef.current;
+    if (!el) return;
+    stickToBottomRef.current = true;
+    setShowJump(false);
+    if (behavior === "smooth") autoScrollUntilRef.current = Date.now() + 600;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }
+
+  /** Track whether the user is reading near the bottom; offer a jump pill if not. */
+  function handleBodyScroll() {
+    const el = bodyRef.current;
+    if (!el) return;
+    if (Date.now() < autoScrollUntilRef.current) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distance < 80;
+    stickToBottomRef.current = atBottom;
+    setShowJump((prev) => (prev === !atBottom ? prev : !atBottom));
+  }
+
   useEffect(() => {
-    bodyRef.current?.scrollTo({
-      top: bodyRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    if (!stickToBottomRef.current) return;
+    // While streaming, follow instantly (the CSS smooth-scroll would otherwise
+    // re-animate on every token and fight the user). Smooth only for one-offs.
+    scrollToBottom(streaming ? "instant" : "smooth");
   }, [messages, streaming, needDetails]);
 
   /** Stream one exchange; `display` is what's shown (user bubble already added). */
@@ -536,6 +564,7 @@ export function AryaChat({
   async function sendText(content: string) {
     const text = content.trim();
     if (!text || streaming) return;
+    stickToBottomRef.current = true;
     setRefined(false);
 
     // Chat-only flow: no chart yet → ask for details inside the chat.
@@ -806,6 +835,7 @@ export function AryaChat({
   async function sendTextAfterPaywall(text: string) {
     const content = text.trim();
     if (!content || streaming || !kundli) return;
+    stickToBottomRef.current = true;
     setRefined(false);
     const next: ChatMessage[] = [...messages, { role: "user", content }];
     setMessages([...next, { role: "assistant", content: "" }]);
@@ -993,7 +1023,7 @@ export function AryaChat({
         <span className="badge badge--ai">AI</span>
       </header>
 
-      <div className="chat-body" ref={bodyRef}>
+      <div className="chat-body" ref={bodyRef} onScroll={handleBodyScroll}>
         <div className="welcome-chip">{t("welcome")}</div>
 
         {hasMoreHistory && (
@@ -1100,6 +1130,16 @@ export function AryaChat({
           </div>
         )}
       </div>
+
+      {showJump && (
+        <button
+          className="chat-jump"
+          onClick={() => scrollToBottom()}
+          aria-label={t("scrollToLatest")}
+        >
+          <ArrowDown size={14} />
+        </button>
+      )}
 
       <div className="chat-input-row">
         <textarea
