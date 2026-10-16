@@ -356,6 +356,15 @@ export function AryaChat({
           isCurrency(data.currency) ? data.currency : "INR"
         );
       }
+      // Adopt the server's metered question count as the local mirror. The
+      // local counter only ever grows, so a user who was active before
+      // metering existed stayed "out of questions" forever and a verified
+      // payment could not get them back in. The server is the authority; this
+      // cache must be corrected from it, not merely kept above it.
+      if (typeof data.usedQuestions === "number") {
+        setAskedCount(data.usedQuestions);
+        localStorage.setItem(ASKED_KEY, String(data.usedQuestions));
+      }
       if (data.pending) {
         setPendingOrder({
           orderId: data.pending.orderId,
@@ -393,6 +402,10 @@ export function AryaChat({
             data.pricingCohort,
             isCurrency(data.currency) ? data.currency : "INR"
           );
+        }
+        if (typeof data.usedQuestions === "number") {
+          setAskedCount(data.usedQuestions);
+          localStorage.setItem(ASKED_KEY, String(data.usedQuestions));
         }
         if (data.pending) {
           setPendingOrder({
@@ -551,11 +564,14 @@ export function AryaChat({
       setShowSignup(true);
       return;
     }
-    const limit = FREE_LIMIT + paidQuestions;
-    if (askedCount >= limit) {
-      // Out of questions (free or bought) → always offer the packs so the user
-      // can keep buying as many times as they want. No dead-end.
-      // Hold the question so it can auto-send right after the purchase.
+    // Out of questions → offer the packs. The client only pre-empts the paywall
+    // for users with NO purchased credits, whose limit is purely FREE_LIMIT and
+    // whose local counter is authoritative enough to save a round-trip. For
+    // anyone who has ever paid, the SERVER decides: a stale or pre-metering
+    // local count must never lock out a customer whose payment was verified. If
+    // the server says the quota is spent, its 402 opens the paywall with the
+    // question held (see streamReply) — same outcome, without trusting a cache.
+    if (paidQuestions === 0 && askedCount >= FREE_LIMIT) {
       paywallPendingRef.current = text;
       setCheckoutRetry(false);
       openPaywall();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { resolvePricingForDevice } from "@/lib/pricing-server";
+import { entitlementForDevices } from "@/lib/quota";
 import { REGION_CURRENCY } from "@/lib/geo";
 import { resolveRegionFromRequest } from "@/lib/region-server";
 
@@ -64,6 +65,7 @@ export async function GET(request: Request) {
   const currency = REGION_CURRENCY[region];
   const base = {
     paidQuestionsTotal: 0,
+    usedQuestions: 0,
     pricingCohort: "current" as const,
     region,
     currency,
@@ -94,10 +96,14 @@ export async function GET(request: Request) {
     }
 
     const paid = orders.filter((o) => o.status === "paid");
-    const paidQuestionsTotal = paid.reduce(
-      (sum, o) => sum + (Number(o.pack_questions) || 0),
-      0
-    );
+
+    // The same numbers the server's quota gate uses, so the client's mirror
+    // can never disagree with what will actually be enforced. `used` counts
+    // only metered questions (see METERING_STARTED_AT) — a paying customer's
+    // pre-quota history must not be replayed as if it consumed their credits.
+    const { used, credits } = await entitlementForDevices(deviceIds);
+    const paidQuestionsTotal = credits;
+
     const now = Date.now();
     // Surface the most recent created order as a resume candidate — but only
     // if no payment succeeded after it (a `created` that predates a `paid`
@@ -116,6 +122,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       paidQuestionsTotal,
+      usedQuestions: used,
       pricingCohort,
       region,
       currency,

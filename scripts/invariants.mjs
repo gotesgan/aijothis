@@ -180,6 +180,127 @@ console.log("\n6. the free limit is enforced by the server");
   }
 }
 
+// ── 7. A verified payment always grants access ─────────────────────────────
+// Two ways a payer got locked out, both locked down here:
+//   a) questions asked BEFORE server-side metering existed were charged against
+//      the paid allowance — a long-standing user with ~1,000 questions on
+//      record could never out-earn them by buying, so a verified ₹70 payment
+//      granted nothing;
+//   b) a paid order whose `pack_questions` was NULL (older packs) was worth
+//      ZERO credits.
+console.log("\n7. a verified payment is never locked out");
+{
+  const cleanupUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!cleanupUrl || !serviceKey) {
+    console.log("  · skipped (no Supabase service key in env)");
+  } else {
+    const { createClient } = await import("@supabase/supabase-js");
+    const sb = createClient(cleanupUrl, serviceKey, {
+      auth: { persistSession: false },
+    });
+    // POST and read only the status — the answer itself is not under test, so
+    // cancel the stream rather than wait for a full LLM completion.
+    const postStatus = (path, body, headers = {}) =>
+      fetch(`${BASE}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      }).then((r) => {
+        r.body?.cancel().catch(() => {});
+        return r.status;
+      });
+
+    // A big pre-metering history plus a small paid order: if the history were
+    // charged, even the FIRST question would be over budget.
+    const newPaidDevice = async (order) => {
+      const deviceId = dev(`paid-${order.pack_id}-${order.pack_questions ?? "null"}`);
+      const headers = { "x-device-id": deviceId };
+      const kundli = await post(
+        "/api/kundli",
+        {
+          name: "Test Invariant Bot",
+          date: "1996-11-18",
+          time: "06:00",
+          place: "Pune",
+          lat: 18.52,
+          lng: 73.85,
+          timezone: "Asia/Kolkata",
+          lang: "en",
+        },
+        headers
+      );
+      const chart = kundli.json?.kundli ?? kundli.json;
+      const { data: profile } = await sb
+        .from("profiles")
+        .select("id")
+        .eq("device_id", deviceId)
+        .maybeSingle();
+      if (kundli.status !== 200 || !chart || !profile?.id) return null;
+
+      const chatId = crypto.randomUUID();
+      await sb.from("chats").insert({ id: chatId, profile_id: profile.id, lang: "en" });
+      await sb.from("messages").insert(
+        Array.from({ length: 40 }, (_, i) => ({
+          chat_id: chatId,
+          role: "user",
+          content: `pre-metering question ${i}`,
+          created_at: "2026-08-01T00:00:00Z",
+        }))
+      );
+      await sb.from("orders").insert({
+        device_id: deviceId,
+        profile_id: profile.id,
+        amount_paise: 7000,
+        currency: "INR",
+        pack_id: order.pack_id,
+        pack_questions: order.pack_questions,
+        status: "paid",
+        verified_at: new Date().toISOString(),
+      });
+      return { deviceId, headers, chart };
+    };
+
+    const sendUntilBlocked = async ({ headers, chart }, calls) => {
+      for (let i = 1; i <= calls; i++) {
+        const status = await postStatus(
+          "/api/chat",
+          { kundli: chart, messages: [{ role: "user", content: `metered question ${i}` }], lang: "en" },
+          headers
+        );
+        if (status === 402) return i;
+      }
+      return null;
+    };
+
+    // (a) pre-metering history must not consume the paid allowance.
+    const recorded = await newPaidDevice({ pack_id: "legacy-standard-inr", pack_questions: 3 });
+    if (recorded) {
+      check(
+        "pre-metering questions do not consume the paid allowance",
+        await sendUntilBlocked(recorded, 2),
+        null
+      );
+    } else {
+      console.log("  · (a) skipped (kundli/profile not created)");
+    }
+
+    // (b) a NULL pack_questions order still grants its credits: with the
+    // legacy p20 fallback the 6th question must still be allowed; without it
+    // the user would be stuck at the FREE_LIMIT and 402 on the 6th.
+    const legacy = await newPaidDevice({ pack_id: "p20", pack_questions: null });
+    if (legacy) {
+      check(
+        "a NULL pack_questions order still grants credits",
+        await sendUntilBlocked(legacy, 6),
+        null
+      );
+    } else {
+      console.log("  · (b) skipped (kundli/profile not created)");
+    }
+  }
+}
+
 // ── Cleanup ────────────────────────────────────────────────────────────────
 if (process.env.INVARIANTS_SKIP_CLEANUP !== "1") {
   console.log("\ncleaning up test rows…");
