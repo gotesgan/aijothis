@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { BLOG_POSTS } from "@/lib/blog";
 import { LOCALES, SITE_NAME } from "@/lib/site";
+import { alternatesFor } from "@/lib/seo";
 
 export const dynamicParams = false;
 
@@ -17,18 +18,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   return {
-    title: "Vedic Astrology Guides & Blog",
+    title: "Vedic Astrology Guides & Blog | Jyotish",
     description:
       "Practical, plain-language guides to Kundli, marriage timing, Kundli matching, Muhurat and the 27 Nakshatras — written for real people, not astrologers.",
-    alternates: {
-      canonical: `/${locale}/blog`,
-      languages: {
-        "x-default": "/en/blog",
-        en: "/en/blog",
-        hi: "/hi/blog",
-        mr: "/mr/blog",
-      },
-    },
+    alternates: alternatesFor(locale, "blog"),
   };
 }
 

@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { BLOG_POSTS } from "@/lib/blog";
 import { LOCALES } from "@/lib/site";
+import { alternatesFor } from "@/lib/seo";
 
 export const dynamicParams = false;
 
@@ -17,17 +18,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   return {
-    title: "Sitemap",
+    title: "Sitemap | Jyotish",
     description: "Every page on Jyotish — Vedic astrology guides and tools.",
-    alternates: {
-      canonical: `/${locale}/sitemap`,
-      languages: {
-        "x-default": "/en/sitemap",
-        en: "/en/sitemap",
-        hi: "/hi/sitemap",
-        mr: "/mr/sitemap",
-      },
-    },
+    alternates: alternatesFor(locale, "sitemap"),
   };
 }
 

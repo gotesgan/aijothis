@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { getBlogPost, BLOG_POSTS } from "@/lib/blog";
 import { JsonLd } from "@/components/json-ld";
 import { LOCALES, SITE_NAME, SITE_URL } from "@/lib/site";
+import { englishAlternates, abs, OG_IMAGE } from "@/lib/seo";
 
 export const dynamicParams = false;
 
@@ -27,30 +28,33 @@ export async function generateMetadata({
   const post = getBlogPost(slug);
   if (!post) return { title: "Not found" };
 
+  // The posts are written and published in English only. The /hi and /mr URLs
+  // still resolve (shared links, hreflang history) but point their canonical at
+  // the English version and are noindexed, so untranslated copies do not
+  // compete with the original three ways.
+  const isEnglish = locale === "en";
+  const shareImage = OG_IMAGE;
+
   return {
-    title: post.title,
+    title: `${post.title} | ${SITE_NAME}`,
     description: post.description,
-    alternates: {
-      canonical: `/${locale}/blog/${slug}`,
-      languages: {
-        "x-default": `/en/blog/${slug}`,
-        en: `/en/blog/${slug}`,
-        hi: `/hi/blog/${slug}`,
-        mr: `/mr/blog/${slug}`,
-      },
-    },
+    alternates: englishAlternates(`blog/${slug}`),
+    robots: isEnglish ? undefined : { index: false, follow: true },
     openGraph: {
       title: post.title,
       description: post.description,
       type: "article",
       publishedTime: post.date,
+      modifiedTime: post.date,
       siteName: SITE_NAME,
       url: `${SITE_URL}/${locale}/blog/${slug}`,
+      images: [{ url: shareImage, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.description,
+      images: [shareImage],
     },
   };
 }
@@ -65,16 +69,24 @@ export default async function BlogPostPage({
   const post = getBlogPost(slug);
   if (!post) notFound();
 
-  const url = `${SITE_URL}/${locale}/blog/${post.slug}`;
+  const url = abs(`blog/${post.slug}`);
   const articleJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": "BlogPosting",
     headline: post.title,
     description: post.description,
+    image: [OG_IMAGE],
     datePublished: post.date,
-    author: { "@type": "Organization", name: SITE_NAME },
-    publisher: { "@type": "Organization", name: SITE_NAME },
-    mainEntityOfPage: url,
+    dateModified: post.date,
+    inLanguage: "en",
+    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/icon.png` },
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -94,7 +106,7 @@ export default async function BlogPostPage({
         "@type": "ListItem",
         position: 2,
         name: "Blog",
-        item: `${SITE_URL}/${locale}/blog`,
+        item: abs("blog"),
       },
       { "@type": "ListItem", position: 3, name: post.title, item: url },
     ],

@@ -7,6 +7,8 @@ import { ConsentSettingsLink } from "@/components/consent-banner";
 import { JsonLd } from "@/components/json-ld";
 import { Link } from "@/i18n/navigation";
 import { SITE_URL } from "@/lib/site";
+import { alternatesFor } from "@/lib/seo";
+import { BLOG_POSTS } from "@/lib/blog";
 import { Sun, ChevronRight } from "lucide-react";
 import { ResumeGate } from "@/components/resume-gate";
 import type { Metadata } from "next";
@@ -39,7 +41,7 @@ export async function generateMetadata({
   return {
     title: t.title,
     description: t.description,
-    alternates: { canonical: `/${locale}` },
+    alternates: alternatesFor(locale),
   };
 }
 
@@ -59,6 +61,7 @@ export default async function HomePage({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "Jyotish",
+    alternateName: "Hiarya",
     url: SITE_URL,
     description:
       "AI Vedic astrology chat — get your Kundli and personal answers on love, marriage, career, money and health.",
@@ -68,8 +71,22 @@ export default async function HomePage({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Jyotish",
+    alternateName: ["Hiarya", "Arya"],
     url: SITE_URL,
     logo: `${SITE_URL}/icon.png`,
+    description:
+      "Jyotish (Hiarya) is an AI Vedic astrology app. Arya, an AI astrologer, reads your real Kundli and answers questions on love, marriage, career, money and health.",
+  };
+  const appJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Jyotish — AI Vedic Astrologer",
+    alternateName: "Hiarya",
+    applicationCategory: "LifestyleApplication",
+    operatingSystem: "Web",
+    url: SITE_URL,
+    inLanguage: ["en", "hi", "mr"],
+    offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
   };
 
   // FAQPage structured data — targets "People also ask" (where is kundali,
@@ -106,6 +123,7 @@ export default async function HomePage({
       <ResumeGate mode="redirect" />
       <JsonLd data={websiteJsonLd} />
       <JsonLd data={orgJsonLd} />
+      <JsonLd data={appJsonLd} />
       <JsonLd data={faqJsonLd} />
       <Header />
 
@@ -230,6 +248,23 @@ export default async function HomePage({
           ))}
         </div>
       </section>
+
+      {/* Internal links into the guides. The blog ranks on page 1–2 but earns
+          no clicks partly because nothing on the homepage points at it; this
+          passes link equity and gives readers a next step. English only — the
+          posts themselves are English. */}
+      {locale === "en" && (
+        <section className="seo-content">
+          <h2 className="section-title">Vedic astrology guides</h2>
+          <ul className="guide-links">
+            {BLOG_POSTS.map((post) => (
+              <li key={post.slug}>
+                <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <AppNav />
 

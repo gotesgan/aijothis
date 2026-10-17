@@ -1,6 +1,7 @@
 import { setRequestLocale } from "next-intl/server";
 import { AryaChat } from "@/components/arya-chat";
 import { resolveRegionFromServer } from "@/lib/region-server";
+import { alternatesFor } from "@/lib/seo";
 import type { Metadata } from "next";
 
 const titles: Record<string, { title: string; description: string }> = {
@@ -28,7 +29,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = titles[locale] ?? titles.en;
-  return { title: t.title, description: t.description };
+  return {
+    title: t.title,
+    description: t.description,
+    alternates: alternatesFor(locale, "chat"),
+  };
 }
 
 export default async function ChatPage({

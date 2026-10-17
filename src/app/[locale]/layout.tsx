@@ -7,6 +7,7 @@ import { Trackers } from "@/components/trackers";
 import { ConsentBanner } from "@/components/consent-banner";
 import { routing } from "@/i18n/routing";
 import { SITE_URL } from "@/lib/site";
+import { alternatesFor } from "@/lib/seo";
 import type { Metadata } from "next";
 import "../globals.css";
 
@@ -35,7 +36,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   return {
-    title: "Jyotish",
+    title: "Jyotish — AI Vedic Astrologer",
     applicationName: "Jyotish",
     description:
       locale === "en"
@@ -44,15 +45,7 @@ export async function generateMetadata({
           ? "आर्य से बात करें — आपका AI वैदिक ज्योतिषी। मुफ्त कुंडली सेकंदों में।"
           : "आर्यशी बोला — तुमचा AI वैदिक ज्योतिषी. मोफत कुंडली सेकंदात.",
     metadataBase: new URL(SITE_URL),
-    alternates: {
-      canonical: `/${locale}`,
-      languages: {
-        "x-default": "/en",
-        en: "/en",
-        hi: "/hi",
-        mr: "/mr",
-      },
-    },
+    alternates: alternatesFor(locale),
     openGraph: {
       title: "Jyotish",
       siteName: "Jyotish",
@@ -60,9 +53,10 @@ export async function generateMetadata({
         "Jyotish is an AI Vedic astrology app. Share your birth details and chat with Arya for personal answers on love, marriage, career, money and health — grounded in your real Kundli.",
       url: `${SITE_URL}/${locale}`,
       locale: locale === "en" ? "en_IN" : locale === "hi" ? "hi_IN" : "mr_IN",
+      type: "website",
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: "Jyotish",
       description:
         "AI Vedic astrology — chat with Arya for personal answers grounded in your real Kundli.",
