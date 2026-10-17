@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/json-ld";
 import { Link } from "@/i18n/navigation";
 import { SITE_URL } from "@/lib/site";
 import { Sun, ChevronRight } from "lucide-react";
+import { ResumeGate } from "@/components/resume-gate";
 import type { Metadata } from "next";
 
 const titles: Record<string, { title: string; description: string }> = {
@@ -100,6 +101,9 @@ export default async function HomePage({
 
   return (
     <div className="screen">
+      {/* A returning user already has a chart on their profile — skip the
+          birth-details form they have demonstrably completed once already. */}
+      <ResumeGate mode="redirect" />
       <JsonLd data={websiteJsonLd} />
       <JsonLd data={orgJsonLd} />
       <JsonLd data={faqJsonLd} />

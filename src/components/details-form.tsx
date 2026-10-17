@@ -18,6 +18,9 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [selected, setSelected] = useState<PlaceSelection | null>(null);
+  // The place TEXT to display for a pre-filled form, held separately from
+  // `selected` because the visible text lives inside PlaceAutocomplete.
+  const [prefillPlace, setPrefillPlace] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,6 +33,52 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
   useEffect(() => {
     if (initialQ) trackQuestionChip(initialQ);
   }, [initialQ]);
+
+  /**
+   * Pre-fill from the profile this person already has.
+   *
+   * The birth details live on `profiles` from their first visit, so landing on
+   * an empty form asks a returning user to retype facts we already hold — the
+   * single most reported piece of friction in this funnel. This is the safety
+   * net for every path that reaches /details: a bookmark, a back-navigation, or
+   * tapping a landing chip faster than the resume redirect can fire.
+   *
+   * Only ever fills EMPTY fields, and only once, so it can never overwrite
+   * something the user is in the middle of typing or correcting.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Something already here (same device, or they started typing) — leave
+      // their input strictly alone.
+      if (name.trim() || date || time || selected) return;
+      try {
+        const res = await fetch("/api/me", { headers: { "x-device-id": getDeviceId() } });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled || !data?.birth) return;
+        setName((prev) => prev || data.name || "");
+        setDate((prev) => prev || data.birth.date || "");
+        setTime((prev) => prev || data.birth.time || "");
+        setSelected((prev) =>
+          prev ?? {
+            place: data.birth.place,
+            lat: data.birth.lat,
+            lng: data.birth.lng,
+            timezone: data.birth.timezone,
+          }
+        );
+        setPrefillPlace((prev) => prev ?? data.birth.place);
+      } catch {
+        // Fail soft — the form still works, it just starts empty.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally runs once on mount; the guards above make re-runs a no-op.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -125,6 +174,12 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
         placeholder={t("pobPh")}
         onSelect={setSelected}
         onEdit={() => setSelected(null)}
+        // Changing the key is what applies the pre-fill: it remounts the input
+        // so its internal `query` state starts from the saved place. The key
+        // is deliberately NOT reset on edit — that would remount mid-typing
+        // and discard what the user just entered.
+        key={prefillPlace ?? "no-prefill"}
+        initialPlace={prefillPlace}
       />
 
       {error && (

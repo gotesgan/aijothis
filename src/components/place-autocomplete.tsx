@@ -17,23 +17,57 @@ export function PlaceAutocomplete({
   placeholder,
   onSelect,
   onEdit,
+  initialPlace,
 }: {
   label: string;
   placeholder: string;
   onSelect: (place: PlaceSelection) => void;
   /** Called when the user edits the input after a place was chosen. */
   onEdit: () => void;
+  /**
+   * Seeds the displayed text for a place the profile already holds.
+   *
+   * Without this, a pre-filled form still shows an EMPTY place box: the
+   * selection lives in the parent, but the visible text lives in this
+   * component's own `query` state.
+   *
+   * Applied through `useState` initialisers, so the parent must change this
+   * component's `key` when the seed arrives (an effect that called setState
+   * would trip react-hooks/set-state-in-effect). Seeding `picked` alongside
+   * the text is what stops the debounced search from firing on a string the
+   * user never typed.
+   */
+  initialPlace?: string;
 }) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialPlace ?? "");
   const [suggestions, setSuggestions] = useState<GeocodeResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [googleFailed, setGoogleFailed] = useState(false);
-  const [picked, setPicked] = useState(false);
+  const [picked, setPicked] = useState(!!initialPlace);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSelectedRef = useRef("");
+  const lastSelectedRef = useRef(initialPlace ?? "");
+
+  /**
+   * Put the seeded place on screen.
+   *
+   * `query` alone is not enough: the input is only bound to it on the
+   * Open-Meteo fallback path (`value={showFallbackList ? query : undefined}`).
+   * When Google Places is healthy the input is uncontrolled, so the visible text
+   * has to be written straight to the DOM.
+   *
+   * Deliberately a DOM write with no setState — the React Compiler lint rules
+   * reject state updates in effects, and none are needed: the parent remounts
+   * this component via `key` when the seed arrives, so `picked` and
+   * `lastSelectedRef` are already correct from their initialisers.
+   */
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input || !initialPlace) return;
+    if (input.value !== initialPlace) input.value = initialPlace;
+  }, [initialPlace]);
 
   /* ── Google Places autocomplete (when a key is configured) ── */
   useEffect(() => {

@@ -6,7 +6,14 @@ import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
-import { getDeviceId, getOrCreateChatId, newUuid, saveKundli, setChatId } from "@/lib/storage";
+import {
+  getDeviceId,
+  getOrCreateChatId,
+  KUNDLI_KEY,
+  newUuid,
+  saveKundli,
+  setChatId,
+} from "@/lib/storage";
 import { detectMatchRequest } from "@/lib/match";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import { pickStarters } from "@/lib/starters";
@@ -645,6 +652,50 @@ export function AryaChat({
 
   /** Real Google signup — the credential arrives from the rendered button's
    *  callback and is saved on the profile (email/name/sub). */
+  /**
+   * Rejoin a returning user to their own chart instead of making them retype
+   * their birth details.
+   *
+   * Two things are lost when someone arrives on a new phone or after clearing
+   * site data, and both are recoverable server-side: the chart (stored in
+   * `profiles.kundli_json`) and their signed-up status (`signed_up_at`). The
+   * signed-up one matters commercially — reading it from localStorage alone
+   * means an existing customer is shown the Google gate again, which is the
+   * "locked out despite paying" failure this codebase treats as the worst
+   * outcome.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Nothing to restore if this device already has both.
+      if (kundli && signedUp) return;
+      try {
+        const res = await fetch("/api/me", {
+          headers: { "x-device-id": getDeviceId() },
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (data?.signedUp && !signedUp) {
+          setSignedUp(true);
+          localStorage.setItem(SIGNED_UP_KEY, "1");
+        }
+        if (data?.hasKundli && data.kundli && !kundli) {
+          saveKundli(data.kundli as KundliResult);
+          // useKundli subscribes to cross-tab `storage` events only, so a
+          // plain save would leave this component rendering an empty chart.
+          window.dispatchEvent(new StorageEvent("storage", { key: KUNDLI_KEY }));
+        }
+      } catch {
+        // Fail soft: worst case is today's behaviour.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kundli, signedUp]);
+
   async function completeGoogleSignup(credential: string) {
     setSignedUp(true);
     localStorage.setItem(SIGNED_UP_KEY, "1");
