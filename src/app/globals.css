@@ -1472,6 +1472,17 @@ button {
 .chat-send:hover:not([disabled]) {
   transform: translateY(-1px);
 }
+/* Stop replaces Send mid-stream. Gold outline so it reads as a different
+   control at a glance rather than the same button in a different state. */
+.chat-send--stop {
+  background: transparent;
+  border: 1.5px solid var(--gold, #ffb84d);
+  color: var(--gold, #ffb84d);
+  box-shadow: none;
+}
+.chat-send--stop:hover {
+  background: rgba(255, 184, 77, 0.12);
+}
 .chat-send[disabled] {
   opacity: 0.4;
   box-shadow: none;

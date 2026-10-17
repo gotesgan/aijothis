@@ -36,7 +36,7 @@ import { ChatMarkdown } from "@/components/chat-markdown";
 import { BirthDetailsCard } from "@/components/birth-details-card";
 import { MatchCard, type MatchPrefill } from "@/components/match-card";
 import { AppNav } from "@/components/app-nav";
-import { Send, Gem, Heart, X, ArrowDown } from "lucide-react";
+import { Send, Gem, Heart, X, ArrowDown, Square } from "lucide-react";
 import posthog from "posthog-js";
 import {
   findPackInMarket,
@@ -271,6 +271,9 @@ export function AryaChat({
   // Suppress scroll bookkeeping while a programmatic smooth scroll is in flight
   // so the jump pill doesn't flicker on/off mid-animation.
   const autoScrollUntilRef = useRef(0);
+  // The in-flight reply's abort controller, so the Stop button can cancel the
+  // stream from outside `streamReply`. Null whenever nothing is streaming.
+  const abortRef = useRef<AbortController | null>(null);
   const [showJump, setShowJump] = useState(false);
   const initialSentRef = useRef(false);
   const hasIdentifiedGoogleUserRef = useRef(false);
@@ -517,21 +520,46 @@ export function AryaChat({
   ) {
     const chatId = getOrCreateChatId();
     const messageId = newUuid();
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-device-id": getDeviceId(),
-      },
-      body: JSON.stringify({
-        kundli: chart,
-        messages: apiMessages,
-        lang: locale,
-        chatId,
-        messageId,
-        matchKundli: matchChart ?? undefined,
-      }),
-    });
+
+    // One controller per in-flight reply. Every streaming path funnels through
+    // here, so a single ref gives all of them a working Stop.
+    //
+    // Stopping is a CLIENT-side stop only: /api/chat finishes generating and
+    // persists the exchange regardless of whether we are still listening, so
+    // pressing Stop can never leave a half-written turn in history.
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let stopped = false;
+
+    let res: Response;
+    try {
+      res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-device-id": getDeviceId(),
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          kundli: chart,
+          messages: apiMessages,
+          lang: locale,
+          chatId,
+          messageId,
+          matchKundli: matchChart ?? undefined,
+        }),
+      });
+    } catch (err) {
+      abortRef.current = null;
+      if ((err as Error).name === "AbortError") {
+        // Stopped before the first byte: drop the empty assistant bubble rather
+        // than leaving a blank message on screen.
+        setMessages(display);
+        capturePostHog("chat_response_stopped");
+        return;
+      }
+      throw err;
+    }
 
     // The server is the authority on the free limit. If it says the quota is
     // spent, the local counter was wrong (cleared storage, a device switch) —
@@ -560,7 +588,16 @@ export function AryaChat({
     let acc = "";
 
     while (true) {
-      const { done, value } = await reader.read();
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await reader.read();
+      } catch {
+        // AbortError: the user pressed Stop. Keep whatever already streamed —
+        // throwing here would replace a usable partial answer with an error.
+        stopped = true;
+        break;
+      }
+      const { done, value } = chunk;
       if (done) break;
       acc += decoder.decode(value, { stream: true });
 
@@ -574,8 +611,21 @@ export function AryaChat({
       }
     }
 
+    abortRef.current = null;
+    // Stopped with nothing received yet → remove the blank bubble. Otherwise keep
+    // the partial answer, which is what every AI chat does on stop.
+    if (stopped && !acc.trim()) {
+      setMessages(display);
+      capturePostHog("chat_response_stopped");
+      return;
+    }
     setMessages([...display, { role: "assistant", content: acc }]);
-    capturePostHog("chat_response_received");
+    capturePostHog(stopped ? "chat_response_stopped" : "chat_response_received");
+  }
+
+  /** Stop the streaming answer. The partial text stays on screen. */
+  function stopStreaming() {
+    abortRef.current?.abort();
   }
 
   /** Send a question (used by input + chips + carried-from-landing question). */
@@ -1217,14 +1267,29 @@ export function AryaChat({
             }
           }}
         />
-        <button
-          className="chat-send"
-          onClick={send}
-          disabled={!input.trim() || streaming}
-          aria-label={t("send")}
-        >
-          <Send size={18} />
-        </button>
+        {/* While Arya is answering, this becomes Stop — the same affordance
+            ChatGPT and friends use. It used to be a permanently disabled send
+            button, which gave a tap no feedback at all; Clarity recorded those
+            as dead clicks and then rage clicks. A control that does something
+            is strictly better than one that does nothing. */}
+        {streaming ? (
+          <button
+            className="chat-send chat-send--stop"
+            onClick={stopStreaming}
+            aria-label={t("stop")}
+          >
+            <Square size={14} fill="currentColor" />
+          </button>
+        ) : (
+          <button
+            className="chat-send"
+            onClick={send}
+            disabled={!input.trim()}
+            aria-label={t("send")}
+          >
+            <Send size={18} />
+          </button>
+        )}
       </div>
 
       {pendingOrder && (
