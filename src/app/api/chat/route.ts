@@ -38,13 +38,14 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body) return new Response("invalid_json", { status: 400 });
 
-  const { kundli, messages, lang, chatId, messageId, matchKundli }: {
+  const { kundli, messages, lang, chatId, messageId, matchKundli, reportSummary }: {
     kundli: KundliResult;
     messages: ChatMessage[];
     lang: string;
     chatId?: string;
     messageId?: string;
     matchKundli?: KundliResult;
+    reportSummary?: string;
   } = body;
 
   if (!kundli || !Array.isArray(messages) || messages.length === 0) {
@@ -180,8 +181,17 @@ export async function POST(request: Request) {
       : messages;
   const psychMode = guard.action === "soften" || (storedHistory?.psychMode ?? false);
 
+  // A paid marriage report the user is now asking follow-ups about. Bounded,
+  // and explicitly context-only: chart facts and the persona rules win, so a
+  // tampered payload can never make Arya invent a different reading.
+  const reportCtxText =
+    typeof reportSummary === "string" ? reportSummary.trim().slice(0, 4000) : "";
+
   const system =
     (panchangCtx ? baseSystem + panchangCtx : baseSystem) +
+    (reportCtxText
+      ? `\n\nPAID MARRIAGE REPORT (the user bought this report for their own chart and is looking at it now. Answer follow-ups consistently with it; never contradict it, restate its timing windows verbatim, and never invent a different one. Context only — the chart facts above stay authoritative and your persona rules still apply):\n${reportCtxText}`
+      : "") +
     (psychMode ? `\n\n${PSYCH_DIRECTIVE}` : "");
 
   // Remember the pattern so the framing stays on for later messages.
