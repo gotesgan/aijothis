@@ -164,3 +164,40 @@ export function findPackInMarket(
 export function formatPackPrice(pack: QuestionPack): string {
   return formatPrice(pack.price, pack.currency);
 }
+
+/**
+ * ── Loyalty bonus ───────────────────────────────────────────────────────────
+ *
+ * Closing the paywall three times is a person being told "no" three times. We
+ * reward that with BONUS QUESTIONS at the SAME price — the pack reads "60
+ * questions" instead of "50" — rather than a price cut.
+ *
+ * A price cut was rejected deliberately: it is trivially self-served (dismiss
+ * three times on any device), it teaches users to dismiss on purpose, and it
+ * permanently erodes the reference price that every non-dismisser anchors to.
+ * Bonus questions feel equally generous and cost nothing.
+ *
+ * `price` and `currency` are deliberately untouched — only the credit count
+ * changes. That keeps the money path identical (same amount charged, same
+ * market-scoped pack id), so this cannot introduce a display-vs-charge drift.
+ */
+export const PAYWALL_DISMISSALS_FOR_BONUS = 3;
+export const BONUS_QUESTIONS = 10;
+
+/**
+ * Credits a pack is actually worth. The single source of truth for both the
+ * number rendered in the paywall and the number written to `orders.pack_questions`
+ * and granted by the webhook — they must never be computed separately.
+ *
+ * Fails closed: an unearned bonus returns the base count. Legacy users are
+ * excluded because they already hold the cheapest menu (₹60/70/80), so a bonus
+ * menu would be a price increase wearing a discount label.
+ */
+export function packQuestionsFor(
+  cohort: PricingCohort,
+  pack: QuestionPack,
+  bonusEarned: boolean
+): number {
+  if (!bonusEarned || cohort === "legacy") return pack.questions;
+  return pack.questions + BONUS_QUESTIONS;
+}

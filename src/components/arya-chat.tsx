@@ -33,7 +33,9 @@ import { Send, Gem, Heart, X, ArrowDown } from "lucide-react";
 import posthog from "posthog-js";
 import {
   findPackInMarket,
+  packQuestionsFor,
   packsForCohort,
+  BONUS_QUESTIONS,
   type PricingCohort,
   type QuestionPack,
 } from "@/lib/pricing";
@@ -204,6 +206,9 @@ export function AryaChat({
     return Number(localStorage.getItem(PAID_Q_KEY) ?? 0) || 0;
   });
   const [pricingCohort, setPricingCohort] = useState<PricingCohort>("current");
+  // Loyalty bonus: server-authoritative. Set from /api/orders and updated by the
+  // dismissal endpoint so the bonus appears on the very third dismissal.
+  const [bonusEarned, setBonusEarned] = useState(false);
   // Seeded from the server so the first paint already shows the right symbol —
   // a paywall that renders "$9.99" and then flips to "₹149" reads as a bait and
   // switch. /api/orders re-confirms it on mount.
@@ -362,6 +367,12 @@ export function AryaChat({
           data.pricingCohort,
           isCurrency(data.currency) ? data.currency : "INR"
         );
+      }
+      // Loyalty bonus, server-decided. The client never counts dismissals for
+      // the purpose of granting value — it only mirrors what the server says,
+      // so a forged localStorage flag earns nothing.
+      if (typeof data.bonusEarned === "boolean") {
+        setBonusEarned(data.bonusEarned);
       }
       // Adopt the server's metered question count as the local mirror. The
       // local counter only ever grows, so a user who was active before
@@ -1224,33 +1235,54 @@ export function AryaChat({
             {checkoutRetry && <p className="gate-modal__retry">{t("checkoutRetry")}</p>}
 
             <div className="pack-list">
-              {packs.map((p) => (
-                <button
-                  key={p.id}
-                  className={`pack-option ${
-                    selectedPack.id === p.id ? "pack-option--on" : ""
-                  }`}
-                  onClick={() => {
-                    setSelectedPack(p);
-                    trackPackSelected(p.price, p.currency);
-                    capturePostHog("question_pack_selected", {
-                      pack_tier: p.tier,
-                      question_credits: p.questions,
-                      price: p.price,
-                      currency: p.currency,
-                    });
-                  }}
-                >
-                  <span className="pack-option__price">
-                    {formatPrice(p.price, p.currency)}
-                  </span>
-                  <span className="pack-option__q">
-                    {`${p.questions} ${t("packQ")}`}
-                  </span>
-                  {p.popular && <span className="badge badge--popular">Best value</span>}
-                </button>
-              ))}
+              {packs.map((p) => {
+                const shownQuestions = packQuestionsFor(
+                  pricingCohort,
+                  p,
+                  bonusEarned
+                );
+                const hasBonus = shownQuestions > p.questions;
+                return (
+                  <button
+                    key={p.id}
+                    className={`pack-option ${
+                      selectedPack.id === p.id ? "pack-option--on" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedPack(p);
+                      trackPackSelected(p.price, p.currency);
+                      capturePostHog("question_pack_selected", {
+                        pack_tier: p.tier,
+                        question_credits: shownQuestions,
+                        price: p.price,
+                        currency: p.currency,
+                      });
+                    }}
+                  >
+                    <span className="pack-option__price">
+                      {formatPrice(p.price, p.currency)}
+                    </span>
+                    <span className="pack-option__q">
+                      {`${shownQuestions} ${t("packQ")}`}
+                      {hasBonus && (
+                        <span className="badge badge--bonus">
+                          {t("packBonus", { n: shownQuestions - p.questions })}
+                        </span>
+                      )}
+                    </span>
+                    {p.popular && (
+                      <span className="badge badge--popular">Best value</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+
+            {bonusEarned && (
+              <p className="gate-modal__bonus">
+                {t("paywallBonusNote", { n: BONUS_QUESTIONS })}
+              </p>
+            )}
 
             <button
               className="btn btn--gold"
@@ -1271,6 +1303,26 @@ export function AryaChat({
                 paywallPendingRef.current = null;
                 setShowPaywall(false);
                 trackPaywallDismissed();
+                // Tell the server this was a dismissal. After the threshold it
+                // replies with the earned entitlement, so the bonus appears on
+                // the very next open instead of waiting for a page reload. The
+                // response — not the client's own count — decides.
+                void (async () => {
+                  try {
+                    const res = await fetch("/api/paywall/dismiss", {
+                      method: "POST",
+                      headers: { "x-device-id": getDeviceId() },
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (typeof data?.earned === "boolean") {
+                      setBonusEarned(data.earned);
+                    }
+                  } catch {
+                    // Non-fatal: the bonus simply is not revealed until the
+                    // next /api/orders reconcile.
+                  }
+                })();
               }}
             >
               {t("notNow")}

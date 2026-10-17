@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { createRazorpayOrder, razorpayConfigured, KEY_ID } from "@/lib/razorpay";
-import { packForTier } from "@/lib/pricing";
+import { packForTier, packQuestionsFor } from "@/lib/pricing";
 import { resolvePricingForDevice } from "@/lib/pricing-server";
+import { resolveBonusForDevice, consumeBonus } from "@/lib/bonus-server";
 import { REGION_CURRENCY } from "@/lib/geo";
 import { resolveRegionFromRequest } from "@/lib/region-server";
 import { toMinorUnits } from "@/lib/money";
@@ -43,6 +44,12 @@ export async function POST(request: Request) {
   // by the browser at checkout.
   const amountMinor = toMinorUnits(pack.price, pack.currency);
 
+  // Loyalty bonus: earned by dismissing the paywall repeatedly, grants extra
+  // questions at the SAME price. It never changes `amountMinor` — only the
+  // credit count persisted on the order, which is what the webhook grants. The
+  // browser is not asked whether the bonus applies; it sends a tier only.
+  const { earned: bonusEarned } = await resolveBonusForDevice(deviceId);
+
   // Marketing consent is captured HERE, not in the webhook: this request comes
   // from the visitor's browser so their consent cookie is attached, whereas the
   // Razorpay webhook is a server-to-server POST carrying none of it. Stored on
@@ -57,7 +64,11 @@ export async function POST(request: Request) {
         ?.slice(CONSENT_COOKIE.length + 1)
     )?.marketing === true;
   const packId = pack.id;
-  const packQuestions = pack.questions;
+  // What the webhook will actually grant. Shared rule with the client, so the
+  // "60 questions" in the paywall and the 60 in the ledger cannot diverge.
+  const packQuestions = packQuestionsFor(cohort, pack, bonusEarned);
+  // Echoed back so the client can assert it showed what it charged.
+  const grantedPack = { ...pack, questions: packQuestions };
 
   // Real payment path.
   if (razorpayConfigured()) {
@@ -99,7 +110,7 @@ export async function POST(request: Request) {
             currency: reused.currency,
             region,
             keyId: KEY_ID,
-            pack,
+            pack: grantedPack,
             simulated: false,
             reused: true,
           });
@@ -125,7 +136,7 @@ export async function POST(request: Request) {
         currency: order.currency,
         region,
         keyId: KEY_ID,
-        pack,
+        pack: grantedPack,
         simulated: false,
       });
     } catch (err) {
@@ -146,6 +157,9 @@ export async function POST(request: Request) {
       .eq("device_id", deviceId);
     if (error) console.warn("[supabase] checkout record failed:", error.message);
   }
+  // Spend the one-time bonus here too, or it would re-arm on every simulated
+  // purchase and could never be observed as consumed.
+  if (bonusEarned) await consumeBonus(deviceId);
   await recordOrder({
     deviceId,
     amountMinor,
@@ -157,7 +171,7 @@ export async function POST(request: Request) {
     clientIp,
     clientUa,
   });
-  return NextResponse.json({ simulated: true, ok: true, pack, region });
+  return NextResponse.json({ simulated: true, ok: true, pack: grantedPack, region });
 }
 
 /** Inserts an order row. Non-fatal — existing flow keeps working even if the

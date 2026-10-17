@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyWebhookSignature, getOrderReceipt } from "@/lib/razorpay";
 import { sendCapiPurchase } from "@/lib/meta-capi";
+import { consumeBonus } from "@/lib/bonus-server";
 import { fromMinorUnits, isCurrency } from "@/lib/money";
 
 export const runtime = "nodejs";
@@ -174,6 +175,13 @@ export async function POST(request: Request) {
         .update({ paid20_at: new Date().toISOString() })
         .eq("device_id", deviceId);
       if (error) console.warn("[supabase] webhook grant failed:", error.message);
+
+      // Spend the one-time loyalty bonus. The extra questions are already
+      // baked into the order's `pack_questions`, which is what the quota gate
+      // credits — this only stops a SECOND order carrying the same bonus.
+      // Best-effort: re-granting once costs a few questions, whereas throwing
+      // here would block a paid fulfilment.
+      await consumeBonus(deviceId);
     }
   }
 

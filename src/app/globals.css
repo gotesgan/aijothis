@@ -1593,6 +1593,27 @@ button {
 .pack-option__q {
   font-size: 0.78rem;
   color: var(--ivory-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Loyalty bonus marker: same price, more questions. */
+.badge--bonus {
+  background: rgba(74, 222, 128, 0.14);
+  color: #6ee7a0;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.gate-modal__bonus {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #6ee7a0;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 12px 0 4px;
 }
 .gate-modal__title {
   font-family: var(--stack-display);

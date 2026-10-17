@@ -126,6 +126,8 @@
     "agreePrivacy": "Privacy Policy",
     "agreeTerms": "Terms & Conditions",
     "packQ": "questions",
+    "packBonus": "+{n} free",
+    "paywallBonusNote": "You kept coming back — so we've added {n} extra questions to every pack. Same price.",
     "checkoutRetry": "Payment didn't complete — please try again.",
     "pendingBanner": "You have an unfinished payment",
     "pendingPay": "Finish payment",

@@ -301,6 +301,106 @@ console.log("\n7. a verified payment is never locked out");
   }
 }
 
+// ── 7. Loyalty bonus: earned only, granted only, and never as a discount ────
+// The bonus adds QUESTIONS at the same price. It must not move the amount
+// charged (that would be a discount the ledger and the invoice disagree about),
+// must not be claimable without three real dismissals, and must not be
+// claimable by the legacy cohort — whose ₹60/70/80 menu is already cheaper,
+// so a "bonus" there would be a price increase.
+console.log("\n7. loyalty bonus is earned, granted, and never priced");
+
+const BASE_Q = { starter: 20, standard: 50, deep: 100 };
+const BONUS_Q = 10;
+const DISMISSALS_FOR_BONUS = 3;
+
+// (a) Not earned yet: a brand-new device gets the base credit count.
+{
+  const fresh = dev("bonus-fresh");
+  const { json } = await post("/api/checkout", { packTier: "standard" }, {
+    "x-device-id": fresh,
+    "x-vercel-ip-country": "IN",
+  });
+  check("no dismissals → base credits", json?.pack?.questions, BASE_Q.standard);
+  check("no dismissals → no bonus flag on /api/orders", (await get("/api/orders", { "x-device-id": fresh }))?.bonusEarned, false);
+}
+
+// (b) Two dismissals is still not enough.
+{
+  const twice = dev("bonus-twice");
+  await post("/api/paywall/dismiss", {}, { "x-device-id": twice });
+  const mid = await post("/api/paywall/dismiss", {}, { "x-device-id": twice });
+  check("2 dismissals → not yet earned", mid.json?.earned, false);
+  check("2 dismissals → base credits", mid.json?.dismissals, 2);
+  const { json } = await post("/api/checkout", { packTier: "standard" }, {
+    "x-device-id": twice,
+    "x-vercel-ip-country": "IN",
+  });
+  check("2 dismissals → base credits at checkout", json?.pack?.questions, BASE_Q.standard);
+}
+
+// (c) The third dismissal earns it — and ONLY the credits change, not the price.
+{
+  const thrice = dev("bonus-thrice");
+  for (let i = 0; i < DISMISSALS_FOR_BONUS; i++) {
+    await post("/api/paywall/dismiss", {}, { "x-device-id": thrice });
+  }
+  const orders = await get("/api/orders", { "x-device-id": thrice });
+  check("3 dismissals → earned", orders?.bonusEarned, true);
+
+  const { json } = await post("/api/checkout", { packTier: "standard" }, {
+    "x-device-id": thrice,
+    "x-vercel-ip-country": "IN",
+  });
+  check("earned bonus → base + bonus credits", json?.pack?.questions, BASE_Q.standard + BONUS_Q);
+  // The critical one: same rupees as an un-earned buyer.
+  check("bonus does NOT change the amount charged", json?.amount, EXPECTED.IN.standard[0]);
+  check("bonus does NOT change the currency", json?.currency, "INR");
+  check("bonus keeps the market-scoped pack id", json?.pack?.id, "current-standard-inr");
+}
+
+// (d) Every tier gets the same flat bonus.
+for (const tier of Object.keys(BASE_Q)) {
+  const d = dev(`bonus-tier-${tier}`);
+  for (let i = 0; i < DISMISSALS_FOR_BONUS; i++) {
+    await post("/api/paywall/dismiss", {}, { "x-device-id": d });
+  }
+  const { json } = await post("/api/checkout", { packTier: tier }, {
+    "x-device-id": d,
+    "x-vercel-ip-country": "IN",
+  });
+  check(`${tier}: base + ${BONUS_Q} credits`, json?.pack?.questions, BASE_Q[tier] + BONUS_Q);
+  check(
+    `${tier}: amount unchanged by the bonus`,
+    json?.amount,
+    EXPECTED.IN[tier][0]
+  );
+}
+
+// (e) The client cannot grant itself the bonus.
+{
+  const cheat = dev("bonus-cheat");
+  const { json } = await post(
+    "/api/checkout",
+    { packTier: "standard", bonusEarned: true, dismissals: 99 },
+    { "x-device-id": cheat, "x-vercel-ip-country": "IN" }
+  );
+  check("client-claimed bonus is ignored", json?.pack?.questions, BASE_Q.standard);
+}
+
+// (f) Foreign currencies: bonus must be worth questions, not a currency bug.
+{
+  const us = dev("bonus-us");
+  for (let i = 0; i < DISMISSALS_FOR_BONUS; i++) {
+    await post("/api/paywall/dismiss", {}, { "x-device-id": us });
+  }
+  const { json } = await post("/api/checkout", { packTier: "standard" }, {
+    "x-device-id": us,
+    "x-vercel-ip-country": "US",
+  });
+  check("USD buyer earns the bonus too", json?.pack?.questions, BASE_Q.standard + BONUS_Q);
+  check("USD buyer still pays USD", [json?.currency, json?.amount], ["USD", EXPECTED.US.standard[0]]);
+}
+
 // ── Cleanup ────────────────────────────────────────────────────────────────
 if (process.env.INVARIANTS_SKIP_CLEANUP !== "1") {
   console.log("\ncleaning up test rows…");

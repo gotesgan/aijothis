@@ -126,6 +126,8 @@
     "agreePrivacy": "गोपनीयता नीति",
     "agreeTerms": "नियम व शर्तें",
     "packQ": "questions",
+    "packBonus": "+{n} मुफ्त",
+    "paywallBonusNote": "आप बार-बार वापस आए — इसलिए हमने हर पैक में {n} सवाल जोड़ दिए हैं। कीमत वही है।",
     "checkoutRetry": "भुगतान पूरा नहीं हुआ — कृपया फिर से कोशिश करें।",
     "pendingBanner": "आपका एक अधूरा भुगतान है",
     "pendingPay": "भुगतान पूरा करें",

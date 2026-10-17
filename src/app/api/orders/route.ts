@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { resolvePricingForDevice } from "@/lib/pricing-server";
+import { resolveBonusForDevice } from "@/lib/bonus-server";
 import { entitlementForDevices } from "@/lib/quota";
 import { REGION_CURRENCY } from "@/lib/geo";
 import { resolveRegionFromRequest } from "@/lib/region-server";
@@ -67,6 +68,7 @@ export async function GET(request: Request) {
     paidQuestionsTotal: 0,
     usedQuestions: 0,
     pricingCohort: "current" as const,
+    bonusEarned: false,
     region,
     currency,
     pending: null as null,
@@ -83,6 +85,10 @@ export async function GET(request: Request) {
     // across ALL their devices, so grants/repeat-status survive a device
     // change. Falls back to this device alone when no google_sub exists.
     const { cohort: pricingCohort, deviceIds } = await resolvePricingForDevice(deviceId);
+    // Whether this person earned the loyalty bonus. Resolved with the same
+    // server-authoritative path checkout uses, so the credits shown in the
+    // paywall are the credits the order will actually grant.
+    const { earned: bonusEarned } = await resolveBonusForDevice(deviceId);
 
     const { data: orders, error } = await admin
       .from("orders")
@@ -92,7 +98,7 @@ export async function GET(request: Request) {
       .limit(50);
     if (error || !orders) {
       console.warn("[orders] fetch failed:", error?.message);
-      return NextResponse.json({ ...base, pricingCohort });
+      return NextResponse.json({ ...base, pricingCohort, bonusEarned });
     }
 
     const paid = orders.filter((o) => o.status === "paid");
@@ -124,6 +130,7 @@ export async function GET(request: Request) {
       paidQuestionsTotal,
       usedQuestions: used,
       pricingCohort,
+      bonusEarned,
       region,
       currency,
       pending: pending
