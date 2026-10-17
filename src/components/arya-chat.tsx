@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
+import { useReportCtx } from "@/hooks/use-report-ctx";
 import {
   getDeviceId,
   getOrCreateChatId,
@@ -17,6 +18,7 @@ import {
 import { detectMatchRequest } from "@/lib/match";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import { pickStarters } from "@/lib/starters";
+import { reportChatContext } from "@/lib/report";
 import {
   trackLead,
   trackInitiateCheckout,
@@ -196,6 +198,7 @@ export function AryaChat({
   const locale = useLocale() as Locale;
   const router = useRouter();
   const kundli = useKundli();
+  const reportCtx = useReportCtx();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -547,6 +550,7 @@ export function AryaChat({
           chatId,
           messageId,
           matchKundli: matchChart ?? undefined,
+          reportSummary: reportCtx ? reportChatContext(reportCtx) : undefined,
         }),
       });
     } catch (err) {
@@ -1191,8 +1195,16 @@ export function AryaChat({
           </div>
         )}
 
-        {showStarters && (teaser || starters.length > 0) && (
+        {showStarters && (teaser || starters.length > 0 || (reportCtx && messages.length === 0)) && (
           <div className="starter-chips">
+            {reportCtx && messages.length === 0 && (
+              <button
+                className="chip chip--report"
+                onClick={() => void sendText(t("reportChip"))}
+              >
+                {t("reportChip")}
+              </button>
+            )}
             {teaser && (
               <button className="chip chip--teaser" onClick={() => void sendText(teaser)}>
                 {teaser}

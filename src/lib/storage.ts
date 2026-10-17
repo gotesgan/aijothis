@@ -1,7 +1,10 @@
 import type { KundliResult } from "./types";
+import type { ReportCtx } from "./report";
 
 export const KUNDLI_KEY = "jyotish_kundli_v1";
 export const DEVICE_KEY = "jyotish_device_id_v1";
+/** The last paid marriage report this device holds, so the chat can answer from it. */
+export const REPORT_CTX_KEY = "jyotish_report_ctx_v1";
 
 export function saveKundli(kundli: KundliResult): void {
   if (typeof window === "undefined") return;
@@ -21,6 +24,30 @@ export function loadKundli(): KundliResult | null {
 export function clearKundli(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(KUNDLI_KEY);
+}
+
+export function saveReportCtx(ctx: ReportCtx): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(REPORT_CTX_KEY, JSON.stringify(ctx));
+  } catch {
+    /* quota/private mode — the chat simply won't have the report context */
+  }
+}
+
+export function loadReportCtx(): ReportCtx | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(REPORT_CTX_KEY);
+    return raw ? (JSON.parse(raw) as ReportCtx) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearReportCtx(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(REPORT_CTX_KEY);
 }
 
 export function getDeviceId(): string {
