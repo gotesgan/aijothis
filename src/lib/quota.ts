@@ -8,7 +8,7 @@ import { resolvePricingForDevice } from "@/lib/pricing-server";
  * mirrors it in `arya-chat.tsx` only so it can show the paywall without a
  * round-trip. Changing the limit here is what actually changes the limit.
  */
-export const FREE_LIMIT = 5;
+export const FREE_LIMIT = 1;
 
 /**
  * The instant server-side question metering began.

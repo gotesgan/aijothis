@@ -64,7 +64,7 @@ const ASKED_KEY = "jyotish_asked_count_v1";
 const MATCH_KEY = "jyotish_match_v1";
 /** Must match QUOTA_EXHAUSTED in @/lib/quota. */
 const QUOTA_EXHAUSTED = 402;
-const FREE_LIMIT = 5; // 1 free + 2 login-gated + 2 more, then paywall.
+const FREE_LIMIT = 1; // Q1 free, then Google signup before Q2, then paywall.
 // Mirrors FREE_LIMIT in @/lib/quota purely so the paywall can appear without a
 // round-trip. The server's copy is the one that actually enforces the limit.
 
