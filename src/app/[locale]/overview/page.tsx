@@ -7,9 +7,10 @@ import { useKundli } from "@/hooks/use-kundli";
 import { loadKundli, getDeviceId } from "@/lib/storage";
 import { NavagrahaMandala } from "@/components/navagraha-mandala";
 import { AppNav } from "@/components/app-nav";
+import { BackButton } from "@/components/back-button";
 import {
   Sparkles, Briefcase, HeartHandshake, Coins, HeartPulse,
-  RefreshCw, MessageCircle, ArrowLeft,
+  RefreshCw, MessageCircle,
 } from "lucide-react";
 
 type Overview = {
@@ -43,6 +44,7 @@ function readCache(locale: string): Overview | null {
 
 export default function OverviewPage() {
   const t = useTranslations("Overview");
+  const tc = useTranslations("Common");
   const locale = useLocale();
   const router = useRouter();
   const kundli = useKundli();
@@ -65,7 +67,10 @@ export default function OverviewPage() {
         body: JSON.stringify({ kundli, lang: locale }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Failed to generate");
+      if (!res.ok) {
+        console.error("overview_failed", data);
+        throw new Error("overview_failed");
+      }
       setOverview(data.overview as Overview);
       localStorage.setItem(
         CACHE_KEY,
@@ -76,11 +81,12 @@ export default function OverviewPage() {
         })
       );
     } catch (err) {
-      setError((err as Error).message ?? "Something went wrong.");
+      console.error(err);
+      setError(tc("errorGeneric"));
     } finally {
       setLoading(false);
     }
-  }, [kundli, locale]);
+  }, [kundli, locale, tc]);
 
   useEffect(() => {
     if (!loadKundli()) {
@@ -122,14 +128,7 @@ export default function OverviewPage() {
           padding: "18px 0 10px",
         }}
       >
-        <button
-          className="faint"
-          style={{ fontSize: 22 }}
-          onClick={() => router.push("/kundli")}
-          aria-label="back"
-        >
-          <ArrowLeft size={22} />
-        </button>
+        <BackButton parent="/kundli" />
         <div>
           <h1
             style={{
@@ -156,7 +155,7 @@ export default function OverviewPage() {
 
       {error && !overview && (
         <div className="card" style={{ textAlign: "center" }}>
-          <p style={{ color: "#ff8f8f", fontSize: 14 }}>{error}</p>
+          <p role="alert" style={{ color: "var(--error-text)", fontSize: 14 }}>{error}</p>
           <button className="btn btn--gold" onClick={generate} style={{ marginTop: 14 }}>
             <RefreshCw size={16} /> {t("regenerate")}
           </button>

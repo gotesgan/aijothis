@@ -7,14 +7,16 @@ import { useKundli } from "@/hooks/use-kundli";
 import { loadKundli, getDeviceId } from "@/lib/storage";
 import { PLANET, RASHI } from "@/lib/local-names";
 import { glyphFor } from "@/lib/glyphs";
+import { PLANET_COLOR } from "@/lib/planet-colors";
 import type { Locale } from "@/i18n/routing";
 import type { TransitPosition } from "@/lib/transit";
 import type { UpcomingEvent } from "@/lib/today";
 import { NavagrahaMandala } from "@/components/navagraha-mandala";
 import { AppNav } from "@/components/app-nav";
+import { BackButton } from "@/components/back-button";
 import {
   Sparkles, Briefcase, Heart, Coins, HeartPulse, Clock,
-  RefreshCw, MessageCircle, ArrowLeft, CalendarDays,
+  RefreshCw, MessageCircle, CalendarDays,
 } from "lucide-react";
 
 interface DailySummary {
@@ -55,6 +57,7 @@ function readCache(locale: string): TodayData | null {
 
 export default function TodayPage() {
   const t = useTranslations("Today");
+  const tc = useTranslations("Common");
   const locale = useLocale() as Locale;
   const router = useRouter();
   const kundli = useKundli();
@@ -77,18 +80,22 @@ export default function TodayPage() {
         body: JSON.stringify({ kundli, lang: locale }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message ?? "Failed to generate");
+      if (!res.ok) {
+        console.error("today_failed", json);
+        throw new Error("today_failed");
+      }
       setData(json as TodayData);
       localStorage.setItem(
         CACHE_KEY,
         JSON.stringify({ date: json.date, lang: locale, data: json })
       );
     } catch (err) {
-      setError((err as Error).message ?? "Something went wrong.");
+      console.error(err);
+      setError(tc("errorGeneric"));
     } finally {
       setLoading(false);
     }
-  }, [kundli, locale]);
+  }, [kundli, locale, tc]);
 
   useEffect(() => {
     if (!loadKundli()) {
@@ -128,9 +135,7 @@ export default function TodayPage() {
   return (
     <div className="screen">
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 0 10px" }}>
-        <button className="faint" style={{ fontSize: 22 }} onClick={() => router.push("/kundli")} aria-label="back">
-          <ArrowLeft size={22} />
-        </button>
+        <BackButton parent="/kundli" />
         <div>
           <h1 style={{ fontFamily: "var(--stack-display)", fontSize: 26, fontWeight: 600, lineHeight: 1.1 }}>
             {t("title")}
@@ -148,7 +153,7 @@ export default function TodayPage() {
 
       {error && !data && (
         <div className="card" style={{ textAlign: "center" }}>
-          <p style={{ color: "#ff8f8f", fontSize: 14 }}>{error}</p>
+          <p role="alert" style={{ color: "var(--error-text)", fontSize: 14 }}>{error}</p>
           <button className="btn btn--gold" onClick={generate} style={{ marginTop: 14 }}>
             <RefreshCw size={16} /> {t("generating")}
           </button>
@@ -167,7 +172,7 @@ export default function TodayPage() {
             </div>
             <div className="today-hero__lucky">
               <span className="today-lucky-row">
-                <span className="today-color-dot" style={{ background: data.meta.luckyColor }} />
+                <span className="today-color-dot" style={{ background: PLANET_COLOR[data.meta.rulerId] }} />
                 <span>
                   <span className="today-label">{t("luckyColor")}</span>
                   <span className="today-value">{data.luckyTime}</span>
@@ -211,7 +216,7 @@ export default function TodayPage() {
             <div className="today-list">
               {data.influences.map((p) => (
                 <div className="today-list__row" key={p.id}>
-                  <span className="chart-legend__glyph astro-glyph" style={{ color: "#f2c94c" }}>
+                  <span className="chart-legend__glyph astro-glyph" style={{ color: PLANET_COLOR[p.id] ?? "var(--planet-sun)" }}>
                     {glyphFor(p.id, p.symbol)}
                   </span>
                   <span className="today-list__name">{planet[p.id] ?? p.name}</span>

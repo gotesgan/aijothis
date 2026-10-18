@@ -13,9 +13,11 @@ import {
   type ReportType,
 } from "@/lib/report";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
-import { ArrowRight, Loader2, Lock, Download, Sparkles, MessageCircle } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock, Loader2, Lock, Download, MessageCircle } from "lucide-react";
+import { GenderField } from "./gender-field";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import type { Gender } from "@/lib/types";
 import posthog from "posthog-js";
 
 function capturePostHog(
@@ -114,6 +116,7 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
 
   const [step, setStep] = useState<Step>("form");
   const [name, setName] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [selected, setSelected] = useState<PlaceSelection | null>(null);
@@ -147,6 +150,7 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
       lng: selected?.lng ?? 0,
       timezone: selected?.timezone ?? "",
       lang: locale,
+      gender: gender || undefined,
     };
   }
 
@@ -166,7 +170,10 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
         body: JSON.stringify({ ...birthPayload(), stage: "teaser" }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? tr("errGeneric"));
+      if (!res.ok) {
+        console.error("report_failed", data);
+        throw new Error(tr("errGeneric"));
+      }
       setFacts(data.facts as ReportFacts);
       setPrice(typeof data.price === "number" ? data.price : null);
       setCurrency(isCurrency(data.currency) ? data.currency : "INR");
@@ -175,7 +182,8 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
       capturePostHog("report_teaser_viewed", { type });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      setError((err as Error).message || tr("errGeneric"));
+      console.error(err);
+      setError(tr("errGeneric"));
     } finally {
       setBusy(false);
     }
@@ -195,7 +203,10 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
         body: JSON.stringify({ ...birthPayload(), stage: "full" }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? tr("errGeneric"));
+      if (!res.ok) {
+        console.error("report_failed", data);
+        throw new Error(tr("errGeneric"));
+      }
       const nextFacts = data.facts as ReportFacts;
       const nextSections = data.sections as ReportSection[];
       setFacts(nextFacts);
@@ -213,7 +224,8 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
       capturePostHog("report_purchased", { type, price: price ?? 0, currency });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      setNote((err as Error).message || tr("errPay"));
+      console.error(err);
+      setNote(tr("errPay"));
     } finally {
       setBusy(false);
     }
@@ -243,7 +255,10 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
         body: JSON.stringify({ type }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? tr("errGeneric"));
+      if (!res.ok) {
+        console.error("report_failed", data);
+        throw new Error(tr("errGeneric"));
+      }
 
       if (data.simulated) {
         await loadFull();
@@ -303,27 +318,35 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
             />
           </label>
 
+<GenderField value={gender} onChange={setGender} />
+
           <div className="details-form__row">
             <label className="field">
               <span className="field__label">{tr("dob")}</span>
-              <input
-                className="field__input"
+              <span className="field__control">
+                <CalendarDays size={18} className="field__icon" aria-hidden="true" />
+                <input
+                className="field__input field__input--icon"
                 type="date"
                 data-exclude="true"
                 value={date}
                 max={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setDate(e.target.value)}
-              />
+                />
+              </span>
             </label>
             <label className="field">
               <span className="field__label">{tr("tob")}</span>
-              <input
-                className="field__input"
+              <span className="field__control">
+                <Clock size={18} className="field__icon" aria-hidden="true" />
+                <input
+                className="field__input field__input--icon"
                 type="time"
                 data-exclude="true"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-              />
+                />
+              </span>
             </label>
           </div>
           {!time && (
@@ -339,9 +362,9 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
             onEdit={() => setSelected(null)}
           />
 
-          {error && <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>}
+          {error && <p role="alert" style={{ color: "var(--error-text)", fontSize: 13 }}>{error}</p>}
 
-          <button type="submit" className="btn btn--gold btn--lg" disabled={!canSubmit}>
+          <button type="submit" className="btn btn--gold" disabled={!canSubmit}>
             {busy ? (
               <>
                 <Loader2 size={18} className="spin" /> {tr("building")}
@@ -381,13 +404,12 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
           <span className="faint" style={{ fontSize: 12.5 }}>
             {tr("downloadHint")}
           </span>
-          {note && <span style={{ color: "#ff8f8f", fontSize: 13 }}>{note}</span>}
+          {note && <span role="alert" style={{ color: "var(--error-text)", fontSize: 13 }}>{note}</span>}
         </div>
 
         <article className="rpt-doc" lang={locale}>
-          <header className="rpt-head">
-            <div className="rpt-eyebrow">{t("docEyebrow")}</div>
-            <h1 className="rpt-h1">{t("docTitle")}</h1>
+          <header className="rpt-masthead">
+            <h2 className="rpt-title">{t("docTitle")}</h2>
             <p className="rpt-sub">
               {facts.profile.name ? `${facts.profile.name} · ` : ""}
               {facts.profile.date} · {facts.profile.time}
@@ -396,22 +418,19 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
             <div className="rpt-rule" />
           </header>
 
-          <div className="rpt-meta-grid">
-            <Meta label={tr("lagna")} value={rashi(facts.lagna)} />
-            <Meta label={tr("moonSign")} value={rashi(facts.moonRashi)} />
-            <Meta
+          <dl className="rpt-facts">
+            <Fact label={tr("lagna")} value={rashi(facts.lagna)} />
+            <Fact label={tr("moonSign")} value={rashi(facts.moonRashi)} />
+            <Fact
               label={tr("nakshatra")}
               value={`${nak(facts.moonNakshatra)} · ${tr("pada")} ${facts.moonNakshatraPad}`}
             />
-            <Meta
-              label={tr("currentDasha")}
-              value={planet(facts.currentDashaLord)}
-            />
-          </div>
+            <Fact label={tr("currentDasha")} value={planet(facts.currentDashaLord)} />
+          </dl>
 
           {sections.map((s) => (
             <section key={s.id} className="rpt-section">
-              <h2 className="rpt-h2">{t(`sections.${s.id}`)}</h2>
+              <h3 className="rpt-section__title">{t(`sections.${s.id}`)}</h3>
               {s.body
                 .split(/\n+/)
                 .map((p) => p.trim())
@@ -435,28 +454,27 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
 
   return (
     <div className="no-print rpt-teaser">
-      <div className="rpt-meta-grid">
-        <Meta label={tr("lagna")} value={rashi(facts.lagna)} />
-        <Meta label={tr("moonSign")} value={rashi(facts.moonRashi)} />
-        <Meta
+      <dl className="rpt-facts">
+        <Fact label={tr("lagna")} value={rashi(facts.lagna)} />
+        <Fact label={tr("moonSign")} value={rashi(facts.moonRashi)} />
+        <Fact
           label={tr("nakshatra")}
           value={`${nak(facts.moonNakshatra)} · ${tr("pada")} ${facts.moonNakshatraPad}`}
         />
-        <Meta label={tr("currentDasha")} value={planet(facts.currentDashaLord)} />
-      </div>
+        <Fact label={tr("currentDasha")} value={planet(facts.currentDashaLord)} />
+      </dl>
 
       {type === "career" && <CareerTeaser facts={facts} />}
       {type === "child" && <ChildTeaser facts={facts} locale={locale} />}
       {type === "marriage" && <MarriageTeaser facts={facts} />}
 
-      <section className="rpt-card rpt-card--lock">
-        <h2 className="rpt-h2">
+      {/* The paid report as a table of contents — what you are buying, named. */}
+      <section className="rpt-contents">
+        <h2 className="rpt-contents__title">
           <Lock size={15} aria-hidden /> {tr("lockedTitle")}
         </h2>
-        <p className="faint" style={{ fontSize: 13, marginTop: -6 }}>
-          {tr("lockedNote")}
-        </p>
-        <ul className="rpt-locklist">
+        <p className="rpt-note">{tr("lockedNote")}</p>
+        <ul className="rpt-contents__list">
           {sectionIds.map((id) => (
             <li key={id}>
               <Lock size={13} aria-hidden /> {t(`sections.${id}`)}
@@ -465,42 +483,33 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
         </ul>
       </section>
 
-      {facts.profile.place && (
-        <p className="faint" style={{ fontSize: 11.5, textAlign: "center", lineHeight: 1.5 }}>
-          {tr("calcNote")}
-        </p>
-      )}
+      {facts.profile.place && <p className="rpt-note">{tr("calcNote")}</p>}
 
-      <div className="rpt-cta">
-        <button className="btn btn--gold btn--lg btn--block" onClick={unlock} disabled={busy}>
+      {note && <p role="alert" className="rpt-error">{note}</p>}
+
+      <div className="rpt-dock">
+        <button className="btn btn--gold" onClick={unlock} disabled={busy}>
           {busy ? (
             <>
               <Loader2 size={18} className="spin" /> {tr("working")}
             </>
           ) : purchased ? (
-            <>
-              <Sparkles size={18} /> {tr("viewReport")}
-            </>
+            <>{tr("viewReport")}</>
           ) : (
-            <>
-              <Sparkles size={18} /> {tr("unlockFor")} {priceLabel}
-            </>
+            <>{tr("unlockFor")}</>
           )}
         </button>
         {!purchased && (
-          <p className="faint" style={{ fontSize: 12, textAlign: "center" }}>
-            {tr("oneTime")}
+          <p className="rpt-note">
+            {priceLabel} · {tr("oneTime")}
           </p>
-        )}
-        {note && (
-          <p style={{ color: "#ff8f8f", fontSize: 13, textAlign: "center" }}>{note}</p>
         )}
       </div>
     </div>
   );
 }
 
-/* ── Per-type teaser cards ────────────────────────────────────────────── */
+/* ── Per-type teaser groups ───────────────────────────────────────────── */
 
 function MarriageTeaser({ facts }: { facts: ReportFacts }) {
   const t = useTranslations("Report");
@@ -516,49 +525,37 @@ function MarriageTeaser({ facts }: { facts: ReportFacts }) {
 
   return (
     <>
-      <section className="rpt-card">
-        <h2 className="rpt-h2">{t("marriageHouse")}</h2>
-        <dl className="rpt-kv">
-          <div>
-            <dt>{t("seventhSign")}</dt>
-            <dd>{rashi(facts.seventhSign)}</dd>
-          </div>
-          <div>
-            <dt>{t("seventhLord")}</dt>
-            <dd>
-              {planet(facts.seventhLord)} · {t("house")} {facts.seventhLordHouse}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("planetsInSeventh")}</dt>
-            <dd>
-              {facts.planetsInSeventh.length
+      <section className="rpt-group">
+        <h3 className="rpt-group__title">{t("marriageHouse")}</h3>
+        <dl className="rpt-facts">
+          <Fact label={t("seventhSign")} value={rashi(facts.seventhSign)} />
+          <Fact
+            label={t("seventhLord")}
+            value={`${planet(facts.seventhLord)} \u00b7 ${t("house")} ${facts.seventhLordHouse}`}
+          />
+          <Fact
+            label={t("planetsInSeventh")}
+            value={
+              facts.planetsInSeventh.length
                 ? facts.planetsInSeventh.map(planet).join(", ")
-                : t("none")}
-            </dd>
-          </div>
+                : t("none")
+            }
+          />
         </dl>
       </section>
 
-      <section className="rpt-card">
-        <h2 className="rpt-h2">{t("karakas")}</h2>
-        <dl className="rpt-kv">
-          <div>
-            <dt>{t("venusIn")}</dt>
-            <dd>
-              {rashi(facts.venusSign)} · {t("house")} {facts.venusHouse}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("jupiterIn")}</dt>
-            <dd>
-              {rashi(facts.jupiterSign)} · {t("house")} {facts.jupiterHouse}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("mangalDosha")}</dt>
-            <dd>{doshaLabel}</dd>
-          </div>
+      <section className="rpt-group">
+        <h3 className="rpt-group__title">{t("karakas")}</h3>
+        <dl className="rpt-facts">
+          <Fact
+            label={t("venusIn")}
+            value={`${rashi(facts.venusSign)} \u00b7 ${t("house")} ${facts.venusHouse}`}
+          />
+          <Fact
+            label={t("jupiterIn")}
+            value={`${rashi(facts.jupiterSign)} \u00b7 ${t("house")} ${facts.jupiterHouse}`}
+          />
+          <Fact label={t("mangalDosha")} value={doshaLabel} />
         </dl>
       </section>
     </>
@@ -574,52 +571,42 @@ function CareerTeaser({ facts }: { facts: ReportFacts }) {
 
   return (
     <>
-      <section className="rpt-card">
-        <h2 className="rpt-h2">{t("careerHouse")}</h2>
-        <dl className="rpt-kv">
-          <div>
-            <dt>{t("tenthSign")}</dt>
-            <dd>{rashi(facts.tenthSign)}</dd>
-          </div>
-          <div>
-            <dt>{t("tenthLord")}</dt>
-            <dd>
-              {planet(facts.tenthLord)} · {tr("house")} {facts.tenthLordHouse}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("planetsInTenth")}</dt>
-            <dd>
-              {facts.planetsInTenth.length
+      <section className="rpt-group">
+        <h3 className="rpt-group__title">{t("careerHouse")}</h3>
+        <dl className="rpt-facts">
+          <Fact label={t("tenthSign")} value={rashi(facts.tenthSign)} />
+          <Fact
+            label={t("tenthLord")}
+            value={`${planet(facts.tenthLord)} \u00b7 ${tr("house")} ${facts.tenthLordHouse}`}
+          />
+          <Fact
+            label={t("planetsInTenth")}
+            value={
+              facts.planetsInTenth.length
                 ? facts.planetsInTenth.map(planet).join(", ")
-                : tr("none")}
-            </dd>
-          </div>
+                : tr("none")
+            }
+          />
         </dl>
       </section>
 
-      <section className="rpt-card">
-        <h2 className="rpt-h2">{t("wealthGains")}</h2>
-        <dl className="rpt-kv">
-          <div>
-            <dt>{t("secondLord")}</dt>
-            <dd>
-              {planet(facts.secondLord)} · {tr("house")} {facts.secondLordHouse}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("eleventhLord")}</dt>
-            <dd>
-              {planet(facts.eleventhLord)} · {tr("house")} {facts.eleventhLordHouse}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("mercuryIn")}</dt>
-            <dd>
-              {rashi(facts.planets.find((p) => p.id === "mercury")?.rashi ?? 0)} ·{" "}
-              {tr("house")} {facts.mercuryHouse}
-            </dd>
-          </div>
+      <section className="rpt-group">
+        <h3 className="rpt-group__title">{t("wealthGains")}</h3>
+        <dl className="rpt-facts">
+          <Fact
+            label={t("secondLord")}
+            value={`${planet(facts.secondLord)} \u00b7 ${tr("house")} ${facts.secondLordHouse}`}
+          />
+          <Fact
+            label={t("eleventhLord")}
+            value={`${planet(facts.eleventhLord)} \u00b7 ${tr("house")} ${facts.eleventhLordHouse}`}
+          />
+          <Fact
+            label={t("mercuryIn")}
+            value={`${rashi(
+              facts.planets.find((p) => p.id === "mercury")?.rashi ?? 0
+            )} \u00b7 ${tr("house")} ${facts.mercuryHouse}`}
+          />
         </dl>
       </section>
     </>
@@ -636,62 +623,60 @@ function ChildTeaser({ facts, locale }: { facts: ReportFacts; locale: Locale }) 
 
   return (
     <>
-      <section className="rpt-card">
-        <h2 className="rpt-h2">{t("namingCard")}</h2>
-        <dl className="rpt-kv">
-          <div>
-            <dt>{t("nakshatraPada")}</dt>
-            <dd>
-              {nak(facts.moonNakshatra)} · {tr("pada")} {facts.moonNakshatraPad}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("namingLetters")}</dt>
-            <dd>
-              {facts.namingSyllables
-                .map((s) => (devanagari ? s.dev : s.rom))
-                .join(" · ")}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("namingLetter")}</dt>
-            <dd style={{ fontSize: 20, fontWeight: 600 }}>
-              {devanagari ? facts.namingLetter.dev : facts.namingLetter.rom}
-            </dd>
-          </div>
+      <section className="rpt-group">
+        <h3 className="rpt-group__title">{t("namingCard")}</h3>
+        <dl className="rpt-facts">
+          <Fact
+            label={t("nakshatraPada")}
+            value={`${nak(facts.moonNakshatra)} \u00b7 ${tr("pada")} ${facts.moonNakshatraPad}`}
+          />
+          <Fact
+            label={t("namingLetters")}
+            value={facts.namingSyllables
+              .map((s) => (devanagari ? s.dev : s.rom))
+              .join(" \u00b7 ")}
+          />
+          <Fact
+            label={t("namingLetter")}
+            value={devanagari ? facts.namingLetter.dev : facts.namingLetter.rom}
+            lead
+          />
         </dl>
       </section>
 
-      <section className="rpt-card">
-        <h2 className="rpt-h2">{t("mindLearning")}</h2>
-        <dl className="rpt-kv">
-          <div>
-            <dt>{tr("moonSign")}</dt>
-            <dd>{rashi(facts.moonRashi)}</dd>
-          </div>
-          <div>
-            <dt>{t("fifthLord")}</dt>
-            <dd>
-              {planet(facts.fifthLord)} · {tr("house")} {facts.fifthLordHouse}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("jupiterIn")}</dt>
-            <dd>
-              {rashi(facts.jupiterSign)} · {tr("house")} {facts.jupiterHouse}
-            </dd>
-          </div>
+      <section className="rpt-group">
+        <h3 className="rpt-group__title">{t("mindLearning")}</h3>
+        <dl className="rpt-facts">
+          <Fact label={tr("moonSign")} value={rashi(facts.moonRashi)} />
+          <Fact
+            label={t("fifthLord")}
+            value={`${planet(facts.fifthLord)} \u00b7 ${tr("house")} ${facts.fifthLordHouse}`}
+          />
+          <Fact
+            label={t("jupiterIn")}
+            value={`${rashi(facts.jupiterSign)} \u00b7 ${tr("house")} ${facts.jupiterHouse}`}
+          />
         </dl>
       </section>
     </>
   );
 }
 
-function Meta({ label, value }: { label: string; value: string }) {
+function Fact({
+  label,
+  value,
+  lead,
+}: {
+  label: string;
+  value: string;
+  lead?: boolean;
+}) {
   return (
-    <div className="rpt-meta">
-      <div className="rpt-meta__label">{label}</div>
-      <div className="rpt-meta__value">{value}</div>
+    <div className="rpt-facts__row">
+      <dt>{label}</dt>
+      <dd className={lead ? "rpt-facts__value rpt-facts__value--lead" : "rpt-facts__value"}>
+        {value}
+      </dd>
     </div>
   );
 }

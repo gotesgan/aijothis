@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useKundli } from "@/hooks/use-kundli";
 import { getDeviceId, readDailyCache, writeDailyCache } from "@/lib/storage";
 import { PLANET } from "@/lib/local-names";
+import { PLANET_COLOR } from "@/lib/planet-colors";
 import type { Locale } from "@/i18n/routing";
 import type { TransitPosition } from "@/lib/transit";
 import { RefreshCw, MessageCircle, Briefcase, Heart, Coins, HeartPulse } from "lucide-react";
@@ -29,6 +30,7 @@ interface TodayData {
 
 export function TodayInline() {
   const t = useTranslations("Today");
+  const tc = useTranslations("Common");
   const locale = useLocale() as Locale;
   const router = useRouter();
   const kundli = useKundli();
@@ -49,15 +51,19 @@ export function TodayInline() {
         body: JSON.stringify({ kundli, lang: locale }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message ?? "Failed");
+      if (!res.ok) {
+        console.error("today_failed", json);
+        throw new Error(tc("errorGeneric"));
+      }
       setData(json as TodayData);
       writeDailyCache(CACHE, locale, json);
     } catch (err) {
-      setError((err as Error).message ?? "Something went wrong.");
+      console.error(err);
+      setError(tc("errorGeneric"));
     } finally {
       setLoading(false);
     }
-  }, [kundli, locale]);
+  }, [kundli, locale, tc]);
 
   useEffect(() => {
     if (data) return;
@@ -79,9 +85,9 @@ export function TodayInline() {
   if (error && !data) {
     return (
       <div style={{ textAlign: "center", padding: "8px 0" }}>
-        <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>
+        <p role="alert" style={{ color: "var(--error-text)", fontSize: 13 }}>{error}</p>
         <button className="btn btn--gold btn--sm" onClick={generate} style={{ marginTop: 10 }}>
-          <RefreshCw size={14} /> {t("generating")}
+          <RefreshCw size={14} /> {tc("tryAgain")}
         </button>
       </div>
     );
@@ -105,7 +111,7 @@ export function TodayInline() {
           </p>
         </div>
         <div className="inline-today__lucky">
-          <span className="today-color-dot" style={{ background: data.meta.luckyColor }} />
+          <span className="today-color-dot" style={{ background: PLANET_COLOR[data.meta.rulerId] }} />
           <span>
             <span className="today-label">{t("luckyColor")}</span>
             <span className="today-value">{data.luckyTime}</span>

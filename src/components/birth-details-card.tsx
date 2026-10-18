@@ -18,6 +18,7 @@ export function BirthDetailsCard({
   onComplete: (kundli: KundliResult) => void;
 }) {
   const t = useTranslations("Details");
+  const tc = useTranslations("Common");
   const locale = useLocale();
 
   const [name, setName] = useState("");
@@ -58,10 +59,14 @@ export function BirthDetailsCard({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Failed");
+      if (!res.ok) {
+        console.error("kundli_failed", data);
+        throw new Error(tc("errorGeneric"));
+      }
       onComplete(data.kundli as KundliResult);
     } catch (err) {
-      setError((err as Error).message ?? "Something went wrong.");
+      console.error(err);
+      setError(tc("errorGeneric"));
       setSubmitting(false);
     }
   }
@@ -131,7 +136,7 @@ export function BirthDetailsCard({
         onEdit={() => setSelected(null)}
       />
 
-      {error && <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "var(--error-text)", fontSize: 13 }}>{error}</p>}
 
       <button type="submit" className="btn btn--gold" disabled={!canSubmit}>
         {submitting ? (

@@ -1,3 +1,14 @@
+/**
+ * How the person should be addressed in a reading. Optional everywhere: it
+ * sharpens the language (husband/wife, son/daughter, he/she) but never gates
+ * anything. "other" is a real choice, not a fallback.
+ */
+export type Gender = "female" | "male" | "other";
+
+export function isGender(v: unknown): v is Gender {
+  return v === "female" || v === "male" || v === "other";
+}
+
 export interface BirthDetails {
   name: string;
   date: string; // YYYY-MM-DD
@@ -7,6 +18,7 @@ export interface BirthDetails {
   lng: number;
   timezone: string; // IANA tz id
   utcOffsetMinutes: number; // minutes east of UTC at birth moment
+  gender?: Gender;
 }
 
 export interface PlanetPosition {
@@ -49,6 +61,7 @@ export interface KundliResult {
     lat: number;
     lng: number;
     timezone: string;
+    gender?: Gender;
   };
   computed: KundliComputed;
   planets: PlanetPosition[];

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { computeKundli, getUtcOffsetMinutes } from "@/lib/kundli";
+import { isGender } from "@/lib/types";
 import {
   buildFacts,
   isReportType,
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
       lng: Number(lng),
       timezone: String(timezone),
       utcOffsetMinutes: offsetMinutes,
+      gender: isGender(body.gender) ? body.gender : undefined,
     });
   } catch (err) {
     console.error("report chart computation failed", err);

@@ -1,10 +1,11 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { KundliResult, PlanetPosition } from "@/lib/types";
 import { PLANET } from "@/lib/local-names";
 import type { Locale } from "@/i18n/routing";
 import { glyphFor, RASHI_GLYPH } from "@/lib/glyphs";
+import { PLANET_COLOR } from "@/lib/planet-colors";
 
 /* Classic North Indian chart — square 0..300, center (150,150).
    The inner diamond touches the 4 edge midpoints; the 4 corners are
@@ -40,18 +41,10 @@ const OUTER: Record<number, [number, number]> = {
    12: [0, 0],
 };
 
-/* Navagraha colors (approximate traditional), tuned for the dark surface. */
-const PLANET_COLORS: Record<string, string> = {
-  sun: "#ff9a4d",
-  moon: "#e9e4d2",
-  mars: "#ff6b5e",
-  mercury: "#7fe08f",
-  jupiter: "#ffd45c",
-  venus: "#ff9fc0",
-  saturn: "#7fb2ff",
-  rahu: "#9fb3d8",
-  ketu: "#c2a6ea",
-};
+/* Navagraha hues live in the design tokens (--planet-* in globals.css) and are
+   read through PLANET_COLOR, so the chart, the legend below it and the today
+   list can never disagree. var() is verified to resolve in SVG stroke/fill
+   presentation attributes in the target browsers. */
 
 function centroid(points: [number, number][]): [number, number] {
   return [
@@ -85,6 +78,7 @@ function houseLayout(n: number) {
 
 export function KundliChart({ kundli }: { kundli: KundliResult }) {
   const locale = (useLocale() as Locale) ?? "en";
+  const tc = useTranslations("Common");
   const planetNames = PLANET[locale];
   const lagnaRashi = kundli.computed.lagnaRashi;
 
@@ -95,12 +89,12 @@ export function KundliChart({ kundli }: { kundli: KundliResult }) {
 
   return (
     <>
-      <svg viewBox="0 0 300 300" className="chart-svg" role="img" aria-label="North Indian birth chart">
+      <svg viewBox="0 0 300 300" className="chart-svg" role="img" aria-label={tc("chartAria")}>
       <defs>
         <radialGradient id="chartGlow" cx="50%" cy="42%" r="62%">
-          <stop offset="0%" stopColor="rgba(255,184,77,0.10)" />
-          <stop offset="60%" stopColor="rgba(255,184,77,0.03)" />
-          <stop offset="100%" stopColor="rgba(255,184,77,0)" />
+          <stop offset="0%" stopColor="rgba(var(--brand-rgb),0.10)" />
+          <stop offset="60%" stopColor="rgba(var(--brand-rgb),0.03)" />
+          <stop offset="100%" stopColor="rgba(var(--brand-rgb),0)" />
         </radialGradient>
         <filter id="planetGlow" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="1.4" result="blur" />
@@ -143,14 +137,14 @@ export function KundliChart({ kundli }: { kundli: KundliResult }) {
             {/* planets */}
             {planets.map((p, i) => {
               const [x, y] = anchors[Math.min(i, anchors.length - 1)];
-              const color = PLANET_COLORS[p.id] ?? "#f2c94c";
+              const color = PLANET_COLOR[p.id] ?? "var(--planet-sun)";
               return (
                 <g
                   key={p.id}
                   transform={`translate(${x} ${y})`}
                   className="chart-planet"
                 >
-                  <circle r="9.5" fill="rgba(13,10,22,0.55)" stroke={color} strokeWidth="1" opacity="0.9" />
+                  <circle r="9.5" fill="rgba(var(--background-rgb),0.55)" stroke={color} strokeWidth="1" opacity="0.9" />
                   <text
                     y="0.5"
                     fill={color}
@@ -172,7 +166,7 @@ export function KundliChart({ kundli }: { kundli: KundliResult }) {
         <span className="chart-legend__item" key={p.id}>
           <span
             className="chart-legend__glyph"
-            style={{ color: PLANET_COLORS[p.id] ?? "#f2c94c" }}
+            style={{ color: PLANET_COLOR[p.id] ?? "var(--planet-sun)" }}
           >
             {glyphFor(p.id, p.symbol)}
           </span>

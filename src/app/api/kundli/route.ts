@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { computeKundli, getUtcOffsetMinutes } from "@/lib/kundli";
+import { isGender } from "@/lib/types";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
       lng: Number(lng),
       timezone,
       utcOffsetMinutes: offsetMinutes,
+      gender: isGender(body.gender) ? body.gender : undefined,
     });
 
     // A "match" chart is a second person for kundli-matching — do NOT overwrite

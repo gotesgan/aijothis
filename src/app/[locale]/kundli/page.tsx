@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { KundliChart } from "@/components/kundli-chart";
+import { BackButton } from "@/components/back-button";
 import { useKundli } from "@/hooks/use-kundli";
 import { loadKundli } from "@/lib/storage";
 import { NAKSHATRA, PLANET, RASHI } from "@/lib/local-names";
@@ -57,14 +58,7 @@ export default function KundliPage() {
           padding: "18px 0 10px",
         }}
       >
-        <button
-          className="faint"
-          style={{ fontSize: 22 }}
-          onClick={() => router.back()}
-          aria-label="back"
-        >
-          ‹
-        </button>
+        <BackButton />
         <div>
           <h1
             style={{
@@ -177,7 +171,7 @@ export default function KundliPage() {
           </div>
           {currentDasha && (
             <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
-              {t("asha")}: {planet[currentDasha.lord.toLowerCase()] ?? currentDasha.lord}
+              {t("dashaNow")}: {planet[currentDasha.lord.toLowerCase()] ?? currentDasha.lord}
             </p>
           )}
         </AccordionSection>

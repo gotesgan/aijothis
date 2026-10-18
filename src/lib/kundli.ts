@@ -224,6 +224,7 @@ export async function computeKundli(
       lat: input.lat,
       lng: input.lng,
       timezone: input.timezone,
+      gender: input.gender,
     },
     computed: {
       julianDay: jd,

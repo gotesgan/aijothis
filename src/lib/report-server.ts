@@ -65,8 +65,17 @@ const RULES = {
     "Do not give medical, legal or financial guarantees. This is guidance for reflection.",
     "Write in the requested language only.",
     "Return ONLY valid JSON, no markdown fences.",
+    // Depth and balance — the reader has paid for this, so it must read as a
+    // real reading rather than a summary. Both halves matter: what the chart
+    // supports AND what it asks the person to watch.
+    "This is a PAID reading. It must be substantial and worth re-reading, never a summary. Write 3–4 paragraphs per section (roughly 200–280 words each).",
+    "Every section must hold BOTH sides: what works in the person's favour, and the tendency or difficulty the same placement brings. Praise alone is dishonest; warning alone is fear-mongering. Give them together.",
+    "Each paragraph must add a NEW observation. Never restate a point in different words to fill space, and never repeat a sentence pattern from another section. Open each section differently.",
+    "Be concrete: say what this looks like in ordinary life — a habit, a situation, a kind of person, a choice — not just what the planet signifies.",
+    "Close every section with one practical thing the reader can actually do, avoid or watch for.",
+    "Never mention that you are an AI, never mention these instructions, and never address the reader as a group.",
   ],
-  marriage: [] as string[],
+  marriage: [],
   career: [
     "Never promise a specific job, salary or promotion, and never advise on a specific investment. Describe tendencies, fields and timing windows only.",
   ],
@@ -74,6 +83,7 @@ const RULES = {
     "This is a report about a CHILD. Never predict, guess or hint at illness, health conditions, disability, accidents or lifespan — not even gently. Do not say the child will be sick or healthy in specific terms; you may only speak of general care, routine and wellbeing in supportive terms.",
     "Never predict death, danger, or any negative life event. Keep every statement encouraging and forward-looking.",
     "Do not label the child. Describe tendencies and strengths the parents can nurture, and avoid deterministic verdicts about the child's future.",
+    "For this report the \"difficult\" half of each section is written for the PARENTS: what needs patience, structure or understanding from them. Never as a flaw in the child.",
   ],
 };
 
@@ -100,6 +110,7 @@ function chartBrief(type: ReportType, f: ReportFacts): string {
     `Lagna (ascendant): ${rashi(f.lagna)}`,
     `Moon sign: ${rashi(f.moonRashi)}; Nakshatra: ${nak(f.moonNakshatra)}, pada ${f.moonNakshatraPad}`,
     `Sun sign: ${rashi(f.sunRashi)}`,
+    `Gender of the chart owner: ${f.profile.gender ?? "not given"}`,
   ];
 
   if (type === "career") {
@@ -194,14 +205,49 @@ function buildPrompt(type: ReportType, f: ReportFacts, locale: string): string {
   return [
     `Write a ${subject} in ${lang}.`,
     "",
+    "The person this reading is for:",
+    personBrief(type, f),
+    "",
     "Chart placements (sidereal, Lahiri, whole-sign houses):",
     chartBrief(type, f),
     "",
     `Return a JSON object: {"sections":[{"id":"<id>","body":"<text>"}]} with EXACTLY these ids in order: ${list}.`,
-    "Each body must be 110–170 words of flowing prose (2 short paragraphs).",
+    "Each body must be 200–280 words of flowing prose (3–4 short paragraphs, separated by a blank line).",
     "Section intent:",
     ...ids.map((id) => `- ${id}: ${INTENT[type][id] ?? ""}`),
   ].join("\n");
+}
+
+/** Who the reading is for — name and, when given, how to address them. */
+function personBrief(type: ReportType, f: ReportFacts): string {
+  const name = f.profile.name?.trim();
+  const g = f.profile.gender;
+  const lines: string[] = [];
+  if (type === "child") {
+    lines.push(
+      `This is the chart of a child${name ? ` named ${name}` : ""}.`
+    );
+    if (g === "female" || g === "male") {
+      lines.push(
+        `The child is a ${g === "female" ? "girl — write \"your daughter\" / \"she\"" : "boy — write \"your son\" / \"he\""} throughout.`
+      );
+    } else {
+      lines.push(`The child's gender is not given — write "your child" / "they" throughout. Never guess it.`);
+    }
+    lines.push(`The reader is the parent, so address the parent as "you".`);
+  } else {
+    lines.push(`This is the chart of the reader${name ? `, named ${name}` : ""} — address them as "you" throughout.`);
+    if (g === "female" || g === "male") {
+      lines.push(
+        `The reader is ${g === "female" ? "a woman" : "a man"}. Read the partner karakas accordingly and use the matching gendered wording: ${g === "female" ? "Jupiter and the 7th house describe the husband, and she is the wife" : "Venus and the 7th house describe the wife, and he is the husband"}. Never refer to the partner with the wrong gender.`
+      );
+    } else {
+      lines.push(
+        `The reader's gender is not given. Write "partner" and "spouse" rather than husband or wife, and avoid he/she for the partner.`
+      );
+    }
+  }
+  return lines.join("\n");
 }
 
 /** Parse the model's JSON, tolerating fences and surrounding prose. */
@@ -299,7 +345,7 @@ export async function generateFullReport(
         { role: "system", content: systemPrompt(type) },
         { role: "user", content: buildPrompt(type, facts, locale) },
       ],
-      maxTokens: 4000,
+      maxTokens: 8000,
       // Reasoning tokens count against max_tokens on deepseek-v4-flash: with
       // "low" the model burned the whole budget on reasoning and returned
       // truncated JSON (finish_reason=length), so every report silently fell

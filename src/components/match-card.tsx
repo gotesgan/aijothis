@@ -28,6 +28,7 @@ export function MatchCard({
   onCancel: () => void;
 }) {
   const t = useTranslations("Match");
+  const tc = useTranslations("Common");
   const locale = useLocale();
 
   const [name, setName] = useState(prefill?.name ?? "");
@@ -67,10 +68,14 @@ export function MatchCard({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Failed");
+      if (!res.ok) {
+        console.error("match_failed", data);
+        throw new Error(tc("errorGeneric"));
+      }
       onComplete(data.kundli as KundliResult);
     } catch (err) {
-      setError((err as Error).message ?? "Something went wrong.");
+      console.error(err);
+      setError(tc("errorGeneric"));
       setSubmitting(false);
     }
   }
@@ -130,7 +135,7 @@ export function MatchCard({
         onEdit={() => setSelected(null)}
       />
 
-      {error && <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "var(--error-text)", fontSize: 13 }}>{error}</p>}
 
       <div className="match-card__actions">
         <button

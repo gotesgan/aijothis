@@ -105,15 +105,15 @@ function fmtTime(iso: string) {
 function HeroNumeral({ value, label, sub, accent }: { value: string; label: string; sub: string; accent?: boolean }) {
   return (
     <div className="relative min-w-0">
-      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#71688a]">{label}</div>
+      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">{label}</div>
       <div
         className={`mt-1 truncate font-[var(--stack-display)] text-3xl font-medium leading-none tracking-tight sm:text-4xl ${
-          accent ? "text-[#ffb84d]" : "text-[#f7f1e5]"
+          accent ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]"
         }`}
       >
         {value}
       </div>
-      <div className="mt-1.5 truncate text-[11px] text-[#b4aac4]">{sub}</div>
+      <div className="mt-1.5 truncate text-[11px] text-[var(--text-muted)]">{sub}</div>
     </div>
   );
 }
@@ -124,7 +124,7 @@ function Delta({ value }: { value: number }) {
   return (
     <span
       className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-        up ? "bg-[#f2c94c]/10 text-[#f2c94c]" : "bg-[#e0522e]/10 text-[#e0522e]"
+        up ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]" : "bg-[var(--error-text)]/10 text-[var(--error-text)]"
       }`}
     >
       <Icon className="h-3 w-3" />
@@ -150,16 +150,16 @@ function Kpi({
   delta?: number;
 }) {
   return (
-    <div className="group rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 transition-colors hover:border-[#ffb84d]/30 hover:bg-white/[0.05]">
+    <div className="group rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-white/[0.05]">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-[#71688a]">{label}</span>
-        {icon && <span className="text-[#71688a] transition-colors group-hover:text-[#ffb84d]">{icon}</span>}
+        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{label}</span>
+        {icon && <span className="text-[var(--text-muted)] transition-colors group-hover:text-[var(--brand-primary)]">{icon}</span>}
       </div>
       <div className="mt-2 flex items-baseline gap-2">
-        <span className="font-[var(--stack-display)] text-2xl font-medium text-[#f7f1e5]">{value}</span>
+        <span className="font-[var(--stack-display)] text-2xl font-medium text-[var(--text-primary)]">{value}</span>
         {typeof delta === "number" && <Delta value={delta} />}
       </div>
-      {sub && <div className="mt-1 text-[11px] text-[#71688a]">{sub}</div>}
+      {sub && <div className="mt-1 text-[11px] text-[var(--text-muted)]">{sub}</div>}
     </div>
   );
 }
@@ -187,8 +187,8 @@ function RevenueChart({ daily }: { daily: Stats["revenue"]["daily"] }) {
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Revenue by day">
         <defs>
           <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffb84d" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#ffb84d" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--brand-primary)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--brand-primary)" stopOpacity="0" />
           </linearGradient>
         </defs>
         {[0.25, 0.5, 0.75].map((f) => (
@@ -198,7 +198,7 @@ function RevenueChart({ daily }: { daily: Stats["revenue"]["daily"] }) {
             x2={W - pad}
             y1={H - pad - f * (H - pad * 2)}
             y2={H - pad - f * (H - pad * 2)}
-            stroke="rgba(247,241,229,0.06)"
+            stroke="rgba(var(--text-primary-rgb),0.06)"
             strokeWidth="1"
           />
         ))}
@@ -206,18 +206,18 @@ function RevenueChart({ daily }: { daily: Stats["revenue"]["daily"] }) {
         <polyline
           points={line}
           fill="none"
-          stroke="#ffb84d"
+          stroke="var(--brand-primary)"
           strokeWidth="2.5"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
         {pts.map((p) => (
-          <circle key={p.date} cx={p.x} cy={p.y} r="3" fill="#0d0a16" stroke="#ffb84d" strokeWidth="1.5">
+          <circle key={p.date} cx={p.x} cy={p.y} r="3" fill="var(--background)" stroke="var(--brand-primary)" strokeWidth="1.5">
             <title>{`${p.date}: ${inr(p.revenueInr)} (${p.orders} orders)`}</title>
           </circle>
         ))}
       </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-[#71688a]">
+      <div className="mt-1 flex justify-between text-[10px] text-[var(--text-muted)]">
         <span>{pts[0].date.slice(5).replace("-", "/")}</span>
         <span>{pts[pts.length - 1].date.slice(5).replace("-", "/")}</span>
       </div>
@@ -234,14 +234,14 @@ function PackSplit({ byPack }: { byPack: Stats["revenue"]["byPack"] }) {
       {byPack.map((p) => (
         <div key={p.packId}>
           <div className="mb-1 flex items-center justify-between text-[11px]">
-            <span className="text-[#b4aac4]">{packLabel(p.packId)}</span>
-            <span className="text-[#f7f1e5]">
-              {inr(p.revenueInr)} <span className="text-[#71688a]">· {num(p.orders)} ord</span>
+            <span className="text-[var(--text-muted)]">{packLabel(p.packId)}</span>
+            <span className="text-[var(--text-primary)]">
+              {inr(p.revenueInr)} <span className="text-[var(--text-muted)]">· {num(p.orders)} ord</span>
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#9a6b1f] to-[#ffb84d]"
+              className="h-full rounded-full bg-[var(--brand-primary)]"
               style={{ width: `${(p.revenueInr / total) * 100}%` }}
             />
           </div>
@@ -262,7 +262,7 @@ function CurrencySplit({ byCurrency }: { byCurrency: Stats["revenue"]["byCurrenc
   const foreign = byCurrency.filter((c) => c.currency !== "INR");
   if (foreign.length === 0) {
     return (
-      <p className="text-[11px] text-[#71688a]">
+      <p className="text-[11px] text-[var(--text-muted)]">
         No USD/EUR orders yet — all revenue is INR.
       </p>
     );
@@ -274,14 +274,14 @@ function CurrencySplit({ byCurrency }: { byCurrency: Stats["revenue"]["byCurrenc
           key={c.currency}
           className="flex items-center justify-between text-[11px]"
         >
-          <span className="text-[#b4aac4]">
+          <span className="text-[var(--text-muted)]">
             {c.currency} · last 30d
           </span>
-          <span className="text-[#f7f1e5]">
+          <span className="text-[var(--text-primary)]">
             {c.last30 === null
               ? "unmapped currency"
               : `${c.currency} ${c.last30.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}{" "}
-            <span className="text-[#71688a]">
+            <span className="text-[var(--text-muted)]">
               · {num(c.orders)} ord all-time
             </span>
           </span>
@@ -309,18 +309,18 @@ function Funnel({ funnel }: { funnel: Stats["funnel"] }) {
         return (
           <div key={s.label}>
             <div className="mb-1 flex items-center justify-between text-[11px]">
-              <span className="text-[#b4aac4]">{s.label}</span>
+              <span className="text-[var(--text-muted)]">{s.label}</span>
               <span className="flex items-center gap-2">
                 {drop !== null && drop > 0 && (
-                  <span className="text-[#71688a]">−{drop}%</span>
+                  <span className="text-[var(--text-muted)]">−{drop}%</span>
                 )}
-                <span className="font-medium text-[#f7f1e5]">{num(s.value)}</span>
-                <span className="w-9 text-right text-[#71688a]">{pct}%</span>
+                <span className="font-medium text-[var(--text-primary)]">{num(s.value)}</span>
+                <span className="w-9 text-right text-[var(--text-muted)]">{pct}%</span>
               </span>
             </div>
             <div className="h-3 overflow-hidden rounded-full bg-white/[0.06]">
               <div
-                className={`h-full rounded-full ${i === steps.length - 1 ? "bg-[#f2c94c]" : "bg-[#ffb84d]/80"}`}
+                className={`h-full rounded-full ${i === steps.length - 1 ? "bg-[var(--brand-primary)]" : "bg-[var(--brand-primary)]/80"}`}
                 style={{ width: `${Math.max(1, (s.value / max) * 100)}%` }}
               />
             </div>
@@ -345,11 +345,11 @@ function LangSplit({ lang }: { lang: Stats["users"]["lang"] }) {
     <div className="space-y-2.5">
       {rows.map((r) => (
         <div key={r.key} className="flex items-center gap-3">
-          <span className="w-16 shrink-0 text-[11px] text-[#b4aac4]">{r.label}</span>
+          <span className="w-16 shrink-0 text-[11px] text-[var(--text-muted)]">{r.label}</span>
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-            <div className="h-full rounded-full bg-[#f2c94c]/70" style={{ width: `${(lang[r.key] / total) * 100}%` }} />
+            <div className="h-full rounded-full bg-[var(--brand-primary)]/70" style={{ width: `${(lang[r.key] / total) * 100}%` }} />
           </div>
-          <span className="w-8 shrink-0 text-right text-[11px] text-[#71688a]">{num(lang[r.key])}</span>
+          <span className="w-8 shrink-0 text-right text-[11px] text-[var(--text-muted)]">{num(lang[r.key])}</span>
         </div>
       ))}
     </div>
@@ -361,10 +361,10 @@ function LangSplit({ lang }: { lang: Stats["users"]["lang"] }) {
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="flex items-center justify-between border-b border-white/[0.05] py-2.5 last:border-0">
-      <span className="text-[11px] text-[#b4aac4]">{label}</span>
+      <span className="text-[11px] text-[var(--text-muted)]">{label}</span>
       <div className="flex items-baseline gap-2">
-        {hint && <span className="text-[10px] text-[#71688a]">{hint}</span>}
-        <span className="text-sm font-medium text-[#f7f1e5]">{value}</span>
+        {hint && <span className="text-[10px] text-[var(--text-muted)]">{hint}</span>}
+        <span className="text-sm font-medium text-[var(--text-primary)]">{value}</span>
       </div>
     </div>
   );
@@ -373,7 +373,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
-      <h2 className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ffb84d]">
+      <h2 className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]">
         {icon}
         {title}
       </h2>
@@ -388,20 +388,20 @@ function GoalBar({ todayInr }: { todayInr: number }) {
   const goal = 150;
   const pct = Math.min(100, (todayInr / goal) * 100);
   return (
-    <div className="rounded-xl border border-[#ffb84d]/20 bg-gradient-to-r from-[#ffb84d]/[0.07] to-transparent p-4">
+    <div className="rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.07] p-4">
       <div className="mb-2 flex items-center justify-between text-[11px]">
-        <span className="uppercase tracking-wider text-[#b4aac4]">Today vs daily target</span>
-        <span className="font-medium text-[#ffb84d]">
-          {inr(todayInr)} <span className="text-[#71688a]">/ {inr(goal)}</span>
+        <span className="uppercase tracking-wider text-[var(--text-muted)]">Today vs daily target</span>
+        <span className="font-medium text-[var(--brand-primary)]">
+          {inr(todayInr)} <span className="text-[var(--text-muted)]">/ {inr(goal)}</span>
         </span>
       </div>
       <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#ffb84d] to-[#f2c94c] transition-all duration-700"
+          className="h-full rounded-full bg-[var(--brand-primary)] transition-all duration-700"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="mt-1.5 text-[10px] text-[#71688a]">{pct.toFixed(0)}% of goal · target = healthy ₹150/day</div>
+      <div className="mt-1.5 text-[10px] text-[var(--text-muted)]">{pct.toFixed(0)}% of goal · target = healthy ₹150/day</div>
     </div>
   );
 }
@@ -483,12 +483,12 @@ export default function AdminPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0d0a16]">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#ffb84d]/20 border-t-[#ffb84d]" />
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--brand-primary)]/20 border-t-[var(--brand-primary)]" />
           </div>
-          <span className="text-xs text-[#71688a]">Reading the charts…</span>
+          <span className="text-xs text-[var(--text-muted)]">Reading the charts…</span>
         </div>
       </div>
     );
@@ -496,15 +496,15 @@ export default function AdminPage() {
 
   if (status === "needs_pass" || status === "error") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0d0a16] px-4">
-        <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#141027] p-7 shadow-[0_18px_60px_rgba(0,0,0,0.5)]">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4">
+        <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[var(--surface)] p-7 shadow-[0_18px_60px_rgba(0,0,0,0.5)]">
           <div className="mb-5 flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#ffb84d]/10">
-              <BarChart3 className="h-4.5 w-4.5 text-[#ffb84d]" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10">
+              <BarChart3 className="h-4.5 w-4.5 text-[var(--brand-primary)]" />
             </div>
             <div>
-              <div className="font-[var(--stack-display)] text-sm font-medium text-[#f7f1e5]">Control Center</div>
-              <div className="text-[10px] uppercase tracking-wider text-[#71688a]">Jyotish — private</div>
+              <div className="font-[var(--stack-display)] text-sm font-medium text-[var(--text-primary)]">Control Center</div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Jyotish — private</div>
             </div>
           </div>
           <form onSubmit={submit} className="space-y-3">
@@ -515,7 +515,7 @@ export default function AdminPage() {
               placeholder="Username"
               autoFocus
               autoComplete="username"
-              className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-[#f7f1e5] outline-none transition-colors placeholder:text-[#71688a] focus:border-[#ffb84d]"
+              className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
             />
             <input
               type="password"
@@ -523,12 +523,12 @@ export default function AdminPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               autoComplete="current-password"
-              className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-[#f7f1e5] outline-none transition-colors placeholder:text-[#71688a] focus:border-[#ffb84d]"
+              className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
             />
-            {error && <div className="text-xs text-[#e0522e]">{error}</div>}
+            {error && <div className="text-xs text-[var(--error-text)]">{error}</div>}
             <button
               type="submit"
-              className="w-full rounded-lg bg-[#ffb84d] py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#f2c94c]"
+              className="w-full rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-[var(--brand-on-primary)] transition-colors hover:bg-[var(--brand-primary)]"
             >
               Enter control center
             </button>
@@ -543,31 +543,31 @@ export default function AdminPage() {
   const last7Orders = revenue.daily.reduce((s, d) => s + d.orders, 0);
 
   return (
-    <div className="relative min-h-screen bg-[#0d0a16] text-[#f7f1e5]">
+    <div className="relative min-h-screen bg-[var(--background)] text-[var(--text-primary)]">
       {/* ambient backdrop */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0"
         style={{
           background:
-            "radial-gradient(60rem 30rem at 80% -10%, rgba(255,184,77,0.06), transparent 60%), radial-gradient(50rem 30rem at 10% 110%, rgba(242,201,76,0.05), transparent 60%)",
+            "radial-gradient(60rem 30rem at 80% -10%, rgba(var(--brand-rgb),0.06), transparent 60%), radial-gradient(50rem 30rem at 10% 110%, rgba(var(--brand-rgb),0.05), transparent 60%)",
         }}
       />
       <div className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6">
         {/* header */}
         <header className="mb-7 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#ffb84d]/25 bg-[#ffb84d]/[0.08]">
-              <BarChart3 className="h-5 w-5 text-[#ffb84d]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.08]">
+              <BarChart3 className="h-5 w-5 text-[var(--brand-primary)]" />
             </div>
             <div>
               <h1 className="font-[var(--stack-display)] text-lg font-medium leading-none">
-                Jyotish <span className="text-[#ffb84d]">Control Center</span>
+                Jyotish <span className="text-[var(--brand-primary)]">Control Center</span>
               </h1>
-              <div className="mt-1 flex items-center gap-2 text-[11px] text-[#71688a]">
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f2c94c] opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f2c94c]" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--brand-primary)] opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--brand-primary)]" />
                 </span>
                 Live · updated {fmtTime(stats.generatedAt)} IST
               </div>
@@ -576,13 +576,13 @@ export default function AdminPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setRefreshTick((x) => x + 1)}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#b4aac4] transition-colors hover:border-[#ffb84d]/40 hover:text-[#ffb84d]"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]"
             >
               <RefreshCw className="h-3.5 w-3.5" /> Refresh
             </button>
             <button
               onClick={logout}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#b4aac4] transition-colors hover:border-[#e0522e]/40 hover:text-[#e0522e]"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--error-text)]/40 hover:text-[var(--error-text)]"
             >
               <LogOut className="h-3.5 w-3.5" /> Exit
             </button>
@@ -661,7 +661,7 @@ export default function AdminPage() {
                 <Stat label="Paying users" value={num(users.payingUsers)} />
               </div>
               <div className="mt-4 sm:mt-0">
-                <div className="mb-2 text-[11px] text-[#b4aac4]">Language split</div>
+                <div className="mb-2 text-[11px] text-[var(--text-muted)]">Language split</div>
                 <LangSplit lang={users.lang} />
               </div>
             </div>
@@ -669,14 +669,14 @@ export default function AdminPage() {
 
           <Section title="Funnel" icon={<Sparkles className="h-3.5 w-3.5" />}>
             <Funnel funnel={funnel} />
-            <div className="mt-3 flex gap-4 border-t border-white/[0.05] pt-3 text-[11px] text-[#71688a]">
+            <div className="mt-3 flex gap-4 border-t border-white/[0.05] pt-3 text-[11px] text-[var(--text-muted)]">
               <span>
                 details→paid{" "}
-                <span className="text-[#f7f1e5]">{Math.round((funnel.paid / Math.max(1, funnel.withDetails)) * 100)}%</span>
+                <span className="text-[var(--text-primary)]">{Math.round((funnel.paid / Math.max(1, funnel.withDetails)) * 100)}%</span>
               </span>
               <span>
                 chat→paid{" "}
-                <span className="text-[#f7f1e5]">{Math.round((funnel.paid / Math.max(1, funnel.withChat)) * 100)}%</span>
+                <span className="text-[var(--text-primary)]">{Math.round((funnel.paid / Math.max(1, funnel.withChat)) * 100)}%</span>
               </span>
             </div>
           </Section>
@@ -700,7 +700,7 @@ export default function AdminPage() {
               label="Repeat rate"
               value={`${Math.round((retention.repeatPayers / Math.max(1, retention.payers)) * 100)}%`}
             />
-            <div className="mt-2 text-[10px] text-[#71688a]">Cross-day = paid on ≥2 distinct days</div>
+            <div className="mt-2 text-[10px] text-[var(--text-muted)]">Cross-day = paid on ≥2 distinct days</div>
           </Section>
 
           <Section title="Orders health" icon={<Activity className="h-3.5 w-3.5" />}>
@@ -708,7 +708,7 @@ export default function AdminPage() {
             <Stat label="Pending (created)" value={num(revenue.orderHealth.created)} />
             <Stat label="Failed" value={num(revenue.orderHealth.failed)} />
             <Stat label="Simulated (test)" value={num(revenue.orderHealth.simulated)} />
-            <div className="mt-2 text-[10px] text-[#71688a]">Chat content is never shown here</div>
+            <div className="mt-2 text-[10px] text-[var(--text-muted)]">Chat content is never shown here</div>
           </Section>
         </div>
 

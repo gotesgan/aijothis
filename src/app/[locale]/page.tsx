@@ -9,7 +9,7 @@ import { Link } from "@/i18n/navigation";
 import { SITE_URL } from "@/lib/site";
 import { alternatesFor } from "@/lib/seo";
 import { BLOG_POSTS } from "@/lib/blog";
-import { Sun, ChevronRight } from "lucide-react";
+import { Sun } from "lucide-react";
 import { ResumeGate } from "@/components/resume-gate";
 import type { Metadata } from "next";
 
@@ -117,7 +117,7 @@ export default async function HomePage({
   ];
 
   return (
-    <div className="screen">
+    <div className="screen home">
       {/* A returning user already has a chart on their profile — skip the
           birth-details form they have demonstrably completed once already. */}
       <ResumeGate mode="redirect" />
@@ -128,51 +128,41 @@ export default async function HomePage({
       <Header />
 
       <section className="hero">
-        <NavagrahaMandala />
-        <p className="hero__brand">{t("brand")}</p>
-        <p className="hero__brand-tag">{t("brandTag")}</p>
-        <span className="eyebrow">
-          <span className="eyebrow__om">ॐ</span>
-          {t("eyebrow")}
-        </span>
-        <h1 className="hero__title">
-          {t("title")} <em>{t("titleHighlight")}</em>
-        </h1>
-        <p className="hero__sub">{t("subtitle")}</p>
+        <div className="hero__copy">
+          <span className="eyebrow">{t("eyebrow")}</span>
+          <h1 className="hero__title">
+            {t("title")} {t("titleHighlight")}
+          </h1>
+          <p className="hero__sub">{t("subtitle")}</p>
 
-        <div className="hero__cta">
-          <Link href="/details" className="btn btn--gold btn--lg">
-            {t("cta")}
-          </Link>
-          <span className="hero__cta-note">
-            <span className="badge badge--live">●</span>
-            {t("stats1Value")} · {t("stats1Label")}
-          </span>
-        </div>
-
-        {/* tappable question chips — carry the question into the funnel */}
-        <div className="hero-chips">
-          {[t("chip1"), t("chip2"), t("chip3")].map((q) => (
-            <Link
-              key={q}
-              href={{ pathname: "/details", query: { q } }}
-              className="chip"
-            >
-              {q}
+          <div className="hero__cta">
+            <Link href="/details" className="btn btn--gold btn--lg">
+              {t("cta")}
             </Link>
-          ))}
+            <span className="hero__cta-note">{t("ctaNote")}</span>
+          </div>
+
+          {/* tappable question chips — carry the question into the funnel */}
+          <div className="hero-chips">
+            {[t("chip1"), t("chip2"), t("chip3")].map((q) => (
+              <Link
+                key={q}
+                href={{ pathname: "/details", query: { q } }}
+                className="chip"
+              >
+                {q}
+              </Link>
+            ))}
+          </div>
+
+          <p className="hero__purpose">{t("purpose")}</p>
         </div>
 
-        {/* Supporting detail follows the action: on mobile, asking Arya stays
-            visible without scrolling past explanatory copy or the preview. */}
-        <p className="hero__purpose">{t("purpose")}</p>
-
-        {/* sample Arya chat bubble — sets expectation it's a chat */}
-        <div className="chat-preview">
-          <span className="chat-preview__avatar">
-            <Image src="/arays.png" alt="AI" fill sizes="40px" className="avatar-img" />
-          </span>
-          <div className="msg msg--ai">{t("sampleBubble")}</div>
+        {/* The rotating navagraha dial is the page's one signature graphic. On
+            desktop it sits beside the headline instead of on top of it, so the
+            copy leads and the ornament supports it. */}
+        <div className="hero__visual">
+          <NavagrahaMandala />
         </div>
       </section>
 
@@ -191,26 +181,31 @@ export default async function HomePage({
         </div>
       </section>
 
-      <Link href="/today" className="card reading-teaser">
-        <span className="reading-teaser__icon">
-          <Sun size={20} />
-        </span>
-        <span>
-          <span className="reading-teaser__title">{tt("teaserTitle")}</span>
-          <span className="reading-teaser__sub">{tt("teaserSub")}</span>
-        </span>
-        <ChevronRight size={20} className="reading-teaser__arrow" />
-      </Link>
+      <div className="home-split">
+        <Link href="/today" className="card reading-teaser">
+          <span className="reading-teaser__icon">
+            <Sun size={20} />
+          </span>
+          <span className="reading-teaser__body">
+            <span className="reading-teaser__title">{tt("teaserTitle")}</span>
+            <span className="reading-teaser__sub">{tt("teaserSub")}</span>
+            <span className="reading-teaser__cta">{tt("teaserCta")}</span>
+          </span>
+        </Link>
 
-      <div className="persona">
-        <span className="persona__avatar">
-          <Image src="/arays.png" alt="AI" fill sizes="64px" className="avatar-img" />
-        </span>
-        <div className="persona__body">
-          <span className="persona__name">{t("personaName")}</span>
-          <span className="persona__meta">{t("personaMeta")}</span>
-        </div>
-        <span className="badge badge--ai">{t("aiBadge")}</span>
+        <section className="meet">
+          <h2 className="section-title">{t("meetTitle")}</h2>
+          <div className="meet__row">
+            <span className="meet__avatar">
+              <Image src="/arays.png" alt="" fill sizes="56px" className="avatar-img" />
+            </span>
+            <span className="meet__name">{t("personaName")}</span>
+            <span className="badge badge--ai">{t("aiBadge")}</span>
+          </div>
+          <p className="meet__sub">{t("personaMeta")}</p>
+          {/* One real line from Arya — the chat is the product, so show it. */}
+          <div className="msg msg--ai meet__bubble">{t("sampleBubble")}</div>
+        </section>
       </div>
 
       <section className="how">
@@ -229,12 +224,18 @@ export default async function HomePage({
       </section>
 
       {/* SEO content — real substance for Google to rank (kundli, nakshatra,
-          vedic astrology, marriage timing long-tail queries). */}
+          vedic astrology, marriage timing long-tail queries). The long-form
+          prose stays in the DOM (Google indexes collapsed content, and the
+          FAQPage JSON-LD already relies on that) but sits behind a
+          disclosure so the page reads as a product, not an essay. */}
       <section className="seo-content">
         <h2 className="section-title">{t("seoTitle")}</h2>
         <p className="seo-content__p">{t("seoIntro")}</p>
-        <p className="seo-content__p">{t("seoBody1")}</p>
-        <p className="seo-content__p">{t("seoBody2")}</p>
+        <details className="seo-more">
+          <summary className="seo-more__summary">{t("seoMore")}</summary>
+          <p className="seo-content__p">{t("seoBody1")}</p>
+          <p className="seo-content__p">{t("seoBody2")}</p>
+        </details>
       </section>
 
       <section className="faq">
@@ -273,11 +274,9 @@ export default async function HomePage({
         <span className="legal-links__dot">·</span>
         <Link href="/legal/terms" className="legal-links__item">{lt("terms")}</Link>
         <span className="legal-links__dot">·</span>
-        <Link href="/blog" className="legal-links__item">Blog</Link>
+        <Link href="/blog" className="legal-links__item">{lt("blog")}</Link>
         <span className="legal-links__dot">·</span>
-        <Link href="/sitemap" className="legal-links__item">Sitemap</Link>
-        <span className="legal-links__dot">·</span>
-        <span className="legal-links__item faint">{t("stats2Value")} users</span>
+        <Link href="/sitemap" className="legal-links__item">{lt("sitemap")}</Link>
         <span className="legal-links__dot">·</span>
         {/* Withdrawal has to be as easy as granting. */}
         <ConsentSettingsLink />
