@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { computeKundli, getUtcOffsetMinutes } from "@/lib/kundli";
-import { buildFacts, reportPackId, REPORT_PRICE } from "@/lib/report";
+import {
+  buildFacts,
+  isReportType,
+  reportPackId,
+  REPORT_PRICES,
+  type ReportType,
+} from "@/lib/report";
 import {
   generateFullReport,
   getStoredReport,
@@ -17,18 +23,26 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/report
  *
- * stage "teaser" → free. Computes the chart and returns the raw marriage
- * placements the client renders as the teaser. No payment, no LLM, instant.
+ * Body carries `type` ("marriage" | "career" | "child", default "marriage") so
+ * one endpoint serves all three reports — the type picks the price, the pack id
+ * and the section set. Everything else (chart computation, profile persistence,
+ * purchase gate, persistence) is shared.
  *
- * stage "full" → requires a settled marriage-report order for this device.
- * Runs the LLM narrative (falls back to a deterministic report) so a verified
+ * stage "teaser" → free. Computes the chart and returns the raw placements the
+ * client renders as the teaser. No payment, no LLM, instant.
+ *
+ * stage "full" → requires a settled order for this device + report type. Runs
+ * the LLM narrative (falls back to a deterministic report) so a verified
  * payment is never left with an empty page.
+ *
+ * stage "download" → persists the rendered narrative (purchase-gated).
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "invalid_json" }, { status: 400 });
 
   const { name, date, time, place, lat, lng, timezone, lang, stage } = body;
+  const type: ReportType = isReportType(body.type) ? body.type : "marriage";
   if (!date || !time || lat == null || lng == null || !timezone) {
     return NextResponse.json({ error: "missing_birth_fields" }, { status: 400 });
   }
@@ -85,30 +99,31 @@ export async function POST(request: Request) {
     }
   }
 
-  if (stage !== "full") {
-    // The teaser is free. It also reports whether this device already owns the
+  if (stage !== "full" && stage !== "download") {
+    // The teaser is free. It also reports whether this device already owns this
     // report, so a returning buyer sees "view your report" instead of being
     // asked to pay twice. One indexed read; no LLM.
     const currency = REGION_CURRENCY[resolveRegionFromRequest(request)];
-    const purchased = deviceId ? await hasReportPurchase(deviceId) : false;
+    const purchased = deviceId ? await hasReportPurchase(deviceId, type) : false;
     return NextResponse.json({
       facts: buildFacts(kundli),
-      price: REPORT_PRICE[currency],
+      price: REPORT_PRICES[type][currency],
       currency,
       purchased,
+      type,
     });
   }
 
-  // Paid stage. Device-scoped and settled-order-scoped.
+  // Paid stages. Device-scoped and settled-order-scoped.
   if (!deviceId) {
     return NextResponse.json({ error: "missing_device" }, { status: 400 });
   }
-  if (!(await hasReportPurchase(deviceId))) {
+  if (!(await hasReportPurchase(deviceId, type))) {
     return NextResponse.json({ error: "not_purchased" }, { status: 402 });
   }
 
   const currency = REGION_CURRENCY[resolveRegionFromRequest(request)];
-  const packId = reportPackId(currency);
+  const packId = reportPackId(type, currency);
 
   // Download/handoff: persist the rendered narrative so a re-visit is re-served
   // the same prose (and the chat can answer from it) rather than paying for a
@@ -118,6 +133,7 @@ export async function POST(request: Request) {
       deviceId,
       packId,
       locale: String(lang ?? "en"),
+      type,
       facts: buildFacts(kundli),
       sections: Array.isArray(body.sections) ? body.sections : [],
     });
@@ -126,7 +142,8 @@ export async function POST(request: Request) {
 
   // Re-use a stored report when one exists; otherwise generate (and the client
   // will persist it on download). Guarantees the same text on every view.
-  const stored = await getStoredReport(deviceId, packId);
-  const sections = stored ?? (await generateFullReport(kundli, String(lang ?? "en")));
+  const stored = await getStoredReport(deviceId, packId, type);
+  const sections =
+    stored ?? (await generateFullReport(kundli, String(lang ?? "en"), type));
   return NextResponse.json({ facts: buildFacts(kundli), sections });
 }

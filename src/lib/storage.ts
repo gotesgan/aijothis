@@ -3,7 +3,7 @@ import type { ReportCtx } from "./report";
 
 export const KUNDLI_KEY = "jyotish_kundli_v1";
 export const DEVICE_KEY = "jyotish_device_id_v1";
-/** The last paid marriage report this device holds, so the chat can answer from it. */
+/** The last paid report this device holds (any type), so the chat can answer from it. */
 export const REPORT_CTX_KEY = "jyotish_report_ctx_v1";
 
 export function saveKundli(kundli: KundliResult): void {
