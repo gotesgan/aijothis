@@ -174,7 +174,8 @@ console.log("\n6. the free limit is enforced by the server");
         break;
       }
     }
-    check("server blocks the 6th free question", blocked, 6);
+    // FREE_LIMIT server-side is 1 (src/lib/quota.ts): Q1 free, Q2 blocked.
+    check("server blocks the question after the free limit", blocked, 2);
   } else {
     console.log("  · quota assertions skipped (kundli endpoint did not return a chart)");
   }
