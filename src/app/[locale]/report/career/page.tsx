@@ -2,9 +2,6 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Header } from "@/components/header";
 import { BackButton } from "@/components/back-button";
-import { REPORT_PRICES } from "@/lib/report";
-import { resolveCurrencyFromServer } from "@/lib/region-server";
-import { formatPrice } from "@/lib/money";
 import { AppNav } from "@/components/app-nav";
 import { ReportFlow } from "@/components/report-flow";
 import { Link } from "@/i18n/navigation";
@@ -33,8 +30,6 @@ export default async function CareerReportPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("CareerReport");
-  const tc = await getTranslations("Common");
-  const currency = await resolveCurrencyFromServer();
   const rt = await getTranslations("Reports");
   const baby = await getTranslations("BabyReport");
   const marriage = await getTranslations("Report");
@@ -50,12 +45,6 @@ export default async function CareerReportPage({
         <BackButton className="back-btn--doc" />
         <h1 className="page-title">{t("title")}</h1>
         <p className="page-lede">{t("subtitle")}</p>
-        <p className="doc-price">
-          <span className="doc-price__amount">
-            {formatPrice(REPORT_PRICES.career[currency], currency)}
-          </span>
-          <span className="doc-price__note">{tc("oneTime")}</span>
-        </p>
       </div>
 
       <ReportFlow type="career" />

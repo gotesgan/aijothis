@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { getDeviceId, saveReportCtx } from "@/lib/storage";
+import { getDeviceId, loadKundli, saveReportCtx } from "@/lib/storage";
 import { formatPrice, isCurrency, type Currency } from "@/lib/money";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import {
+  reportNamespace,
   reportPackId,
   REPORT_SECTIONS,
   type ReportFacts,
@@ -13,7 +14,7 @@ import {
   type ReportType,
 } from "@/lib/report";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
-import { ArrowRight, CalendarDays, Clock, Loader2, Lock, Download, MessageCircle } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock, Loader2, Lock, Download, MessageCircle, ScrollText } from "lucide-react";
 import { GenderField } from "./gender-field";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -27,11 +28,6 @@ function capturePostHog(
   if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
     posthog.capture(event, properties);
   }
-}
-
-/** The i18n namespace holding a report's own copy (title, sections, disclaimer). */
-export function reportNamespace(type: ReportType): string {
-  return type === "career" ? "CareerReport" : type === "child" ? "BabyReport" : "Report";
 }
 
 /** Loads Razorpay checkout and opens the payment sheet. Same pattern (and the
@@ -135,6 +131,67 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
   const effectiveTime = time || "12:00";
   const canSubmit = Boolean(name.trim()) && Boolean(date) && Boolean(selected) && !busy;
 
+  /**
+   * Already bought it? Open it, don't ask for the birth details again.
+   *
+   * A paid report used to be a dead end: revisiting the page always restarted
+   * at the form, so someone who had paid had to retype everything to see what
+   * they owned. The chart on this device already holds the birth details the
+   * report was generated from, so the correct behaviour is to load it.
+   *
+   * Runs once, and only when both facts are true: a settled order for this
+   * report type, and a chart to compute it from. Anything else falls through to
+   * the form, which is the honest default.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const stored = loadKundli();
+      if (!stored) return;
+      try {
+        const res = await fetch("/api/reports", {
+          headers: { "x-device-id": getDeviceId() },
+        });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          reports?: { type: string; purchased?: boolean }[];
+        };
+        const mine = data.reports?.find((r) => r.type === type);
+        if (cancelled || !mine?.purchased) return;
+        const p = stored.profile;
+        setName(p.name ?? "");
+        setGender(p.gender ?? "");
+        setDate(p.date);
+        setTime(p.time);
+        setSelected({
+          place: p.place,
+          lat: p.lat,
+          lng: p.lng,
+          timezone: p.timezone,
+        });
+        // Tell it to open rather than offer to buy again.
+        setPurchased(true);
+        await loadFull({
+          name: p.name ?? "",
+          date: p.date,
+          time: p.time,
+          place: p.place,
+          lat: p.lat,
+          lng: p.lng,
+          timezone: p.timezone,
+          gender: p.gender,
+        });
+      } catch {
+        // Fail soft: the form is still there.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Deliberately once per mount: this is a load, not a reaction to state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const rashi = (i: number) => RASHI[locale]?.[i] ?? RASHI.en[i] ?? String(i);
   const nak = (i: number) => NAKSHATRA[locale]?.[i] ?? NAKSHATRA.en[i] ?? String(i);
   const planet = (id: string) => PLANET[locale]?.[id.toLowerCase()] ?? id;
@@ -190,7 +247,7 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
   }
 
   /** Step 3 (after payment): fetch the full report. */
-  async function loadFull() {
+  async function loadFull(override?: Partial<ReturnType<typeof birthPayload>>) {
     setBusy(true);
     setNote("");
     try {
@@ -200,7 +257,7 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
           "Content-Type": "application/json",
           "x-device-id": getDeviceId(),
         },
-        body: JSON.stringify({ ...birthPayload(), stage: "full" }),
+        body: JSON.stringify({ ...birthPayload(), ...override, stage: "full" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -392,14 +449,26 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
           <button
             className="btn btn--gold"
             onClick={() => {
+              // Keeps the DB copy (so a re-visit is served, not regenerated)…
               persistDownload();
-              window.print();
+              // …and prints from the dedicated document template, in its own
+              // tab: this screen is an interface, and printing an interface is
+              // what made the PDF look like a screenshot. Opened from a click,
+              // so it is not a blocked popup, and it closes itself afterwards.
+              const url = `/${locale}/report/print?type=${type}`;
+              const tab = window.open(url, "_blank");
+              if (!tab) window.location.href = url;
             }}
           >
             <Download size={17} /> {tr("download")}
           </button>
           <Link className="btn btn--ghost" href="/chat">
             <MessageCircle size={17} /> {tr("discussWithArya")}
+          </Link>
+          {/* Third way out of a finished report: the other two readings, with
+              the hub marking what this person already owns. */}
+          <Link className="btn btn--ghost" href="/reports">
+            <ScrollText size={17} /> {tr("seeOther")}
           </Link>
           <span className="faint" style={{ fontSize: 12.5 }}>
             {tr("downloadHint")}

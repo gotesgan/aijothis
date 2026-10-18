@@ -1,9 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Header } from "@/components/header";
 import { BackButton } from "@/components/back-button";
-import { REPORT_PRICES } from "@/lib/report";
-import { resolveCurrencyFromServer } from "@/lib/region-server";
-import { formatPrice } from "@/lib/money";
 import { AppNav } from "@/components/app-nav";
 import { MarriageReport } from "@/components/marriage-report";
 
@@ -15,8 +12,6 @@ export default async function ReportPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Report");
-  const tc = await getTranslations("Common");
-  const currency = await resolveCurrencyFromServer();
 
   return (
     <div className="screen screen--doc">
@@ -33,12 +28,6 @@ export default async function ReportPage({
         <BackButton className="back-btn--doc" />
         <h1 className="page-title">{t("title")}</h1>
         <p className="page-lede">{t("subtitle")}</p>
-        <p className="doc-price">
-          <span className="doc-price__amount">
-            {formatPrice(REPORT_PRICES.marriage[currency], currency)}
-          </span>
-          <span className="doc-price__note">{tc("oneTime")}</span>
-        </p>
       </div>
 
       <MarriageReport />

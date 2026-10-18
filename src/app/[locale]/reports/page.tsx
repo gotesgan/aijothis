@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { ArrowRight } from "lucide-react";
 
 import { Header } from "@/components/header";
 import { BackButton } from "@/components/back-button";
 import { AppNav } from "@/components/app-nav";
-import { Link } from "@/i18n/navigation";
+import { ReportRows } from "@/components/report-rows";
 import { REPORT_PRICES, type ReportType } from "@/lib/report";
 import { resolveCurrencyFromServer } from "@/lib/region-server";
-import { formatPrice } from "@/lib/money";
 import { alternatesFor } from "@/lib/seo";
 
 export async function generateMetadata({
@@ -62,25 +60,18 @@ export default async function ReportsPage({
         <p className="page-lede">{t("subtitle")}</p>
       </div>
 
-      <ul className="reports-list rpt-facts">
-        {ITEMS.map(({ type, href, titleKey, descKey }) => (
-          <li key={type}>
-            <Link href={href} className="report-row">
-              <span className="report-row__title">{t(titleKey)}</span>
-              <span className="report-row__price">
-                {formatPrice(REPORT_PRICES[type][currency], currency)}
-              </span>
-              <span className="report-row__desc">{t(descKey)}</span>
-              <span className="report-row__cta">
-                {t("previewCta")}
-                <ArrowRight size={15} aria-hidden="true" />
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-
-      <p className="reports-note">{t("freeNote")}</p>
+      <ReportRows
+        items={ITEMS.map(({ type, href, titleKey, descKey }) => ({
+          type,
+          href,
+          title: t(titleKey),
+          desc: t(descKey),
+        }))}
+        prices={Object.fromEntries(
+          ITEMS.map(({ type }) => [type, REPORT_PRICES[type][currency]])
+        )}
+        currency={currency}
+      />
 
       <div className="screen__grow" />
 

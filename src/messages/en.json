@@ -15,7 +15,8 @@
     "genderF": "Female",
     "genderM": "Male",
     "genderN": "Prefer not to say",
-    "oneTime": "one-time payment"
+    "printFactsTitle": "Chart at a glance",
+    "generatedOn": "Generated"
   },
   "Nav": {
     "generateKundli": "Generate Kundli",
@@ -30,6 +31,9 @@
     "primary": "Primary navigation"
   },
   "Reports": {
+    "unlocked": "Unlocked",
+    "openCta": "Open report",
+    "ownedNote": "Already unlocked — tap one to read it again, or download the PDF to keep.",
     "related": "Other readings",
     "title": "Reports",
     "subtitle": "Long-form readings written from your own chart. Preview any of them — you only pay to unlock the full text.",
@@ -331,6 +335,8 @@
     "unlockFor": "Unlock the full report",
     "viewReport": "View my full report",
     "oneTime": "One-time payment. Yours to keep, downloadable as a PDF.",
+    "oneTime": "One-time payment. Yours to keep, downloadable as a PDF.",
+    "seeOther": "See other reports",
     "errPay": "We couldn't open the payment. Please try again.",
     "payDismissed": "Payment was closed before it finished. You can try again.",
     "payScriptFailed": "The payment window couldn't load. Please check your connection and retry.",

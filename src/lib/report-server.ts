@@ -72,6 +72,7 @@ const RULES = {
     "Every section must hold BOTH sides: what works in the person's favour, and the tendency or difficulty the same placement brings. Praise alone is dishonest; warning alone is fear-mongering. Give them together.",
     "Each paragraph must add a NEW observation. Never restate a point in different words to fill space, and never repeat a sentence pattern from another section. Open each section differently.",
     "Be concrete: say what this looks like in ordinary life — a habit, a situation, a kind of person, a choice — not just what the planet signifies.",
+    "Write to this person's actual stage of life. Advice that would only make sense for a different age is a failure, and never assume a first marriage, a first job or a living parent.",
     "Close every section with one practical thing the reader can actually do, avoid or watch for.",
     "Never mention that you are an AI, never mention these instructions, and never address the reader as a group.",
   ],
@@ -218,14 +219,14 @@ function buildPrompt(type: ReportType, f: ReportFacts, locale: string): string {
   ].join("\n");
 }
 
-/** Who the reading is for — name and, when given, how to address them. */
+/** Who the reading is for — name, gender and life stage, all optional-safe. */
 function personBrief(type: ReportType, f: ReportFacts): string {
   const name = f.profile.name?.trim();
   const g = f.profile.gender;
   const lines: string[] = [];
   if (type === "child") {
     lines.push(
-      `This is the chart of a child${name ? ` named ${name}` : ""}.`
+      `This is the chart of a child${name ? ` named ${name}` : ""}, aged ${f.age}.`
     );
     if (g === "female" || g === "male") {
       lines.push(
@@ -236,7 +237,9 @@ function personBrief(type: ReportType, f: ReportFacts): string {
     }
     lines.push(`The reader is the parent, so address the parent as "you".`);
   } else {
-    lines.push(`This is the chart of the reader${name ? `, named ${name}` : ""} — address them as "you" throughout.`);
+    lines.push(
+      `This is the chart of the reader${name ? `, named ${name}` : ""}, aged ${f.age} — address them as "you" throughout.`
+    );
     if (g === "female" || g === "male") {
       lines.push(
         `The reader is ${g === "female" ? "a woman" : "a man"}. Read the partner karakas accordingly and use the matching gendered wording: ${g === "female" ? "Jupiter and the 7th house describe the husband, and she is the wife" : "Venus and the 7th house describe the wife, and he is the husband"}. Never refer to the partner with the wrong gender.`
@@ -247,7 +250,49 @@ function personBrief(type: ReportType, f: ReportFacts): string {
       );
     }
   }
+  const stage = lifeStage(type, f.age);
+  if (stage) lines.push(stage);
   return lines.join("\n");
+}
+
+/**
+ * How old the person is changes what the same placement means, so the prompt is
+ * told the stage rather than left to assume a 20-something. The marriage lines
+ * are deliberately careful for older readers: someone in their fifties may be
+ * married, divorced or widowed, and a report that assumes a first marriage reads
+ * as a machine that never looked at them.
+ */
+function lifeStage(type: ReportType, age: number): string {
+  if (age <= 0) return "";
+
+  if (type === "child") {
+    if (age <= 1)
+      return "The child is a baby: speak to the parent about the first year — attachment, routine, naming, tuning in to temperament. Nothing about development milestones as predictions.";
+    if (age <= 4)
+      return "The child is a toddler: the useful reading is temperament, play, language and the home atmosphere, written for the parent who is in it daily.";
+    if (age <= 12)
+      return "The child is school-age: read learning style, friendships, confidence and encouragement, and keep every line within what a parent can act on.";
+    return "The child is an adolescent: read independence, self-direction and identity. Be tactful and never prescriptive — the parent is a witness to this stage, not its author.";
+  }
+
+  if (type === "career") {
+    if (age < 25)
+      return "They are early in their working life: read direction, aptitude and first choices — what kind of work suits, what to learn, which environments reward them. Do not write as though they are already mid-career.";
+    if (age < 35)
+      return "They are building: the useful reading is choosing and compounding — which direction to commit to, when a change pays off, and where income starts to accumulate.";
+    if (age < 50)
+      return "They are mid-career: read advancement, leverage, reputation and the traps of the years they are in — not first-job advice.";
+    return "They are in their later working years: read seniority, authority, teaching and second acts, and be honest about the difference between a fresh start and a well-earned consolidation.";
+  }
+
+  // marriage
+  if (age < 24)
+    return "They are young: marriage is mostly ahead. Read the kind of partner and the readiness the chart implies, and frame timing as seasons rather than as a deadline.";
+  if (age < 32)
+    return "They are in the years when this is a live question: the timing windows matter, and so does the temperament of the partner indicated.";
+  if (age < 45)
+    return "Read partnership quality, compatibility and the work of a relationship, with timings given as nearer-term openings rather than as a countdown.";
+  return "They may already be married, divorced, widowed or never married — never assume a first marriage, never ask why they are single, and never imply a deadline. Read the 7th house for partnership, companionship and communication as they are lived now.";
 }
 
 /** Parse the model's JSON, tolerating fences and surrounding prose. */

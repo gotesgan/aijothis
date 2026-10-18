@@ -47,22 +47,34 @@ export async function POST(request: Request) {
       const deviceId = request.headers.get("x-device-id");
       const admin = getSupabaseAdmin();
       if (deviceId && admin) {
-        const { error } = await admin.from("profiles").upsert(
-          {
-            device_id: deviceId,
-            lang: String(lang ?? "en"),
-            name: String(name ?? ""),
-            mobile: mobile ? String(mobile).replace(/\s/g, "") : null,
-            birth_date: date,
-            birth_time: time,
-            birth_place: String(place ?? ""),
-            lat: Number(lat),
-            lng: Number(lng),
-            timezone,
-            kundli_json: kundli,
-          },
-          { onConflict: "device_id" }
-        );
+        const row = {
+          device_id: deviceId,
+          lang: String(lang ?? "en"),
+          name: String(name ?? ""),
+          mobile: mobile ? String(mobile).replace(/\s/g, "") : null,
+          birth_date: date,
+          birth_time: time,
+          birth_place: String(place ?? ""),
+          lat: Number(lat),
+          lng: Number(lng),
+          timezone,
+          kundli_json: kundli,
+        };
+        const gender = isGender(body.gender) ? body.gender : null;
+
+        let { error } = await admin
+          .from("profiles")
+          .upsert({ ...row, gender }, { onConflict: "device_id" });
+
+        // Migrations are applied separately from this deploy, so the column can
+        // legitimately be missing for a while. Losing the whole profile write
+        // over one optional field would silently stop birth details
+        // persisting, so drop just that field and try once more.
+        if (error && /gender/i.test(error.message ?? "")) {
+          ({ error } = await admin
+            .from("profiles")
+            .upsert(row, { onConflict: "device_id" }));
+        }
         if (error) console.warn("[supabase] profile upsert:", error.message);
       }
     }

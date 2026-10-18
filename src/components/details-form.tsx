@@ -66,6 +66,11 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
         setName((prev) => prev || data.name || "");
         setDate((prev) => prev || data.birth.date || "");
         setTime((prev) => prev || data.birth.time || "");
+        // Cross-device recovery of the gender answer, so a new phone does not
+        // silently downgrade every reading to "gender not given".
+        if (data.gender === "female" || data.gender === "male" || data.gender === "other") {
+          setGender((prev) => prev || data.gender);
+        }
         setSelected((prev) =>
           prev ?? {
             place: data.birth.place,
