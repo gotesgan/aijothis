@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+
+import { Link } from "@/i18n/navigation";
 import { LanguageSwitcher } from "./language-switcher";
 
 export function Header() {
@@ -7,10 +9,14 @@ export function Header() {
 
   return (
     <header className="app-header">
-      <div className="app-header__brand">
+      {/* The logo is the way home, as it is on any site. Home is `/`, which
+          resolves to the chat for anyone who already has a chart, and to the
+          landing page for someone new — so this is the same destination the
+          Home tab promises, without a second rule to keep in sync. */}
+      <Link href="/" className="app-header__brand" aria-label={t("name")}>
         <Image
           src="/logo.png"
-          alt={t("name")}
+          alt=""
           className="app-header__logo-img"
           width={38}
           height={38}
@@ -19,7 +25,7 @@ export function Header() {
           {t("name")}
           <span className="dot">{t("nameSuffix")}</span>
         </span>
-      </div>
+      </Link>
       <span className="app-header__spacer" />
       <LanguageSwitcher />
     </header>
