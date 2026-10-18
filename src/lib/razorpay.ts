@@ -2,8 +2,32 @@ import { createHmac } from "node:crypto";
 
 import type { Currency } from "@/lib/money";
 
-const KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+/**
+ * Razorpay credentials.
+ *
+ * Outside production we prefer the TEST pair when it is set, so a local
+ * checkout can be walked end to end — test modal, test signature, no live
+ * money — while production reads only the live pair. Same rule as the test
+ * Supabase project in src/lib/supabase.ts: the test values live in .env.local
+ * (gitignored) and are never deployed. Delete either var and this falls back
+ * to the live one, so the override can never half-apply.
+ *
+ * A local production run (`next build && next start`) mirrors production and
+ * will use the live pair on purpose.
+ */
+const USE_TEST =
+  process.env.NODE_ENV !== "production" &&
+  Boolean(
+    process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID_TEST &&
+      process.env.RAZORPAY_KEY_SECRET_TEST
+  );
+
+const KEY_ID = USE_TEST
+  ? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID_TEST
+  : process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+const KEY_SECRET = USE_TEST
+  ? process.env.RAZORPAY_KEY_SECRET_TEST
+  : process.env.RAZORPAY_KEY_SECRET;
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
 export function razorpayConfigured(): boolean {

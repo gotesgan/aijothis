@@ -1,50 +1,172 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════
-   JYOTISH — Vedic night design system
-   Palette, type and texture grounded in the subject:
-   navagraha, saffron, marigold, kumkum, sacred geometry.
+   ARYA — calm guidance design system
+   One dark theme. Surfaces carry the structure, a single
+   lavender brand colour carries the actions, and sage/blue
+   only ever support. Every value below is measured against
+   WCAG 2.2 AA (see the implementation report for ratios).
    ═══════════════════════════════════════════════════ */
 
 :root {
-  /* palette */
-  --night: #0d0a16;          /* deep plum-black */
-  --night-2: #141027;        /* raised surface */
-  --night-3: #1c1630;        /* elevated surface */
-  --line: rgba(247, 241, 229, 0.09);       /* hairlines */
-  --line-strong: rgba(247, 241, 229, 0.2);
-  --marigold: #ffb84d;       /* primary accent — saffron-marigold */
-  --gold: #f2c94c;           /* bright gold */
-  --gold-deep: #9a6b1f;
-  --vermilion: #e0522e;      /* kumkum red — sparing */
-  --ivory: #f7f1e5;          /* warm text */
-  --ivory-muted: #b4aac4;    /* muted text */
-  --ivory-faint: #71688a;    /* faint text */
-  --glow-marigold: rgba(255, 184, 77, 0.22);
-  --glow-gold: rgba(242, 201, 76, 0.16);
-  --ai-bubble: #1b1530;
-  --ai-bubble-border: rgba(255, 184, 77, 0.28);
-  --ai-text: #efe6d2;
+  /* ── surfaces ─────────────────────────────────────────────
+     Deliberately close together (1.1–1.2:1 apart), so hierarchy
+     is carried by borders + spacing, not by fill contrast. */
+  --background: #121522;      /* app canvas */
+  --surface: #1b2030;         /* cards, panels, chat container */
+  --surface-raised: #242a3d;  /* nested cards, selects, grouped content */
+  --surface-elevated: #2d3347;/* menus, popovers, overlays */
+
+  /* ── borders ──────────────────────────────────────────────
+     --border-default 1.74:1 on --surface: intended for decorative
+     card outlines, which WCAG 1.4.11 does not require to hit 3:1.
+     --border-control is the measured 3.06:1 boundary for the edges
+     of things a user must perceive as interactive (inputs, toggles,
+     secondary buttons). Do not swap one for the other. */
+  --border-subtle: #30364a;
+  --border-default: #41465b;
+  --border-control: #636a8c;
+
+  /* ── text ── */
+  --text-primary: #f7f3ea;    /* 16.4:1 on canvas — headings, readings */
+  --text-secondary: #d0cdde;  /* 10.4:1 on surface — body, conversation */
+  --text-muted: #aaa7bf;      /* 6.9:1 on surface — metadata only */
+
+  /* ── brand — the one colour that means "act here" ── */
+  --brand-primary: #c8b7ff;
+  --brand-on-primary: #211b35; /* 9.2:1 on the lavender fill */
+
+  /* ── supporting accents — never compete with brand ── */
+  --sage: #b8d8c2;            /* completion, support */
+  --sage-on: #1d3027;
+  --sage-container: #20332d;
+  --info: #a9c8f5;            /* informational, secondary links */
+  --info-container: #222d42;
+
+  /* ── semantic feedback — used only when the state is real ── */
+  --error-text: #ffb4ab;
+  --error-container: #351d22;
+  --warning-text: #ffd79a;
+  --warning-container: #352914;
+  --success-text: var(--sage);
+  --success-container: var(--sage-container);
+  --info-text: var(--info);
+  --info-surface: var(--info-container);
+
+  /* ── interactive state ── */
+  --focus-ring: var(--brand-primary);   /* 9.0:1 on surface */
+
+  /* ── rgb channels, so alpha tints stay derived from one source ── */
+  --background-rgb: 18, 21, 34;
+  --surface-rgb: 27, 32, 48;
+  --surface-raised-rgb: 36, 42, 61;
+  --surface-elevated-rgb: 45, 51, 71;
+  --text-primary-rgb: 247, 243, 234;
+  --brand-rgb: 200, 183, 255;
+  --sage-rgb: 184, 216, 194;
+  --info-rgb: 169, 200, 245;
+  --error-rgb: 255, 180, 171;
+  --warning-rgb: 255, 215, 154;
+  --star-rgb: 226, 232, 248;   /* impartial starlight, not warm */
+
+  /* ── print only — the report is printed on white paper ──
+     Ink colours for the PDF/print path, kept out of the screen theme. */
+  --print-ink: #1a1720;
+  --print-h1: #2f2a44;
+  --print-h2: #4a3f78;
+  --print-sub: #5a5566;
+  --print-muted: #6f6a7d;
+  --print-value: #241f33;
+  --print-accent: #6b5f96;
+  --print-panel: #f6f5fa;
+  --print-line: #dcd9e6;
+
+  /* ── navagraha ────────────────────────────────────────────
+     Planet glyphs need to be told apart, so they get distinct hues —
+     but all nine are desaturated into the same family as the system
+     (sage, blue, lavender, muted earths) so the chart never becomes
+     the loudest thing on the page. Nothing here is alarm red. */
+  --planet-sun: #e9c37c;
+  --planet-moon: #e9e7f2;
+  --planet-mars: #e09280;
+  --planet-mercury: #b8d8c2;
+  --planet-jupiter: #d9c98d;
+  --planet-venus: #e4b3ca;
+  --planet-saturn: #a9c8f5;
+  --planet-rahu: #9d97bb;
+  --planet-ketu: #c8b7ff;
+
+  /* ── legacy aliases ───────────────────────────────────────
+     Older rules across this file (and a few components) still
+     reference these names. They are pure pointers so there is
+     still exactly one definition of each colour above. */
+  --night: var(--background);
+  --night-2: var(--surface);
+  --night-3: var(--surface-raised);
+  --scrim: var(--background-rgb);
+  --line: var(--border-subtle);
+  --line-strong: var(--border-default);
+  --marigold: var(--brand-primary);
+  --gold: var(--brand-primary);
+  --gold-deep: #9d8cd6;       /* muted lavender: gradients + small labels */
+  --ivory: var(--text-primary);
+  --ivory-muted: var(--text-secondary);
+  --ivory-faint: var(--text-muted);
+  --glow-marigold: rgba(var(--brand-rgb), 0.16);
+  --glow-gold: rgba(var(--brand-rgb), 0.1);
+  --ai-bubble: var(--surface);
+  --ai-bubble-border: var(--border-subtle);
+  --ai-text: var(--text-primary);
 
   /* radii & shadow */
   --radius: 20px;
   --radius-sm: 12px;
   --radius-xs: 8px;
-  --shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
-  --ring: 0 0 0 2px var(--marigold);
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --ring: 0 0 0 2px var(--brand-primary);
 
   /* type */
   --stack-display: var(--font-display), var(--font-devanagari), serif;
   --stack-body: var(--font-inter), var(--font-devanagari), system-ui, sans-serif;
 
   --maxw: 460px;
+
+  /* motion — springs approximated with cubic-béziers. --spring is critically
+     damped (no overshoot, for entrances and layout moves); --spring-bounce
+     keeps a whisper of overshoot for things a finger actually flicked.
+     Details in the "Motion & materials" section at the end of this file. */
+  --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --spring-bounce: cubic-bezier(0.34, 1.32, 0.64, 1);
+  --press: cubic-bezier(0.2, 0, 0, 1);
+  --dur-press: 0.12s;
+  --dur-enter: 0.34s;
 }
 
 @theme inline {
-  --color-marigold: var(--marigold);
-  --color-gold: var(--gold);
-  --color-night: var(--night);
-  --color-ivory: var(--ivory);
+  /* Surfaces, text, brand and semantic roles — the semantic names are the
+     source of truth; the trailing aliases exist only because older markup
+     still writes `text-marigold` / `bg-night`. */
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-brand: var(--brand-primary);
+  --color-brand-on: var(--brand-on-primary);
+  --color-sage: var(--sage);
+  --color-info: var(--info);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-error: var(--error-text);
+  --color-warning: var(--warning-text);
+  --color-success: var(--success-text);
+  /* legacy aliases */
+  --color-marigold: var(--brand-primary);
+  --color-gold: var(--brand-primary);
+  --color-night: var(--background);
+  --color-ivory: var(--text-primary);
 }
 
 * {
@@ -59,36 +181,38 @@ body {
 }
 
 body {
-  background: var(--night);
-  color: var(--ivory);
+  background: var(--background);
+  color: var(--text-primary);
   font-family: var(--stack-body);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ambient cosmic field */
+/* Ambient starlight — eight single points, no field. Deliberately this
+   sparse: dense starfields would compete with the reading text. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(1px 1px at 18% 26%, rgba(255, 235, 190, 0.55), transparent),
-    radial-gradient(1px 1px at 38% 68%, rgba(255, 235, 190, 0.4), transparent),
-    radial-gradient(2px 2px at 62% 18%, rgba(255, 235, 190, 0.35), transparent),
-    radial-gradient(1px 1px at 78% 52%, rgba(255, 235, 190, 0.45), transparent),
-    radial-gradient(2px 2px at 48% 88%, rgba(255, 235, 190, 0.3), transparent),
-    radial-gradient(1.5px 1.5px at 8% 72%, rgba(255, 235, 190, 0.35), transparent),
-    radial-gradient(1px 1px at 88% 8%, rgba(255, 235, 190, 0.4), transparent),
-    radial-gradient(2px 2px at 28% 8%, rgba(255, 235, 190, 0.3), transparent);
+    radial-gradient(1px 1px at 18% 26%, rgba(var(--star-rgb), 0.34), transparent),
+    radial-gradient(1px 1px at 38% 68%, rgba(var(--star-rgb), 0.24), transparent),
+    radial-gradient(2px 2px at 62% 18%, rgba(var(--star-rgb), 0.2), transparent),
+    radial-gradient(1px 1px at 78% 52%, rgba(var(--star-rgb), 0.28), transparent),
+    radial-gradient(2px 2px at 48% 88%, rgba(var(--star-rgb), 0.18), transparent),
+    radial-gradient(1.5px 1.5px at 8% 72%, rgba(var(--star-rgb), 0.22), transparent),
+    radial-gradient(1px 1px at 88% 8%, rgba(var(--star-rgb), 0.24), transparent),
+    radial-gradient(2px 2px at 28% 8%, rgba(var(--star-rgb), 0.18), transparent);
   pointer-events: none;
 }
 
+/* One restrained brand wash at the top of the canvas. Previously two
+   saturated radial glows, which read as decoration rather than depth. */
 .app-shell {
   background:
-    radial-gradient(120% 55% at 50% -12%, rgba(66, 43, 18, 0.5), transparent 62%),
-    radial-gradient(90% 40% at 50% 110%, rgba(46, 24, 58, 0.4), transparent 60%);
+    radial-gradient(120% 55% at 50% -12%, rgba(var(--brand-rgb), 0.1), transparent 60%);
   min-height: 100vh;
 }
 
@@ -105,7 +229,7 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--marigold);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -128,8 +252,9 @@ button {
   transform: scale(0.97);
 }
 .btn--gold {
-  background: linear-gradient(135deg, var(--gold), var(--marigold));
-  color: #241503;
+  /* Flat, not a gradient: the brand colour is the whole signal. */
+  background: var(--brand-primary);
+  color: var(--brand-on-primary);
   box-shadow: 0 10px 28px var(--glow-marigold);
 }
 .btn--gold:hover {
@@ -137,13 +262,13 @@ button {
 }
 .btn--ghost {
   background: transparent;
-  border: 1.5px solid var(--line-strong);
-  color: var(--ivory);
+  border: 1.5px solid var(--border-control);
+  color: var(--text-primary);
 }
 .btn--surface {
-  background: var(--night-3);
-  border: 1.5px solid var(--line);
-  color: var(--ivory);
+  background: var(--surface-raised);
+  border: 1.5px solid var(--border-control);
+  color: var(--text-primary);
 }
 .btn--sm {
   padding: 10px 16px;
@@ -177,23 +302,23 @@ button {
 }
 .badge--gold {
   background: var(--glow-marigold);
-  border-color: rgba(242, 201, 76, 0.4);
+  border-color: rgba(var(--brand-rgb), 0.4);
   color: var(--gold);
 }
 .badge--ai {
-  background: rgba(255, 184, 77, 0.1);
+  background: rgba(var(--brand-rgb), 0.1);
   border-color: var(--ai-bubble-border);
   color: var(--marigold);
 }
 .badge--live {
-  color: #8fd69f;
-  border-color: rgba(143, 214, 159, 0.35);
-  background: rgba(143, 214, 159, 0.1);
+  color: var(--sage);
+  border-color: rgba(var(--sage-rgb), 0.35);
+  background: rgba(var(--sage-rgb), 0.1);
 }
 .badge--unlimited {
   color: var(--marigold);
-  border-color: rgba(255, 184, 77, 0.4);
-  background: rgba(255, 184, 77, 0.12);
+  border-color: rgba(var(--brand-rgb), 0.4);
+  background: rgba(var(--brand-rgb), 0.12);
   font-size: 0.62rem;
   margin-top: 2px;
 }
@@ -207,7 +332,7 @@ button {
   padding: 20px;
 }
 .card--gold-edge {
-  border-color: rgba(242, 201, 76, 0.35);
+  border-color: rgba(var(--brand-rgb), 0.35);
 }
 
 /* ─────────────── Fields ─────────────── */
@@ -239,8 +364,100 @@ button {
   border-color: var(--marigold);
   box-shadow: 0 0 0 3px var(--glow-marigold);
 }
+/* A native select and the date/time pickers take the brand colour instead of
+   the platform blue (Chrome's calendar, clock and AM/PM chips all follow this). */
+input,
+select,
+textarea,
+progress {
+  accent-color: var(--brand-primary);
+}
+
+/* A leading icon inside a field (date, time). */
+.field__control {
+  position: relative;
+  display: block;
+}
+.field__icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.field__input--icon {
+  padding-left: 44px;
+}
+
+/* Segmented choice (gender) — real radios, drawn as pills. */
+.seg {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.seg .field__label {
+  display: block;
+  margin-bottom: 8px;
+  padding: 0;
+}
+.seg__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.seg__opt {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 16px;
+  border: 1.5px solid var(--border-control);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.seg__opt input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.seg__opt:hover {
+  border-color: var(--brand-primary);
+}
+.seg__opt--on {
+  border-color: var(--brand-primary);
+  background: rgba(var(--brand-rgb), 0.14);
+  color: var(--text-primary);
+}
+/* The radio itself is invisible, so the ring is drawn on the pill. */
+.seg__opt:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .field__input::-webkit-calendar-picker-indicator {
   filter: invert(0.85);
+}
+
+/* A note above a form's fields — currently the child-report reminder that the
+   details wanted are the baby's, not the reader's. Quiet but unmissable. */
+.form-note {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--brand-rgb), 0.1);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 /* ─────────────── App header ─────────────── */
@@ -266,7 +483,7 @@ button {
   display: grid;
   place-items: center;
   font-size: 1.05rem;
-  color: #241503;
+  color: var(--brand-on-primary);
   font-weight: 800;
   box-shadow: 0 6px 20px var(--glow-marigold);
 }
@@ -357,10 +574,10 @@ button {
   right: 0;
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   max-width: var(--maxw);
   margin: 0 auto;
-  background: rgba(13, 10, 22, 0.92);
+  background: rgba(var(--scrim), 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
@@ -404,7 +621,7 @@ button {
 .tabbar--inline .tabbar__item--active::before {
   width: 22px;
   height: 2px;
-  background: linear-gradient(90deg, rgba(242,201,76,0.6), rgba(255,184,77,0.6));
+  background: var(--brand-primary);
   box-shadow: none;
 }
 
@@ -417,36 +634,31 @@ button {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
-
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--marigold);
-  margin-bottom: 14px;
+/* The centre slot is the product itself — a touch more weight so the eye lands
+   there first. No colour or fill change: it is emphasis, not a second accent. */
+.tabbar__item--primary .tabbar__label {
+  font-weight: 800;
 }
-.eyebrow__om {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  border: 1px solid rgba(242, 201, 76, 0.4);
-  background: var(--glow-marigold);
-  display: grid;
-  place-items: center;
-  font-size: 1rem;
-  letter-spacing: 0;
-  flex-shrink: 0;
+
+/* One quiet eyebrow. It used to carry a ॐ medallion as well as the mandala
+   beside it — two ornaments competing for the same glance, and the badge made
+   the label read as a control. The word alone is enough. */
+.eyebrow {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
 }
 
 .section-title {
   font-family: var(--stack-display);
-  font-size: 1.3rem;
+  font-size: 1.35rem;
   font-weight: 600;
-  margin-bottom: 14px;
+  line-height: 1.22;
+  margin-bottom: 16px;
   letter-spacing: -0.01em;
 }
 
@@ -459,9 +671,10 @@ button {
 
 /* ─────────────── Navagraha mandala ─────────────── */
 .mandala {
-  width: min(164px, 42vw);
+  width: min(132px, 34vw);
   margin: 0 auto;
-  filter: drop-shadow(0 18px 50px var(--glow-marigold));
+  /* A soft contact shadow, not a halo — the dial should sit on the page. */
+  filter: drop-shadow(0 10px 30px rgba(var(--brand-rgb), 0.1));
 }
 .mandala__svg {
   width: 100%;
@@ -497,13 +710,13 @@ button {
 }
 .mandala__hub {
   fill: none;
-  stroke: rgba(242, 201, 76, 0.35);
+  stroke: rgba(var(--brand-rgb), 0.35);
   stroke-width: 1;
   stroke-dasharray: 3 5;
 }
 .mandala__tick {
   fill: none;
-  stroke: rgba(247, 241, 229, 0.18);
+  stroke: rgba(var(--text-primary-rgb), 0.18);
   stroke-width: 1;
 }
 @keyframes mandala-spin {
@@ -518,85 +731,47 @@ button {
 }
 
 /* ─────────────── Landing hero ─────────────── */
+/* Mobile: one column, the dial small and above the copy — it is the brand mark
+   and it is short. Desktop: copy left, dial right, so the headline leads and
+   the ornament supports it instead of pushing the message below the fold. */
 .hero {
+  display: grid;
+  gap: 20px;
   text-align: center;
-  padding: 12px 0 8px;
+  padding: 4px 0;
 }
-.hero__brand {
-  font-family: var(--stack-display);
-  font-size: clamp(1.6rem, 6vw, 2.1rem);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: var(--gold);
-  display: none;
-  margin: 0 0 2px;
-}
-.hero__brand-tag {
-  display: none;
-  color: var(--ivory-faint);
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin: 0 0 14px;
+.hero__copy {
+  display: grid;
+  justify-items: center;
 }
 .hero__title {
   font-family: var(--stack-display);
-  font-size: clamp(2rem, 8vw, 2.65rem);
-  line-height: 1.08;
+  font-size: clamp(1.75rem, 7.4vw, 2.2rem);
+  line-height: 1.12;
   font-weight: 600;
   letter-spacing: -0.02em;
-  margin: 8px 0 12px;
-}
-.hero__title em {
-  font-style: italic;
-  font-weight: 400;
-  background: linear-gradient(120deg, var(--gold), var(--marigold));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  margin: 6px 0 14px;
+  max-width: 22ch;
 }
 .hero__sub {
-  color: var(--ivory-muted);
+  color: var(--text-secondary);
   font-size: 1rem;
-  max-width: 34ch;
-  margin: 0 auto 18px;
+  line-height: 1.6;
+  max-width: 46ch;
+  margin: 0 0 22px;
 }
 .hero__cta {
   display: grid;
+  justify-items: center;
   gap: 10px;
-  max-width: 340px;
+  width: 100%;
+  max-width: 360px;
   margin: 0 auto;
 }
 .hero__cta-note {
-  font-size: 0.76rem;
-  color: var(--ivory-faint);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-/* sample Arya chat bubble on the landing */
-.chat-preview {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  margin: 20px auto 18px;
-  max-width: 340px;
-  text-align: left;
-}
-.chat-preview__avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  overflow: hidden;
-  position: relative;
-  flex-shrink: 0;
-  box-shadow: 0 6px 16px var(--glow-marigold);
-}
-.chat-preview .msg--ai {
-  max-width: 100%;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 /* tappable question chips */
@@ -605,7 +780,67 @@ button {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 22px;
+}
+
+/* crawlable app-purpose statement (also used for OAuth branding review) */
+.hero__purpose {
+  max-width: 48ch;
+  margin: 18px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.hero__visual {
+  display: grid;
+  place-items: center;
+  order: -1;
+}
+
+@media (min-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: center;
+    gap: 56px;
+    text-align: left;
+    padding: 26px 0 10px;
+  }
+  .hero__copy {
+    justify-items: start;
+  }
+  .hero__visual {
+    order: 0;
+  }
+  .mandala {
+    width: min(320px, 30vw);
+  }
+  .hero__title {
+    font-size: clamp(2.4rem, 3.3vw, 3.05rem);
+    max-width: 17ch;
+    margin-top: 0;
+  }
+  .hero__sub {
+    font-size: 1.08rem;
+    max-width: 50ch;
+    margin-bottom: 26px;
+  }
+  .hero__cta {
+    justify-items: start;
+    margin: 0;
+  }
+  /* A full-width pill reads as a mobile button on a wide screen. */
+  .hero__cta .btn {
+    width: auto;
+    min-width: 264px;
+  }
+  .hero-chips {
+    justify-content: flex-start;
+    margin-top: 26px;
+  }
+  .hero__purpose {
+    margin-top: 22px;
+  }
 }
 .chip {
   border: 1.5px solid var(--line-strong);
@@ -613,8 +848,9 @@ button {
   color: var(--ivory);
   border-radius: 999px;
   padding: 9px 14px;
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   font-weight: 600;
+  line-height: 1.4;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
@@ -626,34 +862,6 @@ button {
   transform: scale(0.97);
 }
 
-/* crawlable app-purpose statement (also used for OAuth branding review) */
-.hero__purpose {
-  max-width: 480px;
-  margin: 20px auto 0;
-  font-size: 0.82rem;
-  line-height: 1.6;
-  color: var(--ivory-faint);
-}
-
-@media (min-width: 640px) {
-  .mandala {
-    width: min(238px, 40vw);
-  }
-  .hero {
-    padding-top: 28px;
-  }
-  .hero__brand,
-  .hero__brand-tag {
-    display: block;
-  }
-  .hero__title {
-    font-size: clamp(2.35rem, 5vw, 3.2rem);
-    margin-top: 6px;
-  }
-  .hero__sub {
-    margin-bottom: 24px;
-  }
-}
 .starter-chips {
   display: flex;
   flex-wrap: wrap;
@@ -663,29 +871,29 @@ button {
   padding: 6px 0 4px;
 }
 .starter-chips .chip {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--text-primary-rgb), 0.04);
+  border-color: rgba(var(--text-primary-rgb), 0.1);
 }
 .chip--teaser {
   border-color: var(--marigold);
-  background: rgba(255, 184, 77, 0.15);
+  background: rgba(var(--brand-rgb), 0.15);
   color: var(--ivory);
   font-weight: 700;
 }
 .chip--teaser:hover {
   border-color: var(--marigold);
-  background: linear-gradient(135deg, rgba(255, 184, 77, 0.23), rgba(255, 184, 77, 0.18));
+  background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.23), rgba(var(--brand-rgb), 0.18));
 }
 /* Starter chip shown when the buyer arrives from their paid marriage report. */
 .chip--report {
-  border-color: rgba(120, 180, 255, 0.55);
-  background: rgba(120, 180, 255, 0.12);
+  border-color: rgba(var(--info-rgb), 0.55);
+  background: rgba(var(--info-rgb), 0.12);
   color: var(--ivory);
   font-weight: 600;
 }
 .chip--report:hover {
-  border-color: rgba(120, 180, 255, 0.8);
-  background: rgba(120, 180, 255, 0.18);
+  border-color: rgba(var(--info-rgb), 0.8);
+  background: rgba(var(--info-rgb), 0.18);
 }
 
 /* details: unknown-time toggle */
@@ -716,7 +924,7 @@ button {
   gap: 6px;
   font-size: 0.78rem;
   font-weight: 700;
-  color: #ff9db1;
+  color: var(--brand-primary);
   margin-bottom: 6px;
 }
 .match-card__actions {
@@ -734,15 +942,15 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1.5px solid rgba(255, 157, 177, 0.45);
-  color: #ffb3c4;
-  background: rgba(255, 157, 177, 0.07);
+  border: 1.5px solid rgba(var(--brand-rgb), 0.55);
+  color: var(--brand-primary);
+  background: rgba(var(--brand-rgb), 0.07);
   border-radius: 999px;
   padding: 10px 14px;
 }
 .match-chip:hover {
-  border-color: #ff9db1;
-  background: rgba(255, 157, 177, 0.14);
+  border-color: var(--brand-primary);
+  background: rgba(var(--brand-rgb), 0.14);
 }
 .match-bar {
   display: inline-flex;
@@ -750,30 +958,32 @@ button {
   gap: 8px;
   padding: 10px 14px;
   border-radius: 999px;
-  border: 1.5px solid rgba(255, 157, 177, 0.45);
-  background: rgba(255, 157, 177, 0.12);
-  color: #ffc3d0;
+  border: 1.5px solid rgba(var(--brand-rgb), 0.55);
+  background: rgba(var(--brand-rgb), 0.12);
+  color: var(--brand-primary);
   font-size: 0.82rem;
   font-weight: 600;
 }
 .match-bar__clear {
   display: inline-flex;
   align-items: center;
-  color: #ff9db1;
+  color: var(--brand-primary);
   margin-left: 2px;
   padding: 2px;
 }
 .match-bar__clear:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
-/* stats — hairline-divided row, not boxes */.stats {
+/* stats — hairline-divided row, not boxes. Values are set in the text colour,
+   not the brand: the brand marks action, and these are statements of fact. */
+.stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  margin: 22px 0;
-  padding: 14px 0;
+  margin: 28px 0;
+  padding: 18px 0;
 }
 .stat {
   text-align: center;
@@ -784,148 +994,184 @@ button {
 .stat__value {
   display: block;
   font-family: var(--stack-display);
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
 .stat__label {
-  font-size: 0.7rem;
-  color: var(--ivory-faint);
-  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
 }
 
-/* persona card */
-.persona {
+/* Meet Arya — identity strip, one line of voice, one real message.
+   Deliberately not a card: the avatar and badge already group it. */
+.meet {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.meet__row {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(180deg, var(--night-3), var(--night-2));
-  border: 1px solid var(--ai-bubble-border);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 20px;
-  box-shadow: var(--shadow);
 }
-.persona__avatar {
+.meet__avatar {
   position: relative;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 999px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  box-shadow: 0 6px 18px var(--glow-marigold);
   overflow: hidden;
+  flex-shrink: 0;
 }
-.persona__body {
-  flex: 1;
-  display: grid;
-  gap: 2px;
+.meet__name {
+  font-family: var(--stack-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-right: auto;
 }
-.persona__name {
-  font-weight: 700;
+.meet__sub {
   font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 52ch;
 }
-.persona__meta {
-  font-size: 0.74rem;
-  color: var(--ivory-muted);
+.meet__bubble {
+  max-width: 100%;
+  margin-top: 2px;
 }
 
-/* how it works */
+/* how it works — a bare three-step list. Wrapping each step in a bordered
+   card added four boxes around three sentences; the numbers carry the order. */
 .how {
-  padding: 8px 0 20px;
+  padding: 4px 0 8px;
 }
 .how__list {
   display: grid;
-  gap: 10px;
+  gap: 22px;
 }
 .how__item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 32px 1fr;
   gap: 14px;
-  background: var(--night-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 15px 16px;
-  align-items: flex-start;
+  align-items: start;
 }
 .how__num {
   width: 30px;
   height: 30px;
   border-radius: 999px;
-  background: var(--glow-marigold);
-  color: var(--gold);
-  font-weight: 800;
-  font-size: 0.82rem;
+  border: 1px solid var(--border-default);
+  color: var(--brand-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
   display: grid;
   place-items: center;
   flex-shrink: 0;
   font-family: var(--stack-display);
 }
 .how__title {
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 3px;
 }
 .how__desc {
-  font-size: 0.83rem;
-  color: var(--ivory-muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
 }
 
 /* ─────────────── Landing SEO content + FAQ ─────────────── */
 .seo-content {
-  padding: 8px 0 20px;
+  padding: 4px 0 10px;
 }
 .seo-content__p {
-  font-size: 0.88rem;
-  line-height: 1.6;
-  color: var(--ivory-muted);
-  margin-bottom: 12px;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  max-width: 68ch;
 }
+/* Long-form prose tucked away so the page reads as a product. Content stays
+   in the DOM for crawlers; only the reader's attention is spared. */
+.seo-more {
+  margin-top: 4px;
+}
+.seo-more__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--brand-primary);
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.seo-more__summary::-webkit-details-marker {
+  display: none;
+}
+.seo-more__summary::before {
+  content: "›";
+  display: inline-block;
+  transition: transform 0.15s var(--spring-bounce);
+}
+.seo-more[open] .seo-more__summary::before {
+  transform: rotate(90deg);
+}
+.seo-more[open] .seo-content__p:first-of-type {
+  margin-top: 8px;
+}
+/* Guide links: a hairline list rather than a stack of bordered rows. */
 .guide-links {
   display: grid;
-  gap: 8px;
-  margin-top: 12px;
+  margin-top: 6px;
+  max-width: 68ch;
 }
 .guide-links a {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  color: var(--ivory);
-  background: var(--night-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
+  color: var(--text-primary);
   text-decoration: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  padding: 13px 2px;
+  border-top: 1px solid var(--line);
+  transition: color 0.15s ease;
+}
+.guide-links li:last-child a {
+  border-bottom: 1px solid var(--line);
 }
 .guide-links a::after {
   content: "→";
   margin-left: auto;
-  color: var(--gold, #ffb84d);
+  color: var(--brand-primary);
 }
 .guide-links a:hover {
-  border-color: var(--gold, #ffb84d);
+  color: var(--brand-primary);
 }
 .faq {
-  padding: 4px 0 20px;
+  padding: 4px 0 10px;
 }
 .faq__list {
   display: grid;
-  gap: 10px;
+  max-width: 78ch;
 }
+/* Hairline rows, not rounded cards. */
 .faq__item {
-  background: var(--night-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 0 16px;
+  border-top: 1px solid var(--line);
+}
+.faq__item:last-child {
+  border-bottom: 1px solid var(--line);
 }
 .faq__q {
-  font-size: 0.88rem;
+  font-size: 0.98rem;
   font-weight: 600;
-  color: var(--ivory);
-  padding: 14px 0;
+  color: var(--text-primary);
+  padding: 15px 0;
   cursor: pointer;
   list-style: none;
 }
@@ -935,18 +1181,77 @@ button {
 .faq__q::before {
   content: "›";
   display: inline-block;
-  margin-right: 8px;
-  color: var(--gold);
+  margin-right: 10px;
+  color: var(--brand-primary);
   transition: transform 0.15s ease;
 }
 .faq__item[open] .faq__q::before {
   transform: rotate(90deg);
 }
 .faq__a {
-  font-size: 0.84rem;
-  line-height: 1.6;
-  color: var(--ivory-muted);
-  padding: 0 0 14px;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  padding: 0 0 16px;
+  max-width: 66ch;
+}
+
+/* ─────────────── Landing layout ───────────────
+   The landing is a document, not a phone screen. `.screen` caps every app
+   screen at 460px, which left ~490px of dead gutter either side on a laptop;
+   the landing is allowed to use the width. Mobile is unaffected — it is
+   narrower than every one of these caps. */
+.home {
+  max-width: 1080px;
+}
+
+/* One vertical rhythm for the whole document. The stats row's own margins are
+   dropped so it doesn't double up with the rule below. */
+.home .stats {
+  margin-top: clamp(32px, 5.5vw, 60px);
+  margin-bottom: 0;
+}
+.home .home-split,
+.home .how,
+.home .seo-content,
+.home .faq {
+  margin-top: clamp(32px, 5.5vw, 60px);
+}
+
+.home-split {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 900px) {
+  .home {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+  .home .section-title {
+    font-size: 1.6rem;
+  }
+  /* Today's reading and Meet Arya share a row instead of stacking two short
+     blocks down the middle of a wide page. */
+  .home-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+  .how__list {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  .faq__list {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 48px;
+    max-width: none;
+  }
+  .guide-links {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 40px;
+    max-width: none;
+  }
 }
 
 /* ─────────────── Details form ─────────────── */
@@ -993,8 +1298,8 @@ button {
 /* ─────────────── Kundli chart ─────────────── */
 .chart-wrap {
   background:
-    radial-gradient(90% 90% at 50% 20%, rgba(66, 43, 18, 0.55), var(--night-2));
-  border: 1px solid rgba(242, 201, 76, 0.3);
+    radial-gradient(90% 90% at 50% 20%, rgba(var(--surface-raised-rgb), 0.55), var(--night-2));
+  border: 1px solid rgba(var(--brand-rgb), 0.3);
   border-radius: var(--radius);
   padding: 10px;
   margin-bottom: 16px;
@@ -1007,7 +1312,7 @@ button {
   filter: drop-shadow(0 10px 30px var(--glow-marigold));
 }
 .chart-house {
-  fill: rgba(28, 22, 48, 0.55);
+  fill: rgba(var(--surface-raised-rgb), 0.55);
   stroke: var(--marigold);
   stroke-width: 1.6;
   stroke-linejoin: round;
@@ -1016,8 +1321,8 @@ button {
   fill: var(--glow-marigold);
 }
 .chart-rashi-badge rect {
-  fill: rgba(255, 184, 77, 0.08);
-  stroke: rgba(242, 201, 76, 0.45);
+  fill: rgba(var(--brand-rgb), 0.08);
+  stroke: rgba(var(--brand-rgb), 0.45);
   stroke-width: 1;
 }
 .chart-rashi-badge text {
@@ -1235,7 +1540,7 @@ button {
 .dasha-item__tag {
   font-size: 0.66rem;
   font-weight: 800;
-  color: #241503;
+  color: var(--brand-on-primary);
   background: var(--marigold);
   border-radius: 999px;
   padding: 3px 9px;
@@ -1254,20 +1559,14 @@ button {
 .chat-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
+  gap: 10px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
-  background: rgba(13, 10, 22, 0.82);
+  background: rgba(var(--scrim), 0.82);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 20;
-}
-.chat-header__back {
-  font-size: 1.3rem;
-  color: var(--ivory-muted);
-  padding: 4px 8px;
-  margin-left: -8px;
 }
 .chat-header__chart {
   color: var(--marigold);
@@ -1300,27 +1599,34 @@ button {
 }
 .chat-header__body {
   flex: 1;
+  min-width: 0;
   display: grid;
   gap: 1px;
 }
 .chat-header__name {
   font-weight: 700;
   font-size: 0.98rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .chat-header__status {
   font-size: 0.72rem;
-  color: #8fd69f;
+  color: var(--sage);
   display: flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .chat-header__status::before {
   content: "";
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #6fd08a;
-  box-shadow: 0 0 8px rgba(111, 208, 138, 0.8);
+  background: var(--sage);
+  box-shadow: 0 0 6px rgba(var(--sage-rgb), 0.5);
 }
 
 .chat-body {
@@ -1350,14 +1656,19 @@ button {
 .msg--ai {
   align-self: flex-start;
   background: var(--ai-bubble);
-  border: 1px solid var(--ai-bubble-border);
+  border: 1px solid var(--border-default);
   border-bottom-left-radius: 6px;
   color: var(--ai-text);
 }
 .msg--user {
   align-self: flex-end;
-  background: linear-gradient(135deg, var(--gold), var(--marigold));
-  color: #241503;
+  /* A soft brand tint, not a lavender slab: at 20% over the canvas the bubble
+     is legible and clearly the user's own words, and its 45% brand edge
+     measures 3.01:1 against the canvas. A solid --brand-primary fill would
+     have put the brightest colour in the product behind every user message. */
+  background: rgba(var(--brand-rgb), 0.2);
+  border: 1px solid rgba(var(--brand-rgb), 0.45);
+  color: var(--text-primary);
   border-bottom-right-radius: 6px;
   font-weight: 500;
 }
@@ -1392,7 +1703,7 @@ button {
   margin-top: 9px;
   font-size: 0.66rem;
   font-weight: 700;
-  color: #8fd69f;
+  color: var(--sage);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1428,7 +1739,7 @@ button {
 .markdown code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.85em;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--text-primary-rgb), 0.07);
   border-radius: 5px;
   padding: 1px 5px;
 }
@@ -1439,8 +1750,8 @@ button {
 
 .chat-input-row {
   padding: 14px 20px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(13, 10, 22, 0.9);
+  border-top: 1px solid rgba(var(--text-primary-rgb), 0.08);
+  background: rgba(var(--scrim), 0.9);
   backdrop-filter: blur(14px);
   display: flex;
   gap: 10px;
@@ -1462,12 +1773,14 @@ button {
   place-items: center;
   border-radius: 999px;
   color: var(--marigold);
-  background: rgba(26, 20, 40, 0.92);
-  border: 1px solid rgba(255, 184, 77, 0.35);
+  background: rgba(var(--scrim), 0.92);
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
   z-index: 16;
-  animation: screen-in 0.2s ease both;
+  /* `jump-in`, not the shared `screen-in`: that one ends at `transform: none`,
+     which would drop this button's translateX(-50%) centring once it settled. */
+  animation: jump-in 0.24s var(--spring);
 }
 .chat-jump:active {
   transform: translateX(-50%) scale(0.94);
@@ -1479,8 +1792,8 @@ button {
 }
 .chat-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(var(--text-primary-rgb), 0.04);
+  border: 1.5px solid rgba(var(--text-primary-rgb), 0.08);
   border-radius: 999px;
   padding: 14px 18px;
   font-family: inherit;
@@ -1493,18 +1806,18 @@ button {
 .chat-input:focus {
   outline: none;
   border-color: var(--marigold);
-  box-shadow: 0 0 0 3px rgba(255, 184, 77, 0.16);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.16);
 }
 .chat-send {
   width: 50px;
   height: 50px;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--gold), var(--marigold));
-  color: #241503;
+  color: var(--brand-on-primary);
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  box-shadow: 0 12px 24px rgba(255, 184, 77, 0.24);
+  box-shadow: 0 12px 24px rgba(var(--brand-rgb), 0.24);
   transition: transform 0.18s ease;
 }
 .chat-send:hover:not([disabled]) {
@@ -1514,12 +1827,12 @@ button {
    control at a glance rather than the same button in a different state. */
 .chat-send--stop {
   background: transparent;
-  border: 1.5px solid var(--gold, #ffb84d);
-  color: var(--gold, #ffb84d);
+  border: 1.5px solid var(--gold, var(--brand-primary));
+  color: var(--gold, var(--brand-primary));
   box-shadow: none;
 }
 .chat-send--stop:hover {
-  background: rgba(255, 184, 77, 0.12);
+  background: rgba(var(--brand-rgb), 0.12);
 }
 .chat-send[disabled] {
   opacity: 0.4;
@@ -1527,16 +1840,63 @@ button {
   cursor: default;
 }
 
+/* empty-state hero — a welcome, not a label */
+.chat-body--empty {
+  background: radial-gradient(72% 40% at 50% 88%, rgba(var(--brand-rgb), 0.12), transparent 72%);
+  padding-bottom: 84px;
+}
+/* safe centering: free space goes to the outer margins, so an overlong
+   empty state degrades to normal top-aligned scroll instead of clipping. */
+.chat-body--empty > :first-child {
+  margin-top: auto;
+}
+.chat-body--empty > :last-child {
+  margin-bottom: auto;
+}
+.chat-hero {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 8px 4px;
+  animation: hero-in var(--dur-enter) var(--spring);
+}
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.chat-hero__title {
+  font-family: var(--stack-display);
+  font-size: clamp(1.7rem, 7vw, 2.15rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--ivory);
+}
+.chat-hero__sub {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ivory-muted);
+  max-width: 26ch;
+  text-wrap: balance;
+}
+
 .welcome-chip {
   align-self: center;
   text-align: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(var(--text-primary-rgb), 0.04);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.09);
   border-radius: 999px;
   padding: 10px 18px;
   font-size: 0.78rem;
   color: var(--ivory-muted);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 2px rgba(var(--text-primary-rgb), 0.05);
 }
 
 /* inline birth-details card inside the chat */
@@ -1568,7 +1928,7 @@ button {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(8, 6, 14, 0.72);
+  background: rgba(var(--background-rgb), 0.72);
   backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
@@ -1577,10 +1937,10 @@ button {
 .gate-modal__card {
   width: 100%;
   max-width: 360px;
-  background: linear-gradient(180deg, rgba(22, 16, 44, 0.96), rgba(18, 13, 37, 0.98));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(var(--surface-elevated-rgb), 0.96), rgba(var(--surface-elevated-rgb), 0.98));
+  border: 1px solid rgba(var(--text-primary-rgb), 0.08);
   border-radius: calc(var(--radius) + 4px);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.4);
   padding: 28px 24px;
   display: grid;
   gap: 14px;
@@ -1602,8 +1962,8 @@ button {
   width: 72px;
   height: 72px;
   border-radius: 999px;
-  background: rgba(255, 184, 77, 0.16);
-  border: 1px solid rgba(255, 184, 77, 0.35);
+  background: rgba(var(--brand-rgb), 0.16);
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
   color: var(--gold);
   font-weight: 800;
   font-size: 1.05rem;
@@ -1620,19 +1980,19 @@ button {
   display: grid;
   gap: 4px;
   justify-items: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(var(--text-primary-rgb), 0.03);
+  border: 1.5px solid rgba(var(--text-primary-rgb), 0.08);
   border-radius: 18px;
   padding: 16px 10px;
   transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
 .pack-option:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 184, 77, 0.4);
+  border-color: rgba(var(--brand-rgb), 0.4);
 }
 .pack-option--on {
   border-color: var(--marigold);
-  background: rgba(255, 184, 77, 0.14);
+  background: rgba(var(--brand-rgb), 0.14);
 }
 .pack-option__price {
   font-size: 1.2rem;
@@ -1648,18 +2008,18 @@ button {
 }
 /* Loyalty bonus marker: same price, more questions. */
 .badge--bonus {
-  background: rgba(74, 222, 128, 0.14);
-  color: #6ee7a0;
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  background: rgba(var(--sage-rgb), 0.14);
+  color: var(--sage);
+  border: 1px solid rgba(var(--sage-rgb), 0.35);
   font-weight: 600;
   white-space: nowrap;
 }
 .gate-modal__bonus {
   font-size: 0.8rem;
   line-height: 1.5;
-  color: #6ee7a0;
-  background: rgba(74, 222, 128, 0.08);
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  color: var(--sage);
+  background: rgba(var(--sage-rgb), 0.08);
+  border: 1px solid rgba(var(--sage-rgb), 0.25);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   margin: 12px 0 4px;
@@ -1679,8 +2039,8 @@ button {
   color: var(--marigold);
   font-size: 0.82rem;
   font-weight: 700;
-  background: rgba(255, 184, 77, 0.1);
-  border: 1px solid rgba(255, 184, 77, 0.3);
+  background: rgba(var(--brand-rgb), 0.1);
+  border: 1px solid rgba(var(--brand-rgb), 0.3);
   border-radius: 16px;
   padding: 10px 12px;
 }
@@ -1690,8 +2050,8 @@ button {
   gap: 10px;
   margin: 10px 12px 0;
   padding: 12px 14px;
-  background: rgba(255, 184, 77, 0.18);
-  border: 1px solid rgba(255, 184, 77, 0.28);
+  background: rgba(var(--brand-rgb), 0.18);
+  border: 1px solid rgba(var(--brand-rgb), 0.28);
   border-radius: 18px;
 }
 .pending-banner__text {
@@ -1703,8 +2063,8 @@ button {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--gold);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 184, 77, 0.35);
+  background: rgba(var(--text-primary-rgb), 0.08);
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
   border-radius: 999px;
   padding: 8px 14px;
   white-space: nowrap;
@@ -1733,18 +2093,96 @@ button {
 /* legal footer links */
 .legal-links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 0 4px;
-  font-size: 0.78rem;
-  color: var(--ivory-faint);
+  gap: 6px 10px;
+  padding: 20px 0 6px;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-muted);
 }
 .legal-links__item {
-  color: var(--ivory-muted);
+  color: var(--text-secondary);
 }
 .legal-links__dot {
   opacity: 0.5;
+}
+
+/* ─────────────── Page heading (app screens) ─────────────── */
+.page-title {
+  font-family: var(--stack-display);
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+.page-lede {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 52ch;
+  margin: 0 0 22px;
+}
+
+/* ─────────────── Reports hub ───────────────
+   Hairline rows rather than three heavy cards: the price sits on the title
+   line and the whole row is one link, so the tap target is the full width. */
+.reports-list {
+  list-style: none;
+  display: grid;
+  margin-top: 4px;
+}
+.report-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  color: inherit;
+}
+.reports-list li:last-child .report-row {
+  border-bottom: 1px solid var(--line);
+}
+.report-row__title {
+  font-family: var(--stack-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.report-row__price {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.report-row__desc {
+  grid-column: 1 / -1;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.report-row__cta {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--brand-primary);
+}
+.report-row:hover .report-row__title {
+  color: var(--brand-primary);
+}
+.reports-note {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-top: 14px;
 }
 
 /* ─────────────── Reading (overview) ─────────────── */
@@ -1777,7 +2215,7 @@ button {
   height: 42px;
   border-radius: 999px;
   background: var(--glow-marigold);
-  border: 1px solid rgba(242, 201, 76, 0.35);
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
   color: var(--marigold);
   display: grid;
   place-items: center;
@@ -1800,38 +2238,52 @@ button {
   white-space: pre-wrap;
 }
 
-/* teaser card on the Kundli page */
+/* teaser card on the landing (and the Kundli page's daily reading) */
 .reading-teaser {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
-  padding: 16px 18px;
-  border-color: rgba(242, 201, 76, 0.35);
-  margin-bottom: 16px;
+  padding: 18px 20px;
+  /* Flat surface, no gradient and no shadow — it sits beside "Meet Arya",
+     not above it. */
+  background: var(--surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  box-shadow: none;
 }
 .reading-teaser__icon {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--gold), var(--marigold));
-  color: #241503;
+  background: rgba(var(--brand-rgb), 0.12);
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
+  color: var(--brand-primary);
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
+.reading-teaser__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
 .reading-teaser__title {
-  font-weight: 700;
-  font-size: 1rem;
+  font-family: var(--stack-display);
+  font-weight: 600;
+  font-size: 1.05rem;
   display: block;
 }
 .reading-teaser__sub {
-  font-size: 0.78rem;
-  color: var(--ivory-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
   display: block;
 }
-.reading-teaser__arrow {
-  margin-left: auto;
-  color: var(--marigold);
+.reading-teaser__cta {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--brand-primary);
+  margin-top: 8px;
 }
 
 /* ─────────────── Today dashboard ─────────────── */
@@ -1904,7 +2356,7 @@ button {
   height: 30px;
   border-radius: 999px;
   background: var(--glow-marigold);
-  border: 1px solid rgba(242, 201, 76, 0.3);
+  border: 1px solid rgba(var(--brand-rgb), 0.3);
   color: var(--marigold);
   display: grid;
   place-items: center;
@@ -1962,7 +2414,7 @@ button {
   height: 44px;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--gold), var(--marigold));
-  color: #241503;
+  color: var(--brand-on-primary);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -2005,7 +2457,7 @@ button {
   height: 32px;
   border-radius: 999px;
   background: var(--glow-marigold);
-  border: 1px solid rgba(242, 201, 76, 0.3);
+  border: 1px solid rgba(var(--brand-rgb), 0.3);
   color: var(--marigold);
   display: grid;
   place-items: center;
@@ -2108,9 +2560,15 @@ html {
     transform: none;
   }
 }
+/* No fill-mode on purpose. `both` made the finished animation keep applying
+   `transform` to `.screen`, and a transformed ancestor becomes the containing
+   block for `position: fixed` descendants — so the tab bar, the consent sheet
+   and the paywalls all anchored to the bottom of the document instead of the
+   viewport, and scrolled away on any page taller than the screen. Dropping
+   back to the base styles (opacity 1, transform none) restores fixing. */
 .screen,
 .chat-view {
-  animation: screen-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: screen-in 0.4s var(--spring);
 }
 
 /* Chat message entrance */
@@ -2137,21 +2595,27 @@ html {
     opacity: 1;
   }
 }
+/* Materialise, don't just fade: blur and scale travel together so a surface
+   reads as a material arriving rather than a rectangle blinking on. No fill
+   mode — a retained transform would leave the card as the containing block
+   for any fixed child (same trap the screen entrance used to spring). */
 @keyframes modal-in {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(10px);
+    transform: scale(0.94) translateY(10px);
+    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: none;
+    filter: blur(0);
   }
 }
 .gate-modal {
   animation: fade-in 0.18s ease-out both;
 }
 .gate-modal__card {
-  animation: modal-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: modal-in var(--dur-enter) var(--spring);
 }
 
 /* Gentle micro-interactions (hover-capable devices only) */
@@ -2162,7 +2626,6 @@ html {
   .btn--gold:active {
     transform: translateY(0) scale(0.97);
   }
-  .persona,
   .card:hover {
     border-color: var(--line-strong);
   }
@@ -2394,14 +2857,14 @@ html {
   max-height: calc(100dvh - 24px - env(safe-area-inset-top));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: linear-gradient(180deg, rgba(24, 18, 46, 0.99), rgba(17, 12, 35, 0.99));
-  border: 1px solid rgba(255, 184, 77, 0.22);
+  background: linear-gradient(180deg, rgba(var(--surface-elevated-rgb), 0.99), rgba(var(--surface-elevated-rgb), 0.99));
+  border: 1px solid rgba(var(--brand-rgb), 0.22);
   border-radius: 18px;
-  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
   padding: 16px 16px 14px;
   display: grid;
   gap: 10px;
-  animation: consent-rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: consent-rise var(--dur-enter) var(--spring);
 }
 .consent__title {
   font-family: var(--stack-display);
@@ -2436,8 +2899,8 @@ html {
   cursor: pointer;
 }
 .consent__reject {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(var(--text-primary-rgb), 0.05);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.12);
   color: var(--ivory);
 }
 .consent__customise {
@@ -2462,7 +2925,7 @@ html {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(var(--text-primary-rgb), 0.06);
 }
 .consent__row:last-child {
   border-bottom: 0;
@@ -2489,7 +2952,7 @@ html {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--ivory-faint);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.14);
   border-radius: 999px;
   padding: 4px 8px;
 }
@@ -2498,8 +2961,8 @@ html {
   width: 48px;
   height: 28px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.16);
+  background: rgba(var(--text-primary-rgb), 0.08);
   position: relative;
   cursor: pointer;
   transition: background 0.18s ease, border-color 0.18s ease;
@@ -2516,7 +2979,7 @@ html {
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--text-primary);
   transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .consent__switch--on .consent__knob {
@@ -2537,10 +3000,12 @@ html {
   from {
     opacity: 0;
     transform: translateY(16px);
+    filter: blur(6px);
   }
   to {
     opacity: 1;
     transform: none;
+    filter: blur(0);
   }
 }
 
@@ -2578,190 +3043,446 @@ html {
   padding: 2px 0;
 }
 
-/* ── Marriage report funnel ──────────────────────────────────────────
-   The report is printed to PDF straight from this page (window.print),
-   so every piece of chrome is `.no-print` and the print block below
-   repaints the dark UI as ink on paper. */
+/* ── Report funnel — read as a printed dossier ──────────────────────
+   One document language across the hub, the free preview and the unlocked
+   report: hairline rows for facts, a named table of contents for what you
+   are buying, and a single flat dock for the action. The report is meant to
+   be kept and printed, so it should look like something worth keeping. */
+
+/* Wide enough to read on a laptop; print resets this. */
+@media (min-width: 900px) {
+  .screen--doc {
+    max-width: 760px;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
 
 .rpt-teaser {
   display: grid;
-  gap: 14px;
+  gap: 28px;
   padding-bottom: 8px;
 }
 
-.rpt-meta-grid {
+/* Facts — a hairline definition list, used by both the preview and the
+   document so the preview reads like the thing it is previewing. */
+.rpt-facts {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.rpt-meta {
-  background: var(--night-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-}
-.rpt-meta__label {
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ivory-faint);
-  margin-bottom: 4px;
-}
-.rpt-meta__value {
-  font-family: var(--stack-display);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ivory);
-}
-
-.rpt-card {
-  background: var(--night-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-}
-.rpt-h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-family: var(--stack-display);
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--gold);
-}
-.rpt-kv {
-  display: grid;
-  gap: 8px;
   margin: 0;
+  border-top: 1px solid var(--line);
 }
-.rpt-kv > div {
+.rpt-facts__row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed var(--line);
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
 }
-.rpt-kv > div:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
+.rpt-facts dt {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
 }
-.rpt-kv dt {
-  font-size: 13.5px;
-  color: var(--ivory-muted);
-}
-.rpt-kv dd {
+.rpt-facts dd,
+.rpt-facts__value {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 0.95rem;
   font-weight: 600;
   text-align: right;
-  color: var(--ivory);
+  color: var(--text-primary);
+  /* Numerals line up column-wise down the list. */
+  font-variant-numeric: tabular-nums;
+}
+.rpt-facts__value--lead {
+  font-family: var(--stack-display);
+  font-size: 1.5rem;
+  line-height: 1.1;
 }
 
-.rpt-card--lock {
-  border-color: var(--ai-bubble-border);
+/* A named group of placements (the per-report preview). */
+.rpt-group {
+  display: grid;
+  gap: 10px;
 }
-.rpt-locklist {
+.rpt-group__title {
+  margin: 0;
+  font-family: var(--stack-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* What the paid report contains — the table of contents. */
+.rpt-contents {
   display: grid;
   gap: 8px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
 }
-.rpt-locklist li {
+.rpt-contents__title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  color: var(--ivory-muted);
+  margin: 0;
+  font-family: var(--stack-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
-.rpt-locklist li svg {
-  flex: none;
-  color: var(--gold-deep);
-}
-
-.rpt-cta {
-  position: sticky;
-  bottom: 14px;
+.rpt-contents__list {
+  list-style: none;
   display: grid;
+  margin: 4px 0 0;
+  border-top: 1px solid var(--line);
+}
+.rpt-contents__list li {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-top: 4px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(13, 10, 22, 0.86), var(--night) 62%);
-  backdrop-filter: blur(10px);
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+.rpt-contents__list li svg {
+  flex: none;
+  color: var(--text-muted);
 }
 
+.rpt-note {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.rpt-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--error-text);
+}
+
+/* The one action, docked while you read the preview. Flat surface and a
+   hairline — no gradient, no blur standing in for material. */
+/* The one action, docked while you read the preview.
+   It stacks ON the tab bar rather than floating over the content: anchored to
+   the viewport bottom it collided with the bar and its own note was hidden
+   behind it. 76px is the same clearance `.screen` reserves for the bar (the bar
+   measures 70px at 320px wide) — flat and full-bleed like the bar it sits on. */
+.rpt-dock {
+  position: sticky;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 30; /* under the tab bar's 40, so the bar always wins */
+  display: grid;
+  gap: 6px;
+  padding: 12px 20px;
+  margin: 0 -20px;
+  background: var(--surface);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Actions above the document once it is unlocked. */
 .rpt-paybar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 10px 12px;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
 }
 
-/* The printable document, on-screen (dark). */
+/* ── The document ── */
 .rpt-doc {
-  padding: 26px 24px 30px;
-  background: var(--night-2);
+  padding: 30px 26px 34px;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
-.rpt-head {
-  margin-bottom: 18px;
+.rpt-masthead {
+  margin-bottom: 22px;
 }
-.rpt-eyebrow {
-  font-size: 11.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--marigold);
-}
-.rpt-h1 {
-  margin: 6px 0 4px;
+.rpt-title {
+  margin: 0 0 6px;
   font-family: var(--stack-display);
-  font-size: 27px;
+  font-size: 1.7rem;
   font-weight: 600;
-  color: var(--ivory);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
 }
 .rpt-sub {
   margin: 0;
-  font-size: 13.5px;
-  color: var(--ivory-muted);
+  font-size: 0.86rem;
+  color: var(--text-secondary);
 }
+/* One rule, one weight. */
 .rpt-rule {
   height: 1px;
-  margin: 16px 0 4px;
-  background: linear-gradient(90deg, var(--gold-deep), transparent);
+  margin: 18px 0 0;
+  background: var(--line);
 }
-.rpt-doc .rpt-meta-grid {
-  margin: 16px 0 22px;
+.rpt-doc .rpt-facts {
+  margin-bottom: 26px;
 }
 .rpt-section {
-  margin: 0 0 20px;
+  margin: 0 0 24px;
 }
-.rpt-section .rpt-h2 {
-  font-size: 18px;
-  color: var(--gold);
+.rpt-section__title {
+  margin: 0 0 8px;
+  font-family: var(--stack-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 .rpt-p {
   margin: 0 0 12px;
-  font-size: 15px;
-  line-height: 1.72;
-  color: var(--ai-text);
+  font-size: 0.98rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  max-width: 68ch;
 }
 .rpt-footer {
-  margin-top: 26px;
+  margin-top: 28px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
-  font-size: 11.5px;
-  line-height: 1.6;
-  color: var(--ivory-faint);
+  font-size: 0.75rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+/* ── The one back control ──
+   Destination logic lives in useGoBack(); this is only its skin. Modifiers
+   below adjust placement per surface, never shape or state. */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 999px;
+  color: var(--text-secondary);
+}
+.back-btn:hover {
+  color: var(--text-primary);
+}
+/* Documents and the reading screens: align to the text edge. */
+.back-btn--doc {
+  margin: 0 0 4px -10px;
+}
+/* Sits in the chat header row: narrow enough that the identity beside it
+   never wraps, still a full-height tap target. */
+.back-btn--hdr {
+  width: 34px;
+  height: 44px;
+  margin-left: -6px;
+}
+
+/* ─────────────── Printable reading ───────────────
+   /report/print is a document, not a screen. On screen it is shown as a sheet
+   on a dark desk, so the buyer sees exactly what the PDF will be; on paper the
+   desk disappears and only the sheet remains. Everything below is own-namespace
+   (`.print-doc*`) so it cannot leak into the app's own `.rpt-*` document. */
+.print-page {
+  min-height: 100vh;
+  padding: 18px 14px 60px;
+  background: var(--background);
+}
+.print-page__bar {
+  display: flex;
+  gap: 10px;
+  max-width: 210mm;
+  margin: 0 auto 16px;
+}
+.print-page__status {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.print-doc {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 22mm 20mm;
+  background: #fff;
+  color: var(--print-ink);
+  border-radius: 6px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 11pt;
+  line-height: 1.62;
+}
+
+.print-doc__masthead {
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid var(--print-h1);
+}
+.print-doc__brand {
+  display: block;
+  font-size: 8.5pt;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--print-accent);
+  margin-bottom: 10px;
+}
+.print-doc__title {
+  margin: 0 0 8px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 26pt;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: var(--print-h1);
+}
+.print-doc__prepared {
+  margin: 0;
+  font-size: 9.5pt;
+  color: var(--print-sub);
+}
+
+.print-doc__facts {
+  margin: 20px 0 26px;
+  break-inside: avoid;
+}
+.print-doc__h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 13.5pt;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--print-h2);
+  break-after: avoid;
+}
+.print-doc__facts-list {
+  margin: 0;
+  border-top: 1px solid var(--print-line);
+}
+.print-doc__facts-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--print-line);
+}
+.print-doc__facts-list dt {
+  font-size: 9.5pt;
+  color: var(--print-muted);
+}
+.print-doc__facts-list dd {
+  margin: 0;
+  font-size: 10pt;
+  font-weight: 600;
+  text-align: right;
+  color: var(--print-value);
+}
+
+.print-doc__section {
+  margin: 0 0 20px;
+  /* Sections run long, so forcing them onto one page would leave half-empty
+     sheets. Widows and orphans keep a paragraph from splitting badly instead,
+     and the heading is glued to the text that follows it. */
+  break-inside: auto;
+  orphans: 2;
+  widows: 2;
+}
+.print-doc__p {
+  margin: 0 0 9px;
+  font-size: 11pt;
+  line-height: 1.62;
+  color: var(--print-ink);
+  /* A comfortable measure on A4, rather than the full 210mm minus margins. */
+  max-width: 78ch;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.print-doc__footer {
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px solid var(--print-line);
+  font-size: 8.5pt;
+  line-height: 1.55;
+  color: var(--print-muted);
+  break-inside: avoid;
+}
+.print-doc__footer p {
+  margin: 0 0 6px;
+  max-width: 90ch;
+}
+.print-doc__meta {
+  font-variant-numeric: tabular-nums;
 }
 
 @media print {
+  /* Only the sheet reaches the paper. */
+  .print-page {
+    padding: 0;
+    background: #fff;
+  }
+  .print-page__bar {
+    display: none !important;
+  }
+  .print-doc {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 10.5pt;
+  }
+  .print-doc__title {
+    font-size: 24pt;
+  }
+  .print-doc__p {
+    font-size: 10.5pt;
+    max-width: none;
+  }
+  /* The app's own chrome is not the document. */
+  .tabbar,
+  .app-header,
+  .consent,
+  .gate-modal {
+    display: none !important;
+  }
+  /* The sheet's own margins live in the app-wide @page rule below, so there is
+     exactly one page setup: two @page blocks silently override each other and
+     the last one wins. */
+}
+
+/* Cross-links between the three readings. */
+.doc-crosslinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 28px;
+  font-size: 0.9rem;
+}
+.doc-crosslinks a {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+.doc-crosslinks a:hover {
+  color: var(--brand-primary);
+}
+
+/* ── Browser surfaces belong to the palette too ── */
+a {
+  text-underline-offset: 0.18em;
+}
+::selection {
+  background: rgba(var(--brand-rgb), 0.3);
+  color: var(--text-primary);
+}
+input,
+textarea,
+[contenteditable] {
+  caret-color: var(--brand-primary);
+}
+
+@media print {
+  /* The only page setup in the file. Applies to the printable report and to
+     anything else the reader sends to paper. */
   @page {
+    size: A4;
     margin: 16mm 14mm;
   }
   .no-print {
@@ -2770,7 +3491,7 @@ html {
   html,
   body {
     background: #fff !important;
-    color: #1a1420 !important;
+    color: var(--print-ink) !important;
   }
   .screen {
     max-width: none !important;
@@ -2785,40 +3506,156 @@ html {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .rpt-doc .rpt-h1 {
-    color: #6d4210 !important;
-  }
-  .rpt-doc .rpt-eyebrow {
-    color: #9a6b1f !important;
+  .rpt-doc .rpt-title {
+    color: var(--print-h1) !important;
   }
   .rpt-doc .rpt-sub {
-    color: #4a4458 !important;
+    color: var(--print-sub) !important;
   }
-  .rpt-doc .rpt-h2 {
-    color: #8a5a14 !important;
+  .rpt-doc .rpt-section__title {
+    color: var(--print-h2) !important;
   }
   .rpt-doc .rpt-p {
-    color: #1a1420 !important;
+    color: var(--print-ink) !important;
   }
-  .rpt-doc .rpt-meta {
-    background: #faf7f0 !important;
-    border-color: #e2d6bb !important;
+  /* Facts print as ink on paper: hairline rules, not filled panels. */
+  .rpt-doc .rpt-facts__row {
+    border-color: var(--print-line) !important;
   }
-  .rpt-doc .rpt-meta__label {
-    color: #8a8296 !important;
+  .rpt-doc .rpt-facts dt {
+    color: var(--print-muted) !important;
   }
-  .rpt-doc .rpt-meta__value {
-    color: #2a2235 !important;
+  .rpt-doc .rpt-facts dd {
+    color: var(--print-value) !important;
   }
   .rpt-doc .rpt-rule {
-    background: linear-gradient(90deg, #c79a3f, transparent) !important;
+    background: var(--print-line) !important;
   }
   .rpt-doc .rpt-footer {
-    color: #6b6478 !important;
-    border-top-color: #e2d6bb !important;
+    color: var(--print-muted) !important;
+    border-top-color: var(--print-line) !important;
   }
   .rpt-section,
-  .rpt-meta-grid {
+  .rpt-doc .rpt-facts {
     break-inside: avoid;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Motion & materials — Apple-style fluency
+   From "Designing Fluid Interfaces" (WWDC 2018) plus the typography and
+   materials sessions: feedback lands on pointer-down, only transform,
+   opacity and blur animate, chrome fades into content instead of drawing
+   hard rules, and nothing settles with overshoot unless a finger actually
+   threw it. Springs live in :root as --spring / --spring-bounce.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Kill the ~300ms tap delay and the grey flash on everything pressable, and
+   give the press a shallow, instant scale — the response has to arrive on
+   touch-down, not on release. */
+a,
+button,
+[role="button"],
+.chip,
+.card,
+.acc__head,
+.planet-item,
+.tabbar__item,
+.consent__switch {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip:active,
+.card:active,
+.acc__head:active,
+.planet-item:active,
+.tabbar__item:active {
+  transform: scale(0.985);
+  transition: transform var(--dur-press) var(--press);
+}
+
+/* Tab bar: the active capsule materialises and the icon lifts a hair, so
+   switching tabs reads as one object settling rather than two swapping. */
+@keyframes tab-capsule {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+  }
+}
+.tabbar__item--active::before {
+  animation: tab-capsule var(--dur-enter) var(--spring-bounce);
+}
+.tabbar__item svg {
+  transition: transform var(--dur-enter) var(--spring);
+}
+.tabbar__item--active svg {
+  transform: translateY(-1px) scale(1.05);
+}
+
+/* "Jump to latest" — keeps its centring all the way through the entrance. */
+@keyframes jump-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+
+/* A scroll edge, not a divider: content fades out under the sticky chat
+   header instead of meeting a hard 1px rule. */
+.chat-header {
+  border-bottom: none;
+}
+.chat-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(var(--scrim), 0.6), rgba(var(--scrim), 0));
+}
+
+/* Headlines wrap as a unit instead of leaving one word on its own line.
+   Tracking itself is already size-specific per component (.hero__title
+   tracks -0.02em, .section-title -0.01em) — don't flatten it here. */
+h1,
+h2,
+.section-title,
+.hero__title,
+.gate-modal__title,
+.consent__title {
+  text-wrap: balance;
+}
+
+/* The user asked for less glass — honour it. */
+@media (prefers-reduced-transparency: reduce) {
+  .tabbar,
+  .chat-header,
+  .chat-input-row,
+  .app-header,
+  .consent__sheet {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--night);
+  }
+}
+
+/* …and for more contrast. */
+@media (prefers-contrast: more) {
+  :root {
+    --border-subtle: rgba(var(--text-primary-rgb), 0.3);
+    --border-default: rgba(var(--text-primary-rgb), 0.5);
+    --border-control: rgba(var(--text-primary-rgb), 0.7);
+    --text-secondary: #e6e2f2;
+    --text-muted: #c3bfd6;
   }
 }

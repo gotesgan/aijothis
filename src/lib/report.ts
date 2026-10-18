@@ -65,6 +65,17 @@ export const REPORT_PACK_PREFIX: Record<ReportType, string> = {
   child: "report-child",
 };
 
+/**
+ * The i18n namespace holding a report type's own copy (document title, section
+ * names, disclaimer). It lives beside the section list rather than in the flow
+ * component so the report page and the print page cannot disagree about where a
+ * career section's label comes from — reading a career report out of the
+ * marriage namespace resolves to nothing and mislabels the document.
+ */
+export function reportNamespace(type: ReportType): string {
+  return type === "career" ? "CareerReport" : type === "child" ? "BabyReport" : "Report";
+}
+
 /** Currency-scoped pack id, mirroring the packs in @/lib/pricing. */
 export function reportPackId(type: ReportType, currency: Currency): string {
   return `${REPORT_PACK_PREFIX[type]}-${currency.toLowerCase()}`;
@@ -145,6 +156,12 @@ export interface ReportSection {
  */
 export interface ReportFacts {
   // ── Shared / identity ────────────────────────────────────────────────
+  /**
+   * Whole years at the time this chart was built. Derived from the birth date,
+   * never stored: a read-through of a saved report must not silently age, and a
+   * fresh build should always be current.
+   */
+  age: number;
   lagna: number;
   moonRashi: number;
   moonNakshatra: number;
@@ -275,6 +292,17 @@ function houseSign(lagna: number, house: number): number {
   return (lagna + house - 1) % 12;
 }
 
+/** Whole years from a YYYY-MM-DD birth date to today, in UTC. */
+function ageInYears(date: string): number {
+  const [y, m, d] = String(date).split("-").map(Number);
+  if (!y || !m || !d) return 0;
+  const now = new Date();
+  const beforeBirthday =
+    now.getUTCMonth() + 1 < m ||
+    (now.getUTCMonth() + 1 === m && now.getUTCDate() < d);
+  return Math.max(0, now.getUTCFullYear() - y - (beforeBirthday ? 1 : 0));
+}
+
 export function buildFacts(kundli: KundliResult): ReportFacts {
   const { computed, planets, dasha, profile } = kundli;
   const lagna = computed.lagnaRashi;
@@ -320,6 +348,7 @@ export function buildFacts(kundli: KundliResult): ReportFacts {
   const syllables = NAKSHATRA_SYLLABLES[computed.moonNakshatra] ?? NAKSHATRA_SYLLABLES[0];
 
   return {
+    age: ageInYears(profile.date),
     lagna,
     moonRashi: computed.moonRashi,
     moonNakshatra: computed.moonNakshatra,

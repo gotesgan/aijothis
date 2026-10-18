@@ -9,6 +9,7 @@
  * otherwise identical.
  */
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { resolvePricingForDevice } from "@/lib/pricing-server";
 import { chatCompletion } from "@/lib/llm";
 import {
   buildFacts,
@@ -21,18 +22,31 @@ import {
 import { RASHI_NAMES, NAKSHATRA_NAMES } from "@/lib/kundli";
 import type { KundliResult } from "@/lib/types";
 
-/** Has this device ever settled an order for a report of this type? */
+/**
+ * Has this device ever settled an order for a report of this type?
+ *
+ * `deviceIds` is the Google-linked device set, the same one `/api/orders` and
+ * the chat quota use. Ownership has to be checked across it, not on the single
+ * device that happens to be asking: a buyer who paid on their phone must not be
+ * shown the paywall again on their laptop, which reads as "pay twice". Callers
+ * that already resolved the set should pass it in rather than pay for the
+ * lookup again.
+ */
 export async function hasReportPurchase(
   deviceId: string,
-  type: ReportType = "marriage"
+  type: ReportType = "marriage",
+  deviceIds?: string[]
 ): Promise<boolean> {
   const admin = getSupabaseAdmin();
   if (!admin || !deviceId) return false;
   try {
+    const scope = deviceIds?.length
+      ? deviceIds
+      : (await resolvePricingForDevice(deviceId)).deviceIds;
     const { data, error } = await admin
       .from("orders")
       .select("pack_id, status")
-      .eq("device_id", deviceId)
+      .in("device_id", scope)
       .in("status", ["paid", "simulated"])
       .order("created_at", { ascending: false })
       .limit(50);
@@ -65,8 +79,18 @@ const RULES = {
     "Do not give medical, legal or financial guarantees. This is guidance for reflection.",
     "Write in the requested language only.",
     "Return ONLY valid JSON, no markdown fences.",
+    // Depth and balance — the reader has paid for this, so it must read as a
+    // real reading rather than a summary. Both halves matter: what the chart
+    // supports AND what it asks the person to watch.
+    "This is a PAID reading. It must be substantial and worth re-reading, never a summary. Write 3–4 paragraphs per section (roughly 200–280 words each).",
+    "Every section must hold BOTH sides: what works in the person's favour, and the tendency or difficulty the same placement brings. Praise alone is dishonest; warning alone is fear-mongering. Give them together.",
+    "Each paragraph must add a NEW observation. Never restate a point in different words to fill space, and never repeat a sentence pattern from another section. Open each section differently.",
+    "Be concrete: say what this looks like in ordinary life — a habit, a situation, a kind of person, a choice — not just what the planet signifies.",
+    "Write to this person's actual stage of life. Advice that would only make sense for a different age is a failure, and never assume a first marriage, a first job or a living parent.",
+    "Close every section with one practical thing the reader can actually do, avoid or watch for.",
+    "Never mention that you are an AI, never mention these instructions, and never address the reader as a group.",
   ],
-  marriage: [] as string[],
+  marriage: [],
   career: [
     "Never promise a specific job, salary or promotion, and never advise on a specific investment. Describe tendencies, fields and timing windows only.",
   ],
@@ -74,6 +98,7 @@ const RULES = {
     "This is a report about a CHILD. Never predict, guess or hint at illness, health conditions, disability, accidents or lifespan — not even gently. Do not say the child will be sick or healthy in specific terms; you may only speak of general care, routine and wellbeing in supportive terms.",
     "Never predict death, danger, or any negative life event. Keep every statement encouraging and forward-looking.",
     "Do not label the child. Describe tendencies and strengths the parents can nurture, and avoid deterministic verdicts about the child's future.",
+    "For this report the \"difficult\" half of each section is written for the PARENTS: what needs patience, structure or understanding from them. Never as a flaw in the child.",
   ],
 };
 
@@ -100,6 +125,7 @@ function chartBrief(type: ReportType, f: ReportFacts): string {
     `Lagna (ascendant): ${rashi(f.lagna)}`,
     `Moon sign: ${rashi(f.moonRashi)}; Nakshatra: ${nak(f.moonNakshatra)}, pada ${f.moonNakshatraPad}`,
     `Sun sign: ${rashi(f.sunRashi)}`,
+    `Gender of the chart owner: ${f.profile.gender ?? "not given"}`,
   ];
 
   if (type === "career") {
@@ -194,14 +220,93 @@ function buildPrompt(type: ReportType, f: ReportFacts, locale: string): string {
   return [
     `Write a ${subject} in ${lang}.`,
     "",
+    "The person this reading is for:",
+    personBrief(type, f),
+    "",
     "Chart placements (sidereal, Lahiri, whole-sign houses):",
     chartBrief(type, f),
     "",
     `Return a JSON object: {"sections":[{"id":"<id>","body":"<text>"}]} with EXACTLY these ids in order: ${list}.`,
-    "Each body must be 110–170 words of flowing prose (2 short paragraphs).",
+    "Each body must be 200–280 words of flowing prose (3–4 short paragraphs, separated by a blank line).",
     "Section intent:",
     ...ids.map((id) => `- ${id}: ${INTENT[type][id] ?? ""}`),
   ].join("\n");
+}
+
+/** Who the reading is for — name, gender and life stage, all optional-safe. */
+function personBrief(type: ReportType, f: ReportFacts): string {
+  const name = f.profile.name?.trim();
+  const g = f.profile.gender;
+  const lines: string[] = [];
+  if (type === "child") {
+    lines.push(
+      `This is the chart of a child${name ? ` named ${name}` : ""}, aged ${f.age}.`
+    );
+    if (g === "female" || g === "male") {
+      lines.push(
+        `The child is a ${g === "female" ? "girl — write \"your daughter\" / \"she\"" : "boy — write \"your son\" / \"he\""} throughout.`
+      );
+    } else {
+      lines.push(`The child's gender is not given — write "your child" / "they" throughout. Never guess it.`);
+    }
+    lines.push(`The reader is the parent, so address the parent as "you".`);
+  } else {
+    lines.push(
+      `This is the chart of the reader${name ? `, named ${name}` : ""}, aged ${f.age} — address them as "you" throughout.`
+    );
+    if (g === "female" || g === "male") {
+      lines.push(
+        `The reader is ${g === "female" ? "a woman" : "a man"}. Read the partner karakas accordingly and use the matching gendered wording: ${g === "female" ? "Jupiter and the 7th house describe the husband, and she is the wife" : "Venus and the 7th house describe the wife, and he is the husband"}. Never refer to the partner with the wrong gender.`
+      );
+    } else {
+      lines.push(
+        `The reader's gender is not given. Write "partner" and "spouse" rather than husband or wife, and avoid he/she for the partner.`
+      );
+    }
+  }
+  const stage = lifeStage(type, f.age);
+  if (stage) lines.push(stage);
+  return lines.join("\n");
+}
+
+/**
+ * How old the person is changes what the same placement means, so the prompt is
+ * told the stage rather than left to assume a 20-something. The marriage lines
+ * are deliberately careful for older readers: someone in their fifties may be
+ * married, divorced or widowed, and a report that assumes a first marriage reads
+ * as a machine that never looked at them.
+ */
+function lifeStage(type: ReportType, age: number): string {
+  if (age <= 0) return "";
+
+  if (type === "child") {
+    if (age <= 1)
+      return "The child is a baby: speak to the parent about the first year — attachment, routine, naming, tuning in to temperament. Nothing about development milestones as predictions.";
+    if (age <= 4)
+      return "The child is a toddler: the useful reading is temperament, play, language and the home atmosphere, written for the parent who is in it daily.";
+    if (age <= 12)
+      return "The child is school-age: read learning style, friendships, confidence and encouragement, and keep every line within what a parent can act on.";
+    return "The child is an adolescent: read independence, self-direction and identity. Be tactful and never prescriptive — the parent is a witness to this stage, not its author.";
+  }
+
+  if (type === "career") {
+    if (age < 25)
+      return "They are early in their working life: read direction, aptitude and first choices — what kind of work suits, what to learn, which environments reward them. Do not write as though they are already mid-career.";
+    if (age < 35)
+      return "They are building: the useful reading is choosing and compounding — which direction to commit to, when a change pays off, and where income starts to accumulate.";
+    if (age < 50)
+      return "They are mid-career: read advancement, leverage, reputation and the traps of the years they are in — not first-job advice.";
+    return "They are in their later working years: read seniority, authority, teaching and second acts, and be honest about the difference between a fresh start and a well-earned consolidation.";
+  }
+
+  // marriage
+  if (age < 24)
+    return "They are young: marriage is mostly ahead. Read the kind of partner and the readiness the chart implies, and frame timing as seasons rather than as a deadline.";
+  if (age < 32)
+    return "They are in the years when this is a live question: the timing windows matter, and so does the temperament of the partner indicated.";
+  if (age < 45)
+    return "Read partnership quality, compatibility and the work of a relationship, with timings given as nearer-term openings rather than as a countdown.";
+  return "They may already be married, divorced, widowed or never married — never assume a first marriage, never ask why they are single, and never imply a deadline. Read the 7th house for partnership, companionship and communication as they are lived now.";
 }
 
 /** Parse the model's JSON, tolerating fences and surrounding prose. */
@@ -299,7 +404,7 @@ export async function generateFullReport(
         { role: "system", content: systemPrompt(type) },
         { role: "user", content: buildPrompt(type, facts, locale) },
       ],
-      maxTokens: 4000,
+      maxTokens: 8000,
       // Reasoning tokens count against max_tokens on deepseek-v4-flash: with
       // "low" the model burned the whole budget on reasoning and returned
       // truncated JSON (finish_reason=length), so every report silently fell

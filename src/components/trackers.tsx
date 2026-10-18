@@ -8,6 +8,13 @@ import { usePathname } from "next/navigation";
 import { hubspotBootstrap } from "@/lib/hubspot";
 import { parseConsent, readConsentRaw, subscribeToConsent } from "@/lib/consent";
 import { trackPageView } from "@/lib/pixel";
+import { markHistoryBaseline } from "@/lib/nav-history";
+import {
+  startPostHogCapture,
+  stopPostHogCapture,
+  capturePostHogEvent,
+  posthogConfigured,
+} from "@/lib/posthog-client";
 
 /**
  * Every third-party tracker on the site, mounted only where consent allows.
@@ -18,11 +25,11 @@ import { trackPageView } from "@/lib/pixel";
  *
  * Categories:
  *   marketing  — Meta Pixel (fbq)
- *   analytics  — Vercel Analytics, Microsoft Clarity, HubSpot
+ *   analytics  — Vercel Analytics, Microsoft Clarity, HubSpot, PostHog
  *
- * PostHog is intentionally absent: the app calls `posthog.capture()` but never
- * `posthog.init()`, so nothing is currently sent today. If that is fixed later,
- * gate it here behind `analytics`.
+ * PostHog is loaded on demand (see `posthog-client.ts`) and is the one tracker
+ * here that can be switched off again, which is what makes the footer's
+ * "cookie settings" control a real withdrawal rather than a gesture.
  */
 export function Trackers() {
   // Consent is read through useSyncExternalStore rather than effect + state.
@@ -43,6 +50,31 @@ export function Trackers() {
   useEffect(() => {
     if (marketing) trackPageView();
   }, [pathname, marketing]);
+
+  // PostHog: load it the moment analytics is granted, and tell it to stop the
+  // moment that choice is withdrawn. `$pageview` is sent here rather than by the
+  // SDK's own pageview capture, because this effect already knows about route
+  // changes (the tab bar, the report links) and the SDK does not.
+  useEffect(() => {
+    if (!analytics) {
+      stopPostHogCapture();
+      return;
+    }
+    if (!posthogConfigured()) return;
+    let cancelled = false;
+    void startPostHogCapture().then(() => {
+      if (!cancelled) capturePostHogEvent("$pageview");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, analytics]);
+
+  // Runs once, on whichever page the visitor landed on. Gives the back buttons a
+  // "have we navigated since load?" signal that raw history.length cannot.
+  useEffect(() => {
+    markHistoryBaseline();
+  }, []);
 
   if (!consent) return null;
 

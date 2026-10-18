@@ -1,0 +1,13 @@
+-- Gender on the profile.
+--
+-- Asked on both the birth-details form and the report form so a reading can
+-- address the person correctly (husband/wife, son/daughter, he/she) instead of
+-- guessing. Optional by design: blank is a real answer, and the prompts are
+-- written to stay neutral rather than invent one.
+--
+-- Idempotent, like every migration here, so the automated run can replay it.
+-- The application does not require this column to exist — /api/kundli retries
+-- its profile write without `gender` if the column is missing — so applying
+-- this can never be the thing that breaks a deploy, and skipping it only means
+-- the answer is not persisted.
+alter table public.profiles add column if not exists gender text;

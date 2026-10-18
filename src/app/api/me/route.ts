@@ -77,6 +77,24 @@ export async function GET(request: Request) {
       .in("device_id", deviceIds);
     const signedUp = (signedUpRows ?? []).some((r) => !!r.signed_up_at);
 
+    // Gender is a newer column than the rest, and its migration ships
+    // separately. Read it on its own and tolerate the column not being there
+    // yet: a failed select inside the chart query above would look exactly like
+    // "this person has no chart", which would cost them their pre-filled
+    // details and the returning-user redirect.
+    let gender: string | null = null;
+    const { data: genderRow } = await admin
+      .from("profiles")
+      .select("gender")
+      .in("device_id", deviceIds)
+      .not("gender", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (genderRow && typeof genderRow.gender === "string") {
+      gender = genderRow.gender;
+    }
+
     if (!chart?.kundli_json) {
       return NextResponse.json({ ...empty, signedUp });
     }
@@ -99,6 +117,7 @@ export async function GET(request: Request) {
       // Lets the details form come back pre-filled rather than empty, so a
       // stale link or a fast chip-tap never asks them to retype anything.
       name: (chart.name as string) || null,
+      gender,
       birth,
       kundli: chart.kundli_json,
     });

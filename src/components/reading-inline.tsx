@@ -22,6 +22,7 @@ type Overview = {
 
 export function ReadingInline() {
   const t = useTranslations("Overview");
+  const tc = useTranslations("Common");
   const locale = useLocale();
   const router = useRouter();
   const kundli = useKundli();
@@ -41,15 +42,19 @@ export function ReadingInline() {
         body: JSON.stringify({ kundli, lang: locale }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message ?? "Failed");
+      if (!res.ok) {
+        console.error("overview_failed", json);
+        throw new Error(tc("errorGeneric"));
+      }
       setData(json.overview as Overview);
       writeDailyCache(CACHE, locale, json.overview);
     } catch (err) {
-      setError((err as Error).message ?? "Something went wrong.");
+      console.error(err);
+      setError(tc("errorGeneric"));
     } finally {
       setLoading(false);
     }
-  }, [kundli, locale]);
+  }, [kundli, locale, tc]);
 
   useEffect(() => {
     if (data) return;
@@ -72,9 +77,9 @@ export function ReadingInline() {
   if (error && !data) {
     return (
       <div style={{ textAlign: "center", padding: "8px 0" }}>
-        <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>
+        <p role="alert" style={{ color: "var(--error-text)", fontSize: 13 }}>{error}</p>
         <button className="btn btn--gold btn--sm" onClick={generate} style={{ marginTop: 10 }}>
-          <RefreshCw size={14} /> {t("regenerate")}
+          <RefreshCw size={14} /> {tc("tryAgain")}
         </button>
       </div>
     );

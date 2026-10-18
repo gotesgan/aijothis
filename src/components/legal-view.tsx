@@ -1,19 +1,15 @@
 "use client";
 
-import { useRouter } from "@/i18n/navigation";
 import type { LegalDoc } from "@/lib/legal";
 import { AppNav } from "@/components/app-nav";
-import { ArrowLeft } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 
 export function LegalView({ doc }: { doc: LegalDoc }) {
-  const router = useRouter();
 
   return (
     <div className="screen">
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 0 10px" }}>
-        <button className="faint" style={{ fontSize: 22 }} onClick={() => router.push("/")} aria-label="back">
-          <ArrowLeft size={22} />
-        </button>
+        <BackButton />
         <h1 style={{ fontFamily: "var(--stack-display)", fontSize: 26, fontWeight: 600, lineHeight: 1.1 }}>
           {doc.title}
         </h1>

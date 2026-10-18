@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from "react";import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
-import { saveKundli, getDeviceId } from "@/lib/storage";
+import { saveKundli, loadKundli, getDeviceId } from "@/lib/storage";
 import { trackLead, trackQuestionChip } from "@/lib/pixel";
-import type { KundliResult } from "@/lib/types";
+import type { Gender, KundliResult } from "@/lib/types";
 import { PlaceAutocomplete, type PlaceSelection } from "./place-autocomplete";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock, Loader2 } from "lucide-react";
+import { GenderField } from "./gender-field";
 import posthog from "posthog-js";
 
 export function DetailsForm({ initialQ }: { initialQ?: string }) {
   const t = useTranslations("Details");
+  const tc = useTranslations("Common");
   const locale = useLocale();
   const router = useRouter();
 
   const [name, setName] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [selected, setSelected] = useState<PlaceSelection | null>(null);
@@ -52,6 +55,9 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
       // Something already here (same device, or they started typing) — leave
       // their input strictly alone.
       if (name.trim() || date || time || selected) return;
+      // The chart on this device already knows the answer; a chart from before
+      // this field existed simply has none.
+      setGender((prev) => prev || loadKundli()?.profile.gender || "");
       try {
         const res = await fetch("/api/me", { headers: { "x-device-id": getDeviceId() } });
         if (!res.ok || cancelled) return;
@@ -60,6 +66,11 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
         setName((prev) => prev || data.name || "");
         setDate((prev) => prev || data.birth.date || "");
         setTime((prev) => prev || data.birth.time || "");
+        // Cross-device recovery of the gender answer, so a new phone does not
+        // silently downgrade every reading to "gender not given".
+        if (data.gender === "female" || data.gender === "male" || data.gender === "other") {
+          setGender((prev) => prev || data.gender);
+        }
         setSelected((prev) =>
           prev ?? {
             place: data.birth.place,
@@ -102,12 +113,14 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
           lng: selected.lng,
           timezone: selected.timezone,
           lang: locale,
+          gender: gender || undefined,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message ?? "Something went wrong. Please try again.");
+        console.error("kundli_failed", data);
+        setError(tc("errorGeneric"));
         setSubmitting(false);
         return;
       }
@@ -120,7 +133,8 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
       }
       router.push(initialQ ? { pathname: "/chat", query: { q: initialQ } } : "/chat");
     } catch (err) {
-      setError((err as Error).message ?? "Network error. Please try again.");
+      console.error(err);
+      setError(tc("errorNetwork"));
       setSubmitting(false);
     }
   }
@@ -139,27 +153,35 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
         />
       </label>
 
+<GenderField value={gender} onChange={setGender} />
+
       <div className="details-form__row">
         <label className="field">
           <span className="field__label">{t("dob")}</span>
-          <input
-            className="field__input"
+          <span className="field__control">
+            <CalendarDays size={18} className="field__icon" aria-hidden="true" />
+            <input
+            className="field__input field__input--icon"
             type="date"
             data-exclude="true"
             value={date}
             max={new Date().toISOString().slice(0, 10)}
             onChange={(e) => setDate(e.target.value)}
-          />
+            />
+          </span>
         </label>
         <label className="field">
           <span className="field__label">{t("tob")}</span>
-          <input
-            className="field__input"
+          <span className="field__control">
+            <Clock size={18} className="field__icon" aria-hidden="true" />
+            <input
+            className="field__input field__input--icon"
             type="time"
             data-exclude="true"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-          />
+            />
+          </span>
         </label>
       </div>
 
@@ -183,7 +205,7 @@ export function DetailsForm({ initialQ }: { initialQ?: string }) {
       />
 
       {error && (
-        <p style={{ color: "#ff8f8f", fontSize: 13 }}>{error}</p>
+        <p role="alert" style={{ color: "var(--error-text)", fontSize: 13 }}>{error}</p>
       )}
 
       <button

@@ -23,8 +23,8 @@ export default function OpengraphImage() {
           justifyContent: "center",
           padding: "80px",
           background:
-            "radial-gradient(circle at 20% 20%, #2a1b46 0%, #120d22 55%, #0d0a16 100%)",
-          color: "#f6efe0",
+            "radial-gradient(circle at 20% 20%, #242a3d 0%, #1b2030 55%, #121522 100%)",
+          color: "#f7f3ea",
           fontFamily: "sans-serif",
         }}
       >
@@ -36,7 +36,7 @@ export default function OpengraphImage() {
             fontSize: 30,
             letterSpacing: 6,
             textTransform: "uppercase",
-            color: "#ffb84d",
+            color: "#c8b7ff",
           }}
         >
           <span>ॐ</span>
@@ -57,7 +57,7 @@ export default function OpengraphImage() {
           style={{
             marginTop: 20,
             fontSize: 40,
-            color: "#d9cbb0",
+            color: "#d0cdde",
             display: "flex",
           }}
         >
@@ -70,7 +70,7 @@ export default function OpengraphImage() {
             alignItems: "center",
             gap: 14,
             fontSize: 30,
-            color: "#f6efe0",
+            color: "#f7f3ea",
           }}
         >
           <span
@@ -78,7 +78,7 @@ export default function OpengraphImage() {
               width: 14,
               height: 14,
               borderRadius: 999,
-              background: "#4ade80",
+              background: "#b8d8c2",
               display: "flex",
             }}
           />

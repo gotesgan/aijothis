@@ -1,7 +1,14 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
@@ -38,6 +45,7 @@ import { ChatMarkdown } from "@/components/chat-markdown";
 import { BirthDetailsCard } from "@/components/birth-details-card";
 import { MatchCard, type MatchPrefill } from "@/components/match-card";
 import { AppNav } from "@/components/app-nav";
+import { BackButton } from "@/components/back-button";
 import { Send, Gem, Heart, X, ArrowDown, Square } from "lucide-react";
 import posthog from "posthog-js";
 import {
@@ -67,6 +75,20 @@ const QUOTA_EXHAUSTED = 402;
 const FREE_LIMIT = 1; // Q1 free, then Google signup before Q2, then paywall.
 // Mirrors FREE_LIMIT in @/lib/quota purely so the paywall can appear without a
 // round-trip. The server's copy is the one that actually enforces the limit.
+
+/** Time-of-day greeting bucket, read off the visitor's own clock so the empty
+ *  chat opens with the right greeting for their day. */
+function heroGreetingKey(
+  hour: number
+): "heroMorning" | "heroAfternoon" | "heroEvening" | "heroNight" {
+  if (hour >= 5 && hour < 12) return "heroMorning";
+  if (hour >= 12 && hour < 17) return "heroAfternoon";
+  if (hour >= 17 && hour < 21) return "heroEvening";
+  return "heroNight";
+}
+
+/** Nothing external drives the greeting, so there's nothing to subscribe to. */
+const subscribeNoop = () => () => {};
 
 function capturePostHog(
   event: string,
@@ -195,6 +217,7 @@ export function AryaChat({
 }) {
   const t = useTranslations("Chat");
   const tm = useTranslations("Match");
+  const tc = useTranslations("Common");
   const locale = useLocale() as Locale;
   const router = useRouter();
   const kundli = useKundli();
@@ -825,7 +848,10 @@ export function AryaChat({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Order failed");
+      if (!res.ok) {
+        console.error("checkout_failed", data);
+        throw new Error("checkout_failed");
+      }
 
       if (data.simulated) {
         // Experiment path: grant immediately, but do NOT fire a Purchase event —
@@ -1075,6 +1101,19 @@ export function AryaChat({
     !streaming &&
     (messages.length === 0 || messages[messages.length - 1]?.role === "assistant");
 
+  // Empty-chat hero: a warm welcome instead of a bare label.
+  const emptyChat = messages.length === 0 && !needDetails;
+
+  // Resolved client-side only — `getServerSnapshot` returns null, so the
+  // server HTML carries no hero and hydration can't mismatch on the clock.
+  const heroKey = useSyncExternalStore<ReturnType<typeof heroGreetingKey> | null>(
+    subscribeNoop,
+    () => heroGreetingKey(new Date().getHours()),
+    () => null
+  );
+
+  const heroName = kundli?.profile?.name?.trim() ?? "";
+
   const starters = useMemo(() => {
     if (!showStarters) return [];
     const asked = new Set<string>();
@@ -1113,13 +1152,7 @@ export function AryaChat({
   return (
     <div className="chat-view">
       <header className="chat-header">
-        <button
-          className="chat-header__back"
-          onClick={() => router.push("/")}
-          aria-label={t("back")}
-        >
-          ‹
-        </button>
+        <BackButton className="back-btn--hdr" hideWhenNoHistory />
         <span className="chat-header__avatar">
           <Image src="/arays.png" alt="AI" fill sizes="64px" className="avatar-img" />
         </span>
@@ -1136,11 +1169,23 @@ export function AryaChat({
             <Gem size={17} />
           </button>
         )}
-        <span className="badge badge--ai">AI</span>
       </header>
 
-      <div className="chat-body" ref={bodyRef} onScroll={handleBodyScroll}>
-        <div className="welcome-chip">{t("welcome")}</div>
+      <div
+        className={`chat-body${emptyChat ? " chat-body--empty" : ""}`}
+        ref={bodyRef}
+        onScroll={handleBodyScroll}
+      >
+        {emptyChat && heroKey ? (
+          <div className="chat-hero">
+            <h1 className="chat-hero__title">
+              {heroName ? `${t(heroKey)}, ${heroName}` : t(heroKey)}
+            </h1>
+            <p className="chat-hero__sub">{t("heroAsk")}</p>
+          </div>
+        ) : !emptyChat ? (
+          <div className="welcome-chip">{t("welcome")}</div>
+        ) : null}
 
         {hasMoreHistory && (
           <button
@@ -1320,7 +1365,7 @@ export function AryaChat({
           <button
             className="pending-banner__close"
             onClick={() => setPendingOrder(null)}
-            aria-label="Close"
+            aria-label={tc("close")}
           >
             <X size={14} />
           </button>
@@ -1399,7 +1444,7 @@ export function AryaChat({
                       )}
                     </span>
                     {p.popular && (
-                      <span className="badge badge--popular">Best value</span>
+                      <span className="badge badge--popular">{t("packBadge")}</span>
                     )}
                   </button>
                 );
@@ -1431,6 +1476,12 @@ export function AryaChat({
                 paywallPendingRef.current = null;
                 setShowPaywall(false);
                 trackPaywallDismissed();
+                // Also a PostHog event: it is the trigger for the
+                // "what stopped you buying?" survey, so it has to be captured
+                // at the exact moment the paywall is dismissed.
+                capturePostHog("paywall_dismissed", {
+                  questions_used: askedCount,
+                });
                 // Tell the server this was a dismissal. After the threshold it
                 // replies with the earned entitlement, so the bonus appears on
                 // the very next open instead of waiting for a page reload. The

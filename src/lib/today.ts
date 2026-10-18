@@ -1,5 +1,6 @@
 import { getSwe, normalizeLon } from "./kundli";
 import type { KundliResult } from "./types";
+import { PLANET_COLOR_NAME } from "./planet-colors";
 
 /* ── Weekday rulers (traditional) + lucky color per ruler ── */
 
@@ -8,15 +9,9 @@ export const WEEKDAY_RULER: Record<number, string> = {
   4: "jupiter", 5: "venus", 6: "saturn",
 };
 
-export const RULER_COLOR: Record<string, string> = {
-  sun: "#ff9a4d",
-  moon: "#e9e4d2",
-  mars: "#ff6b5e",
-  mercury: "#7fe08f",
-  jupiter: "#ffd45c",
-  venus: "#ff9fc0",
-  saturn: "#7fb2ff",
-};
+/* The ruler's swatch colour is PLANET_COLOR[rulerId] in ./planet-colors —
+   the same map the chart and the legend use. This object used to be a fourth
+   copy of the navagraha hex values. */
 
 export function getDayMeta(now: Date) {
   const weekdayId = now.getUTCDay();
@@ -24,7 +19,7 @@ export function getDayMeta(now: Date) {
   return {
     weekdayId,
     rulerId,
-    luckyColor: RULER_COLOR[rulerId] ?? "#f2c94c",
+    luckyColor: PLANET_COLOR_NAME[rulerId] ?? "warm amber",
   };
 }
 
