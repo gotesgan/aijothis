@@ -316,5 +316,60 @@
       "remedies": "Remedies",
       "conclusion": "Final guidance"
     }
+  },
+  "CareerReport": {
+    "eyebrow": "Career & Money Report",
+    "title": "Your career and money, read from your own chart",
+    "subtitle": "Enter your birth details to see the career placements in your chart for free. Unlock the full report — direction, job or business, income, timing, remedies — with a one-time payment.",
+    "ctaBuild": "See my chart's career placements",
+    "productName": "Complete Career & Money Report",
+    "docEyebrow": "Vedic Career & Money Report",
+    "docTitle": "Career & Money Report",
+    "disclaimer": "This report is a traditional Jyotish interpretation for reflection and guidance. It is not a substitute for qualified financial, career or legal advice, and a single placement should never decide a job or an investment. Your own effort and choices matter most.",
+    "careerHouse": "Your career house (10th)",
+    "tenthSign": "10th house sign",
+    "tenthLord": "10th lord",
+    "planetsInTenth": "Planets in the 10th",
+    "wealthGains": "Wealth & gains",
+    "secondLord": "2nd lord (earnings)",
+    "eleventhLord": "11th lord (gains)",
+    "mercuryIn": "Mercury (trade & skill)",
+    "sections": {
+      "direction": "Natural direction & aptitude",
+      "jobOrBusiness": "Job or business",
+      "income": "Income & wealth houses",
+      "timing": "Career timing & dashas",
+      "growth": "Growth, recognition & promotion",
+      "risks": "Risks & cautions",
+      "remedies": "Remedies",
+      "conclusion": "Final guidance"
+    }
+  },
+  "BabyReport": {
+    "eyebrow": "Baby & Child Report",
+    "title": "Your child's first reading, from their own chart",
+    "subtitle": "Enter your child's birth details (even before naming) to see the naming syllables and temperament for free. Unlock the full report — naming, nature, strengths, learning, care, milestones — with a one-time payment.",
+    "ctaBuild": "See my child's chart placements",
+    "productName": "Complete Baby & Child Report",
+    "docEyebrow": "Vedic Baby & Child Report",
+    "docTitle": "Baby & Child Report",
+    "disclaimer": "This report is a traditional Jyotish interpretation to help you understand a child's nature for gentle parenting. It is not medical advice and makes no prediction about health, illness or lifespan — please see a doctor for anything medical. A child's future is shaped by love, care and opportunity, not by the chart alone.",
+    "namingCard": "Naming syllables",
+    "nakshatraPada": "Nakshatra & pada",
+    "namingLetters": "Letters for this nakshatra",
+    "namingLetter": "Syllable for your child's pada",
+    "mindLearning": "Mind & learning",
+    "fifthLord": "5th lord (intelligence)",
+    "jupiterIn": "Jupiter (growth & wisdom)",
+    "sections": {
+      "naming": "Naming & auspicious letters",
+      "temperament": "Temperament & nature",
+      "strengths": "Innate strengths",
+      "learning": "Learning & education",
+      "care": "Care, routine & wellbeing",
+      "milestones": "Growth & milestones",
+      "remedies": "Supportive remedies",
+      "conclusion": "Final guidance"
+    }
   }
 }

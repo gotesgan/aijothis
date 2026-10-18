@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { createRazorpayOrder, razorpayConfigured, KEY_ID } from "@/lib/razorpay";
-import { REPORT_PRICE, reportPackId } from "@/lib/report";
+import {
+  isReportType,
+  reportPackId,
+  REPORT_PRICES,
+  type ReportType,
+} from "@/lib/report";
 import { REGION_CURRENCY } from "@/lib/geo";
 import { resolveRegionFromRequest } from "@/lib/region-server";
 import { toMinorUnits } from "@/lib/money";
@@ -13,19 +18,23 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/report-checkout
  *
- * Creates the Razorpay order for the marriage report. The browser sends only
- * its device id — the amount, currency and product id are all server-owned, so
- * the price shown and the price charged cannot drift.
+ * Creates the Razorpay order for a one-off report. The browser sends only its
+ * device id and the report `type` — the amount, currency and product id are all
+ * server-owned, so the price shown and the price charged cannot drift. An
+ * unknown type falls back to "marriage", never to a cheaper product.
  *
  * Uses the SAME /api/payment-verify endpoint on success, so report orders flow
  * through the existing signature-verified, device-scoped settlement path and
- * land in `orders` with `pack_id = report-marriage-<currency>`.
+ * land in `orders` with `pack_id = report-<type>-<currency>`.
  */
 export async function POST(request: Request) {
   const deviceId = request.headers.get("x-device-id");
   if (!deviceId) {
     return NextResponse.json({ error: "missing_device" }, { status: 400 });
   }
+
+  const body = await request.json().catch(() => null);
+  const type: ReportType = isReportType(body?.type) ? body.type : "marriage";
 
   const clientIp =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -36,9 +45,9 @@ export async function POST(request: Request) {
   const region = resolveRegionFromRequest(request);
   const currency = REGION_CURRENCY[region];
 
-  const price = REPORT_PRICE[currency];
+  const price = REPORT_PRICES[type][currency];
   const amountMinor = toMinorUnits(price, currency);
-  const packId = reportPackId(currency);
+  const packId = reportPackId(type, currency);
 
   const marketingConsent =
     consentFromCookie(
@@ -155,7 +164,7 @@ async function recordReportOrder(params: {
       amount_paise: params.amountMinor,
       currency: params.currency,
       pack_id: params.packId,
-      // No chat credits are granted for the report — null, not 0.
+      // No chat credits are granted for a report — null, not 0.
       pack_questions: null,
       order_id: params.orderId ?? null,
       status: params.status,

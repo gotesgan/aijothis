@@ -49,3 +49,16 @@ user-questions.txt
 .playwright-mcp/
 pratiksha-chat.md
 .env.local
+
+# generated report HTML — contains real client names (PII)
+/reports/*.html
+
+# local scratch: agent experiments, marketing assets, audit output
+/demo/
+/seo-report/
+/test-results/
+/CREATIVE-PACK.md
+/.tmp-*
+
+# unwired classifier experiment (not imported anywhere)
+/src/lib/classify.ts
