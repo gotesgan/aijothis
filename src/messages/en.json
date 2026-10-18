@@ -385,6 +385,12 @@
     }
   },
   "BabyReport": {
+    "childNote": "Enter your child’s birth details below — not your own. The reading is of your child’s chart.",
+    "childName": "Child’s name",
+    "childDob": "Child’s date of birth",
+    "childTob": "Child’s time of birth (optional)",
+    "childPob": "Child’s place of birth",
+    "childNamePh": "e.g. Aarav",
     "eyebrow": "Baby & Child Report",
     "title": "Your child's first reading, from their own chart",
     "subtitle": "See your child's naming syllables and nature before you pay. Unlock the full report — strengths, learning, care — one-time payment.",

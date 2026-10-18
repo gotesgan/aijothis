@@ -447,6 +447,19 @@ progress {
   filter: invert(0.85);
 }
 
+/* A note above a form's fields — currently the child-report reminder that the
+   details wanted are the baby's, not the reader's. Quiet but unmissable. */
+.form-note {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--brand-rgb), 0.1);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 /* ─────────────── App header ─────────────── */
 .app-header {
   display: flex;
@@ -3430,10 +3443,9 @@ html {
   .gate-modal {
     display: none !important;
   }
-  @page {
-    size: A4;
-    margin: 18mm 16mm;
-  }
+  /* The sheet's own margins live in the app-wide @page rule below, so there is
+     exactly one page setup: two @page blocks silently override each other and
+     the last one wins. */
 }
 
 /* Cross-links between the three readings. */
@@ -3467,7 +3479,10 @@ textarea,
 }
 
 @media print {
+  /* The only page setup in the file. Applies to the printable report and to
+     anything else the reader sends to paper. */
   @page {
+    size: A4;
     margin: 16mm 14mm;
   }
   .no-print {

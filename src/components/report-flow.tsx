@@ -6,6 +6,7 @@ import { getDeviceId, loadKundli, saveReportCtx } from "@/lib/storage";
 import { formatPrice, isCurrency, type Currency } from "@/lib/money";
 import { RASHI, NAKSHATRA, PLANET } from "@/lib/local-names";
 import {
+  REPORT_PRICES,
   reportNamespace,
   reportPackId,
   REPORT_SECTIONS,
@@ -106,6 +107,13 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
   const ns = reportNamespace(type);
   const t = useTranslations(ns);
   const tr = useTranslations("Report");
+  // A baby report is a reading of the CHILD, so the form asks for the child and
+  // says so plainly. Every other report is about the reader, for whom the
+  // shared labels already read correctly.
+  const isChild = type === "child";
+  const tChild = useTranslations("BabyReport");
+  const fieldLabel = (shared: "name" | "dob" | "tob" | "pob", childKey: string) =>
+    isChild ? tChild(childKey) : tr(shared);
   const locale = useLocale() as Locale;
 
   const sectionIds = REPORT_SECTIONS[type];
@@ -356,22 +364,32 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
     }).catch(() => {});
   }
 
-  const priceLabel = price != null ? formatPrice(price, currency) : "₹199";
+  // Never hardcode a currency: the auto-open path (an owned report) does not set
+  // `price`, and a USD/EUR buyer shown "₹199" has been quoted the wrong money.
+  const priceLabel = formatPrice(
+    price ?? REPORT_PRICES[type][currency],
+    currency
+  );
 
   /* ── Step 1: birth details ──────────────────────────────────────────── */
   if (step === "form") {
     return (
       <div className="no-print">
         <form className="details-form" onSubmit={submitForm}>
+          {isChild && (
+            <p className="form-note">
+              {tChild("childNote")}
+            </p>
+          )}
           <label className="field">
-            <span className="field__label">{tr("name")}</span>
+            <span className="field__label">{fieldLabel("name", "childName")}</span>
             <input
               className="field__input"
               type="text"
               data-exclude="true"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={tr("namePh")}
+              placeholder={isChild ? tChild("childNamePh") : tr("namePh")}
             />
           </label>
 
@@ -379,7 +397,7 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
 
           <div className="details-form__row">
             <label className="field">
-              <span className="field__label">{tr("dob")}</span>
+              <span className="field__label">{fieldLabel("dob", "childDob")}</span>
               <span className="field__control">
                 <CalendarDays size={18} className="field__icon" aria-hidden="true" />
                 <input
@@ -393,7 +411,7 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
               </span>
             </label>
             <label className="field">
-              <span className="field__label">{tr("tob")}</span>
+              <span className="field__label">{fieldLabel("tob", "childTob")}</span>
               <span className="field__control">
                 <Clock size={18} className="field__icon" aria-hidden="true" />
                 <input
@@ -413,7 +431,7 @@ export function ReportFlow({ type = "marriage" }: { type?: ReportType }) {
           )}
 
           <PlaceAutocomplete
-            label={tr("pob")}
+            label={isChild ? tChild("childPob") : tr("pob")}
             placeholder={tr("pobPh")}
             onSelect={setSelected}
             onEdit={() => setSelected(null)}

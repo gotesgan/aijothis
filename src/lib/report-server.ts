@@ -9,6 +9,7 @@
  * otherwise identical.
  */
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { resolvePricingForDevice } from "@/lib/pricing-server";
 import { chatCompletion } from "@/lib/llm";
 import {
   buildFacts,
@@ -21,18 +22,31 @@ import {
 import { RASHI_NAMES, NAKSHATRA_NAMES } from "@/lib/kundli";
 import type { KundliResult } from "@/lib/types";
 
-/** Has this device ever settled an order for a report of this type? */
+/**
+ * Has this device ever settled an order for a report of this type?
+ *
+ * `deviceIds` is the Google-linked device set, the same one `/api/orders` and
+ * the chat quota use. Ownership has to be checked across it, not on the single
+ * device that happens to be asking: a buyer who paid on their phone must not be
+ * shown the paywall again on their laptop, which reads as "pay twice". Callers
+ * that already resolved the set should pass it in rather than pay for the
+ * lookup again.
+ */
 export async function hasReportPurchase(
   deviceId: string,
-  type: ReportType = "marriage"
+  type: ReportType = "marriage",
+  deviceIds?: string[]
 ): Promise<boolean> {
   const admin = getSupabaseAdmin();
   if (!admin || !deviceId) return false;
   try {
+    const scope = deviceIds?.length
+      ? deviceIds
+      : (await resolvePricingForDevice(deviceId)).deviceIds;
     const { data, error } = await admin
       .from("orders")
       .select("pack_id, status")
-      .eq("device_id", deviceId)
+      .in("device_id", scope)
       .in("status", ["paid", "simulated"])
       .order("created_at", { ascending: false })
       .limit(50);

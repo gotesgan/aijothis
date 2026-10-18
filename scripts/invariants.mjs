@@ -123,9 +123,18 @@ const attacker = dev("attacker");
     "x-vercel-ip-country": "IN",
   });
   const { createHmac } = await import("node:crypto");
-  const secret = process.env.RAZORPAY_KEY_SECRET;
+  // Mirrors src/lib/razorpay.ts exactly: outside production the app verifies
+  // with the TEST secret when it is configured, so a signature forged here with
+  // the live secret would fail verification and the suite would report a
+  // payment regression that does not exist.
+  const secret =
+    (process.env.NODE_ENV !== "production" &&
+      process.env.RAZORPAY_KEY_SECRET_TEST) ||
+    process.env.RAZORPAY_KEY_SECRET;
   if (!secret) {
-    console.log("  · skipped (RAZORPAY_KEY_SECRET not in env — run with --env-file=.env.local)");
+    console.log(
+      "  · skipped (neither RAZORPAY_KEY_SECRET nor RAZORPAY_KEY_SECRET_TEST in env — run with --env-file=.env.local)"
+    );
   } else {
     const sign = (o, p) =>
       createHmac("sha256", secret).update(`${o}|${p}`).digest("hex");

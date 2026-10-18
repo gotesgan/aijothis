@@ -24,6 +24,14 @@ import type { PostHog } from "posthog-js";
  */
 let client: PostHog | null = null;
 let loading: Promise<PostHog | null> | null = null;
+/**
+ * The consent state we last wanted. The SDK is imported asynchronously, so a
+ * withdrawal can easily land while that import is still in flight: without a
+ * remembered intent, `stopPostHogCapture()` would run against a null client and
+ * the pending load would then opt the visitor back in. This is what makes
+ * withdrawal win the race.
+ */
+let wanted: "in" | "out" = "out";
 
 export function posthogConfigured(): boolean {
   return Boolean(
@@ -53,8 +61,14 @@ export function loadPostHog(): Promise<PostHog | null> {
         // for the same information.
         disable_session_recording: true,
         respect_dnt: true,
+        // The only thing the old unconditional initialiser gave us that we
+        // still want: client-side exceptions, now gated on consent like
+        // everything else.
+        capture_exceptions: true,
       });
       client = posthog;
+      // If the choice was withdrawn while the import was in flight, honour it.
+      if (wanted === "out") posthog.opt_out_capturing();
       return posthog;
     })
     .catch(() => null);
@@ -64,12 +78,16 @@ export function loadPostHog(): Promise<PostHog | null> {
 
 /** Called when the analytics choice is granted (and on later route changes). */
 export async function startPostHogCapture(): Promise<void> {
+  wanted = "in";
   const posthog = await loadPostHog();
-  posthog?.opt_in_capturing();
+  // The import can resolve after a later withdrawal; only opt in if that is
+  // still the current intent.
+  if (wanted === "in") posthog?.opt_in_capturing();
 }
 
 /** Called the moment analytics is withdrawn. */
 export function stopPostHogCapture(): void {
+  wanted = "out";
   client?.opt_out_capturing();
 }
 

@@ -82,21 +82,33 @@ export async function POST(request: Request) {
   if (deviceId) {
     const admin = getSupabaseAdmin();
     if (admin) {
-      const { error } = await admin.from("profiles").upsert(
-        {
-          device_id: deviceId,
-          lang: String(lang ?? "en"),
-          name: String(name ?? ""),
-          birth_date: String(date),
-          birth_time: String(time),
-          birth_place: String(place ?? ""),
-          lat: Number(lat),
-          lng: Number(lng),
-          timezone: String(timezone),
-          kundli_json: kundli,
-        },
-        { onConflict: "device_id" }
-      );
+      const row = {
+        device_id: deviceId,
+        lang: String(lang ?? "en"),
+        name: String(name ?? ""),
+        birth_date: String(date),
+        birth_time: String(time),
+        birth_place: String(place ?? ""),
+        lat: Number(lat),
+        lng: Number(lng),
+        timezone: String(timezone),
+        kundli_json: kundli,
+      };
+      const gender = isGender(body.gender) ? body.gender : null;
+
+      // A report is often someone's first contact with the app, so this is the
+      // only place their gender answer is captured. Same two-step as
+      // /api/kundli: try with the column, and fall back without it when the
+      // migration has not been applied — losing the whole profile write over
+      // one optional field would stop birth details persisting.
+      let { error } = await admin
+        .from("profiles")
+        .upsert({ ...row, gender }, { onConflict: "device_id" });
+      if (error && /gender/i.test(error.message ?? "")) {
+        ({ error } = await admin
+          .from("profiles")
+          .upsert(row, { onConflict: "device_id" }));
+      }
       if (error) console.warn("[supabase] report profile upsert:", error.message);
     }
   }
@@ -142,10 +154,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok });
   }
 
-  // Re-use a stored report when one exists; otherwise generate (and the client
-  // will persist it on download). Guarantees the same text on every view.
+  // Re-use a stored report when one exists; otherwise generate it once.
   const stored = await getStoredReport(deviceId, packId, type);
-  const sections =
-    stored ?? (await generateFullReport(kundli, String(lang ?? "en"), type));
-  return NextResponse.json({ facts: buildFacts(kundli), sections });
+  if (stored) {
+    return NextResponse.json({ facts: buildFacts(kundli), sections: stored });
+  }
+
+  const facts = buildFacts(kundli);
+  const sections = await generateFullReport(kundli, String(lang ?? "en"), type);
+
+  // Persist immediately for a payer. The old rule was "store only on download",
+  // which meant a buyer who read the report but never downloaded it paid for a
+  // fresh LLM run on every single visit — and the new owned-report shortcut
+  // opens on load, so that path is now the common one. Gating on purchase is
+  // what keeps this from storing a narrative for a mere previewer.
+  void saveReport({
+    deviceId,
+    packId,
+    locale: String(lang ?? "en"),
+    type,
+    facts,
+    sections,
+  }).catch(() => {});
+
+  return NextResponse.json({ facts, sections });
 }
