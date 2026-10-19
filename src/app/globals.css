@@ -1924,17 +1924,27 @@ progress {
 }
 
 /* ─────────────── Signup / paywall gate modals ─────────────── */
+/* Flex + `margin: auto` on the card, rather than grid `place-items: center`.
+   A centred grid child that is taller than its container overflows BOTH ends,
+   and the top half cannot be scrolled to — on a 320x568 phone this paywall is
+   728px tall, so its title and part of the ladder were simply unreachable.
+   Auto margins centre it when it fits and collapse to zero when it does not,
+   which lets the modal scroll. */
 .gate-modal {
   position: fixed;
   inset: 0;
   z-index: 60;
   background: rgba(var(--background-rgb), 0.72);
   backdrop-filter: blur(6px);
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px 20px;
 }
 .gate-modal__card {
+  margin: auto;
   width: 100%;
   max-width: 360px;
   background: linear-gradient(180deg, rgba(var(--surface-elevated-rgb), 0.96), rgba(var(--surface-elevated-rgb), 0.98));
@@ -1946,6 +1956,17 @@ progress {
   gap: 14px;
   text-align: center;
   justify-items: center;
+}
+/* Short screens: tighten the card so the ladder and the pay button fit
+   together without scrolling. */
+@media (max-height: 720px) {
+  .gate-modal {
+    padding: 14px 16px;
+  }
+  .gate-modal__card {
+    padding: 20px 18px;
+    gap: 11px;
+  }
 }
 .gate-modal__g {
   width: 48px;
@@ -1970,20 +1991,28 @@ progress {
   display: grid;
   place-items: center;
 }
+/* One pack per row. Two columns left the third tier alone on its own line with
+   dead space beside it, squeezed the cards until "30 questions" wrapped, and
+   pushed the bonus pill out past the card's right edge. A row has width to
+   spare, so nothing overlaps and the three tiers read as a ladder. */
 .pack-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   width: 100%;
 }
 .pack-option {
   display: grid;
-  gap: 4px;
-  justify-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "price popular"
+    "questions questions";
+  align-items: center;
+  gap: 2px 10px;
+  text-align: left;
   background: rgba(var(--text-primary-rgb), 0.03);
   border: 1.5px solid rgba(var(--text-primary-rgb), 0.08);
-  border-radius: 18px;
-  padding: 16px 10px;
+  border-radius: var(--radius-sm);
+  padding: 13px 16px;
   transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
 .pack-option:hover {
@@ -1995,16 +2024,24 @@ progress {
   background: rgba(var(--brand-rgb), 0.14);
 }
 .pack-option__price {
+  grid-area: price;
   font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--gold);
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
 }
 .pack-option__q {
-  font-size: 0.78rem;
-  color: var(--ivory-muted);
+  grid-area: questions;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.pack-option .badge--popular {
+  grid-area: popular;
+  justify-self: end;
 }
 /* Loyalty bonus marker: same price, more questions. */
 .badge--bonus {
