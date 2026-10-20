@@ -23,6 +23,7 @@
  * selling a full report the model is told to ground in those same placements.
  */
 import type { Currency } from "@/lib/money";
+import { ageInYears } from "@/lib/age";
 import type { KundliResult } from "@/lib/types";
 
 /** The three one-off report products. */
@@ -290,17 +291,6 @@ function houseFrom(planetRashi: number, fromRashi: number): number {
 /** Rashi occupying the nth house from the ascendant (whole-sign). */
 function houseSign(lagna: number, house: number): number {
   return (lagna + house - 1) % 12;
-}
-
-/** Whole years from a YYYY-MM-DD birth date to today, in UTC. */
-function ageInYears(date: string): number {
-  const [y, m, d] = String(date).split("-").map(Number);
-  if (!y || !m || !d) return 0;
-  const now = new Date();
-  const beforeBirthday =
-    now.getUTCMonth() + 1 < m ||
-    (now.getUTCMonth() + 1 === m && now.getUTCDate() < d);
-  return Math.max(0, now.getUTCFullYear() - y - (beforeBirthday ? 1 : 0));
 }
 
 export function buildFacts(kundli: KundliResult): ReportFacts {

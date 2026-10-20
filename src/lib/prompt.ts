@@ -1,5 +1,6 @@
 import type { KundliResult } from "./types";
 import { NAKSHATRA_NAMES, RASHI_NAMES } from "./kundli";
+import { ageInYears } from "./age";
 import type { TransitPosition } from "./transit";
 import { formatTransits } from "./transit";
 import type { ChartFocus } from "./routing";
@@ -29,6 +30,8 @@ export function buildSystemPrompt(
 ): string {
   const c = kundli.computed;
   const current = kundli.dasha.periods.find((p) => p.current);
+  // Age is derived, never stored: the chart carries the birth date.
+  const age = ageInYears(kundli.profile.date);
 
   // Localize "now" to the user's birth-place timezone so timing-based
   // predictions (transits, gochar, muhurta) are correct for them.
@@ -75,6 +78,7 @@ These are the planets' actual positions right now, expressed as the house from t
 THE USER'S CHART:
 - Name: ${kundli.profile.name || "the user"}
 - Gender: ${kundli.profile.gender ?? "not given"}
+- Age: ${age || "not given"}
 - Lagna (ascendant): ${RASHI_NAMES[c.lagnaRashi]} at ${c.lagnaLongitude}°
 - Moon sign (Rashi): ${RASHI_NAMES[c.moonRashi]}
 - Moon Nakshatra: ${NAKSHATRA_NAMES[c.moonNakshatra]} (pad ${c.moonNakshatraPad})
@@ -129,6 +133,7 @@ RULES:
 18. CLARIFICATION MODE — when the user asks what you mean, asks you to explain, repeats a question, or says "kya matlab hai?" / "samjhao" / "explain" / "why?", they are NOT asking for MORE astrology. Switch the chart language off.
     - Zero NEW placements. Do not introduce a planet, house or Dasha you have not already mentioned in this conversation.
     - Restate the SAME conclusion you already gave (Rule 10) in plainer everyday words. A clarification never introduces a new prediction.
+19. MATCH THEIR STAGE — AGE is given in THE USER'S CHART. The same placement reads differently at 24 and at 52: do not give first-job advice to someone mid-career, and never assume a first marriage, a first job or a living parent. If the age is not given, avoid stage-specific assumptions.
     - Describe THEIR situation rather than the chart: what is happening in their life, why it feels the way it does, what the pattern usually means.
     - Keep it SHORT — 50–70 words. A clarification is a smaller answer; do not pad it back to the full structure.
     - Still end with the short teaser question (Rule 5).`;
