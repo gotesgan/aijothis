@@ -8,7 +8,7 @@ import { resolvePricingForDevice } from "@/lib/pricing-server";
  * mirrors it in `arya-chat.tsx` only so it can show the paywall without a
  * round-trip. Changing the limit here is what actually changes the limit.
  */
-export const FREE_LIMIT = 1;
+export const FREE_LIMIT = 3;
 
 /**
  * The instant server-side question metering began.
@@ -32,11 +32,17 @@ export const METERING_STARTED_AT =
  * same "paid but locked out" failure for that plan. The pre-cutoff menu was
  * ₹1 per question, so the id names the quantity directly.
  */
-const LEGACY_PACK_QUESTIONS: Record<string, number> = {
+const HISTORICAL_PACK_QUESTIONS: Record<string, number> = {
   p10: 10,
   p20: 20,
   p30: 30,
   p60: 60,
+  // Current-INR SKUs issued before the latest menu change. Preserve their
+  // original credits if an older order has no pack_questions value.
+  "current-intro-inr": 10,
+  "current-starter-inr": 20,
+  "current-standard-inr": 50,
+  "current-deep-inr": 100,
 };
 
 /**
@@ -50,8 +56,10 @@ export function orderQuestions(order: {
 }): number {
   const stored = Number(order.pack_questions);
   if (Number.isFinite(stored) && stored > 0) return stored;
-  const legacy = order.pack_id ? LEGACY_PACK_QUESTIONS[order.pack_id] : undefined;
-  return legacy ?? 0;
+  const historical = order.pack_id
+    ? HISTORICAL_PACK_QUESTIONS[order.pack_id]
+    : undefined;
+  return historical ?? 0;
 }
 
 export interface QuotaResult {

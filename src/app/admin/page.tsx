@@ -74,16 +74,20 @@ const num = (n: number) => n.toLocaleString("en-IN");
  * `packLabel` falls back to `retired · <id>` for them rather than pretending
  * to know a price they never had.
  */
-const PACK_LABELS: Record<string, string> = Object.fromEntries(
-  (
-    [
-      ...packsForCohort("current", "INR"),
-      ...packsForCohort("legacy", "INR"),
-      ...packsForCohort("current", "USD"),
-      ...packsForCohort("current", "EUR"),
-    ] as QuestionPack[]
-  ).map((p) => [p.id, `${formatPrice(p.price, p.currency)} · ${p.questions}`])
-);
+const PACK_LABELS: Record<string, string> = {
+  ...Object.fromEntries(
+    (
+      [
+        ...packsForCohort("current", "INR"),
+        ...packsForCohort("legacy", "INR"),
+        ...packsForCohort("current", "USD"),
+        ...packsForCohort("current", "EUR"),
+      ] as QuestionPack[]
+    ).map((p) => [p.id, `${formatPrice(p.price, p.currency)} · ${p.questions}`])
+  ),
+  // Keep historical orders readable after the current INR deep pack retired.
+  "current-deep-inr": "₹299 · 100 (previous)",
+};
 
 /** Human label for a pack id, tolerating ids from before currency scoping. */
 function packLabel(packId: string): string {

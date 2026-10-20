@@ -24,9 +24,21 @@ function check(name, got, want) {
 }
 
 const EXPECTED = {
-  IN: { starter: [9900, "INR"], standard: [14900, "INR"], deep: [29900, "INR"] },
-  US: { starter: [499, "USD"], standard: [999, "USD"], deep: [1999, "USD"] },
-  EU: { starter: [549, "EUR"], standard: [1099, "EUR"], deep: [2199, "EUR"] },
+  IN: {
+    starter: [5000, "INR", 10, "current-intro-inr"],
+    standard: [9900, "INR", 20, "current-starter-inr"],
+    deep: [14900, "INR", 50, "current-standard-inr"],
+  },
+  US: {
+    starter: [499, "USD", 20, "current-starter-usd"],
+    standard: [999, "USD", 50, "current-standard-usd"],
+    deep: [1999, "USD", 100, "current-deep-usd"],
+  },
+  EU: {
+    starter: [549, "EUR", 20, "current-starter-eur"],
+    standard: [1099, "EUR", 50, "current-standard-eur"],
+    deep: [2199, "EUR", 100, "current-deep-eur"],
+  },
 };
 const COUNTRY = { IN: "IN", US: "US", EU: "DE" };
 
@@ -56,15 +68,17 @@ for (const region of Object.keys(EXPECTED)) {
       { packTier: tier },
       { "x-device-id": dev(`${region}-${tier}`), "x-vercel-ip-country": COUNTRY[region] }
     );
-    const [amount, currency] = EXPECTED[region][tier];
+    const [amount, currency, questions, packId] = EXPECTED[region][tier];
     check(`${region}/${tier} amount matches displayed pack price`, json?.amount, amount);
     check(
       `${region}/${tier} minor units are consistent`,
       Math.round(json?.pack?.price * 100),
       json?.amount
     );
+    check(`${region}/${tier} charges in the expected currency`, json?.currency, currency);
     check(`${region}/${tier} currency matches displayed pack`, json?.currency, json?.pack?.currency);
-    check(`${region}/${tier} pack id is market-scoped`, json?.pack?.id, `current-${tier}-${currency.toLowerCase()}`);
+    check(`${region}/${tier} question credits match the displayed pack`, json?.pack?.questions, questions);
+    check(`${region}/${tier} pack id is market-scoped`, json?.pack?.id, packId);
   }
 }
 
@@ -183,8 +197,8 @@ console.log("\n6. the free limit is enforced by the server");
         break;
       }
     }
-    // FREE_LIMIT server-side is 1 (src/lib/quota.ts): Q1 free, Q2 blocked.
-    check("server blocks the question after the free limit", blocked, 2);
+    // FREE_LIMIT server-side is 3 (src/lib/quota.ts): Q1–Q3 free, Q4 blocked.
+    check("server blocks the question after the free limit", blocked, 4);
   } else {
     console.log("  · quota assertions skipped (kundli endpoint did not return a chart)");
   }
@@ -319,7 +333,7 @@ console.log("\n7. a verified payment is never locked out");
 // so a "bonus" there would be a price increase.
 console.log("\n7. loyalty bonus is earned, granted, and never priced");
 
-const BASE_Q = { starter: 20, standard: 50, deep: 100 };
+const BASE_Q = { starter: 10, standard: 20, deep: 50 };
 const BONUS_Q = 10;
 const DISMISSALS_FOR_BONUS = 3;
 
@@ -365,7 +379,7 @@ const DISMISSALS_FOR_BONUS = 3;
   // The critical one: same rupees as an un-earned buyer.
   check("bonus does NOT change the amount charged", json?.amount, EXPECTED.IN.standard[0]);
   check("bonus does NOT change the currency", json?.currency, "INR");
-  check("bonus keeps the market-scoped pack id", json?.pack?.id, "current-standard-inr");
+  check("bonus keeps the market-scoped pack id", json?.pack?.id, "current-starter-inr");
 }
 
 // (d) Every tier gets the same flat bonus.
@@ -407,7 +421,11 @@ for (const tier of Object.keys(BASE_Q)) {
     "x-device-id": us,
     "x-vercel-ip-country": "US",
   });
-  check("USD buyer earns the bonus too", json?.pack?.questions, BASE_Q.standard + BONUS_Q);
+  check(
+    "USD buyer earns the bonus too",
+    json?.pack?.questions,
+    EXPECTED.US.standard[2] + BONUS_Q
+  );
   check("USD buyer still pays USD", [json?.currency, json?.amount], ["USD", EXPECTED.US.standard[0]]);
 }
 

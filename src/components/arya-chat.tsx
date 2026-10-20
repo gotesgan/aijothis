@@ -72,9 +72,15 @@ const ASKED_KEY = "jyotish_asked_count_v1";
 const MATCH_KEY = "jyotish_match_v1";
 /** Must match QUOTA_EXHAUSTED in @/lib/quota. */
 const QUOTA_EXHAUSTED = 402;
-const FREE_LIMIT = 1; // Q1 free, then Google signup before Q2, then paywall.
+const FREE_LIMIT = 3; // Q1 free, Google signup before Q2, paywall after Q3.
 // Mirrors FREE_LIMIT in @/lib/quota purely so the paywall can appear without a
 // round-trip. The server's copy is the one that actually enforces the limit.
+
+function defaultPackFor(cohort: PricingCohort, currency: Currency): QuestionPack {
+  const options = packsForCohort(cohort, currency);
+  const index = cohort === "current" && currency === "INR" ? 0 : 1;
+  return options[index] ?? options[0];
+}
 
 /** Time-of-day greeting bucket, read off the visitor's own clock so the empty
  *  chat opens with the right greeting for their day. */
@@ -243,13 +249,14 @@ export function AryaChat({
   // dismissal endpoint so the bonus appears on the very third dismissal.
   const [bonusEarned, setBonusEarned] = useState(false);
   // Seeded from the server so the first paint already shows the right symbol —
-  // a paywall that renders "$9.99" and then flips to "₹149" reads as a bait and
+  // a paywall that renders "$9.99" and then flips to "₹50" reads as a bait and
   // switch. /api/orders re-confirms it on mount.
-  const [currency, setCurrency] = useState<Currency>(
-    REGION_CURRENCY[initialRegion ?? "IN"]
-  );
+  const initialCurrency = REGION_CURRENCY[initialRegion ?? "IN"];
+  const [currency, setCurrency] = useState<Currency>(initialCurrency);
   const packs = packsForCohort(pricingCohort, currency);
-  const [selectedPack, setSelectedPack] = useState<QuestionPack>(packs[1]);
+  const [selectedPack, setSelectedPack] = useState<QuestionPack>(() =>
+    defaultPackFor("current", initialCurrency)
+  );
 
   const [askedCount, setAskedCount] = useState(() => {
     if (typeof window === "undefined") return 0;
@@ -341,7 +348,7 @@ export function AryaChat({
   function applyPricing(cohort: PricingCohort, nextCurrency: Currency) {
     setPricingCohort(cohort);
     setCurrency(nextCurrency);
-    setSelectedPack(packsForCohort(cohort, nextCurrency)[1]);
+    setSelectedPack(defaultPackFor(cohort, nextCurrency));
   }
 
   /** Restore the user's last thread so returning users keep their history. */
@@ -683,7 +690,7 @@ export function AryaChat({
       return;
     }
 
-    // Experiment tiers: Q1 free → Google login before Q2 → paywall after 5.
+    // Q1 free → Google login before Q2 → two more free questions → paywall.
     if (!signedUp && askedCount >= 1) {
       setShowSignup(true);
       return;
@@ -917,14 +924,15 @@ export function AryaChat({
    *  and the banner still shows the amount they actually abandoned. */
   function resumePayment() {
     setSelectedPack(
-      findPackInMarket(pricingCohort, currency, pendingOrder?.packId) ?? packs[1]
+      findPackInMarket(pricingCohort, currency, pendingOrder?.packId) ??
+        defaultPackFor(pricingCohort, currency)
     );
     setShowPaywall(true);
   }
 
-  /** Open the paywall with the cohort's standard pack selected. */
+  /** Open the paywall with the default pack selected for this market. */
   function openPaywall() {
-    setSelectedPack(packs[1]);
+    setSelectedPack(defaultPackFor(pricingCohort, currency));
     setShowPaywall(true);
   }
 

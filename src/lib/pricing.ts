@@ -45,6 +45,8 @@ interface PackSpec {
   price: number;
   questions: number;
   popular?: boolean;
+  /** Optional stable SKU when a menu revision changes tier names or prices. */
+  id?: string;
 }
 
 function menu(
@@ -67,7 +69,7 @@ function menu(
       throw new RangeError(`pricing: pack price must be positive (got ${spec.price})`);
     }
     return {
-      id: `${cohort}-${spec.tier}-${tag}`,
+      id: spec.id ?? `${cohort}-${spec.tier}-${tag}`,
       tier: spec.tier,
       price: spec.price,
       currency,
@@ -91,9 +93,17 @@ function menu(
  */
 const CURRENT_MENU: Record<Currency, readonly QuestionPack[]> = {
   INR: menu("current", "INR", [
-    { tier: "starter", price: 99, questions: 20 },
-    { tier: "standard", price: 149, questions: 50, popular: true },
-    { tier: "deep", price: 299, questions: 100 },
+    { tier: "starter", id: "current-intro-inr", price: 50, questions: 10 },
+    // Reuse former SKUs only where price and credits still match. That keeps
+    // recent abandoned checkouts safe to reuse at the same amount.
+    { tier: "standard", id: "current-starter-inr", price: 99, questions: 20 },
+    {
+      tier: "deep",
+      id: "current-standard-inr",
+      price: 149,
+      questions: 50,
+      popular: true,
+    },
   ]),
   USD: menu("current", "USD", [
     { tier: "starter", price: 4.99, questions: 20 },

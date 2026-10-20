@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { resolvePricingForDevice } from "@/lib/pricing-server";
+import { findPackInMarket } from "@/lib/pricing";
 import { resolveBonusForDevice } from "@/lib/bonus-server";
 import { entitlementForDevices } from "@/lib/quota";
 import { REGION_CURRENCY } from "@/lib/geo";
@@ -117,6 +118,10 @@ export async function GET(request: Request) {
     let pending = null;
     for (const o of orders) {
       if (o.status !== "created") continue;
+      // Do not offer to resume an abandoned order whose SKU was retired by a
+      // price/credit change. The old amount cannot be safely paired with the
+      // new menu; a fresh checkout will use the current server-owned offer.
+      if (!findPackInMarket(pricingCohort, currency, o.pack_id)) continue;
       if (now - new Date(o.created_at).getTime() >= PENDING_WINDOW_MS) continue;
       const newerPaid = paid.some(
         (p) => new Date(p.created_at).getTime() > new Date(o.created_at).getTime()

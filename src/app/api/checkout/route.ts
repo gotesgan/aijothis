@@ -74,9 +74,10 @@ export async function POST(request: Request) {
   if (razorpayConfigured()) {
     try {
       // Idempotency: if there's already a recent `created` order for this
-      // device + pack (a sheet that was dismissed or failed to open, attempts:0),
-      // REUSE it instead of creating a duplicate. Rapid Pay clicks were
-      // spawning many orders with no payment attempt.
+      // device + pack at the same price and credit count (a sheet that was
+      // dismissed or failed to open, attempts:0), REUSE it instead of creating
+      // a duplicate. Rechecking the amount and credits also makes a changed
+      // price or newly earned bonus safe across menu revisions.
       //
       // `pack_id` is cohort- AND currency-scoped, so an abandoned INR order is
       // never reused to fulfil a USD checkout — that would charge the INR
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
       if (admin) {
         const existing = await admin
           .from("orders")
-          .select("order_id, amount_paise, currency")
+          .select("order_id, amount_paise, currency, pack_questions")
           .eq("device_id", deviceId)
           .eq("pack_id", packId)
           .eq("status", "created")
@@ -101,7 +102,9 @@ export async function POST(request: Request) {
         // one currency while the client renders another.
         if (
           existing?.data?.order_id &&
-          existing.data.currency === pack.currency
+          existing.data.currency === pack.currency &&
+          Number(existing.data.amount_paise) === amountMinor &&
+          Number(existing.data.pack_questions) === packQuestions
         ) {
           const reused = existing.data;
           return NextResponse.json({
