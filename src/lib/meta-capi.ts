@@ -98,6 +98,7 @@ export async function sendCapiPurchase(params: {
       );
       return { ok: false };
     }
+    console.log(`[capi] Purchase ${params.eventId} sent`);
     return { ok: true };
   } catch (err) {
     console.warn("[capi] send failed:", (err as Error).message);
